@@ -71,9 +71,7 @@ const Home = () => {
             {/* Altivum Inc. */}
             <div className="bg-altivum-dark p-8 rounded-lg border border-altivum-slate/30 hover:border-altivum-gold/50 transition-all duration-300">
               <div className="w-12 h-12 bg-altivum-gold/20 rounded-lg flex items-center justify-center mb-6">
-                <svg className="w-6 h-6 text-altivum-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+                <span className="material-icons text-altivum-gold text-3xl">bolt</span>
               </div>
               <h3 className="text-2xl font-display font-bold text-white mb-4">
                 Altivum Inc.
@@ -87,18 +85,14 @@ const Home = () => {
                 className="inline-flex items-center text-altivum-gold hover:text-altivum-gold/80 font-medium"
               >
                 Learn More
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <span className="material-icons ml-2">arrow_forward</span>
               </Link>
             </div>
 
             {/* The Vector Podcast */}
             <div className="bg-altivum-dark p-8 rounded-lg border border-altivum-slate/30 hover:border-altivum-gold/50 transition-all duration-300">
               <div className="w-12 h-12 bg-altivum-gold/20 rounded-lg flex items-center justify-center mb-6">
-                <svg className="w-6 h-6 text-altivum-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
+                <span className="material-icons text-altivum-gold text-3xl">mic</span>
               </div>
               <h3 className="text-2xl font-display font-bold text-white mb-4">
                 The Vector Podcast
@@ -112,18 +106,14 @@ const Home = () => {
                 className="inline-flex items-center text-altivum-gold hover:text-altivum-gold/80 font-medium"
               >
                 Listen Now
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <span className="material-icons ml-2">arrow_forward</span>
               </Link>
             </div>
 
             {/* Beyond the Assessment */}
             <div className="bg-altivum-dark p-8 rounded-lg border border-altivum-slate/30 hover:border-altivum-gold/50 transition-all duration-300">
               <div className="w-12 h-12 bg-altivum-gold/20 rounded-lg flex items-center justify-center mb-6">
-                <svg className="w-6 h-6 text-altivum-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
+                <span className="material-icons text-altivum-gold text-3xl">menu_book</span>
               </div>
               <h3 className="text-2xl font-display font-bold text-white mb-4">
                 Beyond the Assessment
@@ -137,9 +127,7 @@ const Home = () => {
                 className="inline-flex items-center text-altivum-gold hover:text-altivum-gold/80 font-medium"
               >
                 Read More
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <span className="material-icons ml-2">arrow_forward</span>
               </Link>
             </div>
           </div>
@@ -176,21 +164,15 @@ const Home = () => {
 
               <ul className="space-y-3">
                 <li className="flex items-start">
-                  <svg className="w-6 h-6 text-altivum-gold mt-1 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <span className="material-icons text-altivum-gold mt-1 mr-3 flex-shrink-0">check_circle</span>
                   <span className="text-altivum-silver">Practical strategies for career transition</span>
                 </li>
                 <li className="flex items-start">
-                  <svg className="w-6 h-6 text-altivum-gold mt-1 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <span className="material-icons text-altivum-gold mt-1 mr-3 flex-shrink-0">check_circle</span>
                   <span className="text-altivum-silver">Real-world insights from military to civilian life</span>
                 </li>
                 <li className="flex items-start">
-                  <svg className="w-6 h-6 text-altivum-gold mt-1 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <span className="material-icons text-altivum-gold mt-1 mr-3 flex-shrink-0">check_circle</span>
                   <span className="text-altivum-silver">Leveraging military skills in new contexts</span>
                 </li>
               </ul>

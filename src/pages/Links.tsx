@@ -225,9 +225,7 @@ const Links = () => {
                   className="inline-flex items-center px-6 py-3 bg-altivum-gold text-altivum-dark font-semibold rounded-md hover:bg-altivum-gold/90 transition-all duration-200"
                 >
                   View Profile
-                  <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
+                  <span className="material-icons ml-2">open_in_new</span>
                 </a>
               </div>
               <div className="flex justify-center">
@@ -279,19 +277,7 @@ const Links = () => {
                     <p className="text-altivum-silver text-sm">{site.description}</p>
                     <p className="text-altivum-gold text-xs mt-2 font-mono">{site.url}</p>
                   </div>
-                  <svg
-                    className="w-6 h-6 text-altivum-silver group-hover:text-altivum-gold transition-colors flex-shrink-0 ml-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                    />
-                  </svg>
+                  <span className="material-icons text-altivum-silver group-hover:text-altivum-gold transition-colors flex-shrink-0 ml-4">open_in_new</span>
                 </div>
               </a>
             ))}
@@ -328,14 +314,7 @@ const Links = () => {
                     </h3>
                     <p className="text-altivum-silver text-sm truncate">{social.handle}</p>
                   </div>
-                  <svg
-                    className="w-5 h-5 text-altivum-silver group-hover:text-altivum-gold transition-colors flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <span className="material-icons text-altivum-silver group-hover:text-altivum-gold transition-colors flex-shrink-0">arrow_forward</span>
                 </div>
               </a>
             ))}
@@ -372,14 +351,7 @@ const Links = () => {
                     </h3>
                     <p className="text-altivum-silver text-sm truncate">{social.handle}</p>
                   </div>
-                  <svg
-                    className="w-5 h-5 text-altivum-silver group-hover:text-altivum-gold transition-colors flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <span className="material-icons text-altivum-silver group-hover:text-altivum-gold transition-colors flex-shrink-0">arrow_forward</span>
                 </div>
               </a>
             ))}
