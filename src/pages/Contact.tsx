@@ -178,6 +178,31 @@ const Contact = () => {
                   </div>
                 </a>
 
+                {/* Personal Email */}
+                <a
+                  href="mailto:christian.perez@altivum.ai"
+                  className="block bg-altivum-navy p-6 rounded-lg border border-altivum-slate/30 hover:border-altivum-gold/50 transition-all duration-300"
+                >
+                  <div className="flex items-start">
+                    <div className="w-12 h-12 bg-altivum-gold/20 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                      <svg className="w-6 h-6 text-altivum-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-2">
+                        Direct Email
+                      </h3>
+                      <p className="text-altivum-gold text-sm font-medium">
+                        christian.perez@altivum.ai
+                      </p>
+                      <p className="text-altivum-silver text-sm mt-1">
+                        For personal inquiries and direct contact
+                      </p>
+                    </div>
+                  </div>
+                </a>
+
                 {/* LinkedIn */}
                 <a
                   href="https://linkedin.com"
