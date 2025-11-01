@@ -1,55 +1,87 @@
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import profileImage from '../assets/profile1.jpeg';
 import readingImage from '../assets/reading.jpeg';
 import heroImage from '../assets/hero2.png';
 
 const Home = () => {
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      const windowHeight = window.innerHeight;
+      // Calculate progress through the sticky section (0-4 for 4 key points)
+      const progress = Math.min(Math.floor((scrollPosition - windowHeight) / (windowHeight * 0.4)), 3);
+      setScrollProgress(Math.max(0, progress));
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const keyPoints = [
+    "Founder & CEO | Altivum Inc",
+    "Host | The Vector Podcast",
+    "Author | Beyond the Assessment",
+    "Former Green Beret | 18D"
+  ];
+
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Hero Section with fade-in animation */}
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden opacity-0 animate-fade-in">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-altivum-dark via-altivum-navy to-altivum-blue opacity-50"></div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 py-32">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="space-y-8">
-              <div className="mb-8">
-                <img
-                  src={heroImage}
-                  alt="Leadership Forged in Service"
-                  className="w-full max-w-3xl mx-auto"
-                />
-              </div>
-
-              <div className="flex flex-wrap gap-4 justify-center">
-                <Link
-                  to="/about"
-                  className="inline-block px-8 py-4 bg-altivum-gold text-altivum-dark font-semibold rounded-md hover:bg-altivum-gold/90 transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  Learn More
-                </Link>
-                <Link
-                  to="/altivum"
-                  className="inline-block px-8 py-4 bg-transparent border-2 border-altivum-gold text-altivum-gold font-semibold rounded-md hover:bg-altivum-gold/10 transition-all duration-200"
-                >
-                  Explore Altivum
-                </Link>
-              </div>
+            <div className="mb-8">
+              <img
+                src={heroImage}
+                alt="Leadership Forged in Service"
+                className="w-full max-w-3xl mx-auto"
+              />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Full-Height Profile Image Section */}
-      <section className="relative h-screen overflow-hidden">
-        <div className="absolute inset-0">
-          <img
-            src={profileImage}
-            alt="Christian Perez"
-            className="w-full h-full object-cover object-center"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-altivum-dark via-transparent to-transparent"></div>
+      {/* Sticky Profile Image Section with Scrolling Text */}
+      <section className="relative h-[400vh]">
+        <div className="sticky top-0 h-screen overflow-hidden">
+          <div className="absolute inset-0">
+            <img
+              src={profileImage}
+              alt="Christian Perez"
+              className="w-full h-full object-cover object-center"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-altivum-dark/80 via-altivum-dark/40 to-transparent"></div>
+          </div>
+
+          {/* Scrolling Key Points Overlay */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center px-6">
+              {keyPoints.map((point, index) => (
+                <div
+                  key={index}
+                  className={`transition-all duration-1000 ${
+                    scrollProgress === index
+                      ? 'opacity-100 transform translate-y-0'
+                      : 'opacity-0 transform translate-y-10 absolute'
+                  }`}
+                >
+                  <h2 className="text-4xl md:text-6xl font-serif font-bold text-white leading-tight">
+                    {point.split(' | ')[0]}
+                  </h2>
+                  <div className="h-1 w-24 bg-altivum-gold mx-auto my-4"></div>
+                  <p className="text-2xl md:text-3xl text-altivum-gold font-semibold">
+                    {point.split(' | ')[1]}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
