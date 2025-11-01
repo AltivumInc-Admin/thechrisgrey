@@ -33,7 +33,7 @@ export default {
       },
       animation: {
         'fade-in': 'fade-in 1.2s ease-out forwards',
-        'nav-fade-in': 'nav-fade-in 0.8s ease-out 1s forwards',
+        'nav-fade-in': 'nav-fade-in 0.8s ease-out 2s forwards',
       },
     },
   },
