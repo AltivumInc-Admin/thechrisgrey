@@ -49,7 +49,7 @@ const Home = () => {
       </section>
 
       {/* Sticky Profile Image Section with Scrolling Summary Tabs */}
-      <section className="relative h-[200vh]">
+      <section className="relative h-[300vh]">
         <div className="sticky top-0 h-screen overflow-hidden">
           <div className="absolute inset-0">
             <img

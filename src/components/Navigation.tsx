@@ -8,8 +8,8 @@ const Navigation = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Nav becomes solid after hero + summary sections (100vh + 200vh = 300vh)
-      const summaryEndPosition = window.innerHeight * 3;
+      // Nav becomes solid after hero + summary sections (100vh + 300vh = 400vh)
+      const summaryEndPosition = window.innerHeight * 4;
       setIsScrolled(window.scrollY > summaryEndPosition);
     };
     window.addEventListener('scroll', handleScroll);
