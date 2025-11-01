@@ -67,7 +67,7 @@ const Home = () => {
             <img
               src={profileImage}
               alt="Christian Perez"
-              className="w-full h-full object-cover object-center"
+              className="w-full h-full object-cover object-right md:object-center"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-altivum-dark/80 via-altivum-dark/40 to-transparent"></div>
           </div>
