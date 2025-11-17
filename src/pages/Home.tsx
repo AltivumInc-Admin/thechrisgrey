@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import profileImage from '../assets/profile1.jpeg';
 import heroImage from '../assets/hero2.png';
+import { typography } from '../utils/typography';
 
 const Home = () => {
   const [scrollProgress, setScrollProgress] = useState(-1);
@@ -98,19 +99,19 @@ const Home = () => {
                     to={point.link}
                     className="block border-l-4 border-altivum-gold pl-4 sm:pl-6 py-3 sm:py-4 md:hover:pl-8 transition-all duration-300 cursor-pointer group active:pl-6 sm:active:pl-8 touch-manipulation"
                   >
-                    <h3 className="text-xl sm:text-2xl md:text-3xl font-serif font-bold text-white mb-1 sm:mb-2 leading-tight">
+                    <h3 className="text-white mb-1 sm:mb-2" style={typography.cardTitleLarge}>
                       {point.title}
                     </h3>
-                    <p className="text-base sm:text-lg md:text-xl text-altivum-gold font-medium italic leading-snug">
+                    <p className="text-altivum-gold italic" style={typography.subtitle}>
                       {point.subtitle}
                     </p>
                   </Link>
                 ) : (
                   <div className="border-l-4 border-altivum-gold pl-4 sm:pl-6 py-3 sm:py-4">
-                    <h3 className="text-xl sm:text-2xl md:text-3xl font-serif font-bold text-white mb-1 sm:mb-2 leading-tight">
+                    <h3 className="text-white mb-1 sm:mb-2" style={typography.cardTitleLarge}>
                       {point.title}
                     </h3>
-                    <p className="text-base sm:text-lg md:text-xl text-altivum-gold font-medium italic leading-snug">
+                    <p className="text-altivum-gold italic" style={typography.subtitle}>
                       {point.subtitle}
                     </p>
                   </div>
@@ -124,10 +125,10 @@ const Home = () => {
       {/* CTA Section */}
       <section className="bg-gradient-to-br from-altivum-navy to-altivum-blue py-16 sm:py-24 md:py-32 lg:py-[12.5rem]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-bold text-white mb-4 sm:mb-6">
+          <h2 className="text-white mb-4 sm:mb-6" style={typography.sectionHeader}>
             Let's Connect
           </h2>
-          <p className="text-lg sm:text-xl text-altivum-silver mb-6 sm:mb-8 leading-relaxed">
+          <p className="text-altivum-silver mb-6 sm:mb-8" style={typography.subtitle}>
             I'm always interested in connecting with people working at the intersection of technology, service, and innovation. Let's continue the conversation.
           </p>
 
@@ -160,7 +161,8 @@ const Home = () => {
           {/* Link to all socials */}
           <Link
             to="/links"
-            className="inline-block text-sm sm:text-base text-altivum-silver hover:text-white underline transition-colors touch-manipulation"
+            className="inline-block text-altivum-silver hover:text-white underline transition-colors touch-manipulation"
+            style={typography.bodyText}
           >
             Check out the rest of my socials
           </Link>

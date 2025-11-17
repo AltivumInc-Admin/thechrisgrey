@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import logo from '../assets/logo.png';
+import { typography } from '../utils/typography';
 
 const Navigation = () => {
   const location = useLocation();
@@ -63,10 +64,10 @@ const Navigation = () => {
           <Link to="/" className="flex items-center">
             <img src={logo} alt="TCG Logo" className="h-16 w-16" />
             <div className="flex flex-col -ml-2">
-              <span className="text-2xl font-display font-bold tracking-tight text-white">
+              <span className="text-white tracking-tight" style={{ ...typography.cardTitleLarge, fontWeight: 700 }}>
                 CHRISTIAN <span className="text-altivum-gold">PEREZ</span>
               </span>
-              <span className="text-xs font-light text-altivum-silver tracking-wider">
+              <span className="text-altivum-silver tracking-wider" style={typography.smallText}>
                 thechrisgrey
               </span>
             </div>

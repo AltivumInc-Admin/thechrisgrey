@@ -7,9 +7,20 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        'serif': ['Playfair Display', 'Georgia', 'serif'],
-        'display': ['Montserrat', 'sans-serif'],
+        'sans': ['"SF Pro Display"', '"Helvetica Neue"', '"Segoe UI"', 'system-ui', 'sans-serif'],
+        'serif': ['"SF Pro Display"', '"Helvetica Neue"', '"Segoe UI"', 'system-ui', 'sans-serif'],
+        'display': ['"SF Pro Display"', '"Helvetica Neue"', '"Segoe UI"', 'system-ui', 'sans-serif'],
+      },
+      fontWeight: {
+        'ultralight': '200',
+        'light': '300',
+        'normal': '400',
+        'medium': '500',
+        'semibold': '600',
+        'bold': '700',
+      },
+      letterSpacing: {
+        'altivum': '0.02em',
       },
       colors: {
         'altivum': {
