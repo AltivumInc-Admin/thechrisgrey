@@ -36,26 +36,45 @@ const BeyondTheAssessment = () => {
 
             {/* Image Column */}
             <div className="relative opacity-0 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              <div className="relative rounded-lg overflow-hidden shadow-2xl border border-altivum-silver/10">
+              <div className="relative rounded-lg overflow-hidden shadow-2xl border border-altivum-silver/10 group">
+                <div className="absolute inset-0 bg-altivum-blue/10 group-hover:bg-transparent transition-colors duration-500"></div>
                 <img
                   src={readingImage}
                   alt="Christian Perez reading Beyond the Assessment"
-                  className="w-full h-auto object-cover hover:scale-105 transition-transform duration-700 ease-out"
+                  className="w-full h-auto object-cover transform scale-100 group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
+              </div>
+              {/* Decorative Quote Card */}
+              <div className="hidden lg:block absolute -bottom-12 -right-12 max-w-xs bg-altivum-navy p-6 rounded-lg border border-altivum-gold/20 shadow-xl">
+                <p className="text-altivum-gold italic text-sm leading-relaxed" style={typography.bodyText}>
+                  "The harder the conflict, the more glorious the triumph. What we obtain too cheap, we esteem too lightly."
+                </p>
+                <p className="text-white/60 text-xs mt-3 uppercase tracking-wider">— Thomas Paine</p>
               </div>
             </div>
 
             {/* Text Column */}
             <div className="opacity-0 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-              <h2 className="text-white mb-8" style={typography.sectionHeader}>
-                The Human Element in <span className="text-altivum-gold">High Performance</span>
+              <h2 className="text-white mb-6" style={typography.sectionHeader}>
+                You Are Always <span className="text-altivum-gold">Being Assessed</span>
               </h2>
 
-              <p className="text-white/80 mb-8 leading-relaxed" style={typography.subtitle}>
-                In a world obsessed with metrics and data, <span className="text-white italic">Beyond the Assessment</span> explores the intangible qualities that define true leadership and resilience. Drawing from experiences in Special Operations and modern business, this book bridges the gap between tactical precision and human connection.
-              </p>
+              <div className="space-y-6 text-white/80" style={typography.subtitle}>
+                <p>
+                  "Men, congratulations on the success you have achieved here after a challenging 21 days. Own it. Enjoy it. Celebrate it. You’ve earned that much."
+                </p>
+                <p>
+                  These words marked the end of Special Forces Assessment and Selection (SFAS)—a 21-day back-breaking, knee-buckling job interview shrouded in secrecy. But the most important lesson wasn't about the physical feat; it was the warning that followed:
+                </p>
+                <p className="text-white font-medium border-l-2 border-altivum-gold pl-4 italic">
+                  "Do not make the catastrophic mistake of forgetting the following: you are always being assessed."
+                </p>
+                <p>
+                  <em>Beyond the Assessment</em> explores the intangible qualities that define true leadership and resilience. It bridges the gap between tactical precision and human connection, challenging you to prove—every day—that you have the character and capability to excel.
+                </p>
+              </div>
 
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="mt-10 flex flex-col sm:flex-row gap-4">
                 <a
                   href="https://a.co/d/iC9TEDW"
                   target="_blank"
