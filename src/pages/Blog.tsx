@@ -109,33 +109,6 @@ const Blog = () => {
       category: "Veterans in Tech",
       image: vetImage,
       pdfUrl: "/assets/documents/Turning Tactical Skills into Technical Impact.pdf"
-    },
-    {
-      id: 3,
-      title: "The Future of Cloud Architecture",
-      excerpt: "Exploring how serverless technologies and edge computing are reshaping the way we build scalable applications.",
-      content: ["Full content coming soon..."],
-      date: "March 15, 2024",
-      category: "Cloud Architecture",
-      image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
-    },
-    {
-      id: 4,
-      title: "AI Integration in Modern Business",
-      excerpt: "Practical strategies for implementing artificial intelligence to drive operational efficiency and innovation.",
-      content: ["Full content coming soon..."],
-      date: "March 10, 2024",
-      category: "Artificial Intelligence",
-      image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
-    },
-    {
-      id: 5,
-      title: "Leadership in High-Stakes Environments",
-      excerpt: "Lessons learned from special operations applied to corporate leadership and team management.",
-      content: ["Full content coming soon..."],
-      date: "March 5, 2024",
-      category: "Leadership",
-      image: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
     }
   ];
 
