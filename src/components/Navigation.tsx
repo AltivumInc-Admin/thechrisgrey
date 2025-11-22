@@ -162,7 +162,7 @@ const Navigation = () => {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden pb-4">
+          <div className="md:hidden pb-4 bg-altivum-navy/95 backdrop-blur-md">
             <div className="flex flex-col space-y-2">
               <Link
                 to="/"
