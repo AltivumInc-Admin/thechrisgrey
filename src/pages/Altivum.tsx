@@ -143,6 +143,24 @@ const Altivum = () => {
         description="Altivum Inc. is a cloud architecture and AI integration firm founded by Christian Perez. We build resilient, scalable systems for the future."
         keywords="Altivum Inc, Altivum Logic, Altivum Vanguard, Altivum Press, Cloud Architecture, AI Integration, Christian Perez"
         url="https://thechrisgrey.com/altivum"
+        structuredData={[
+          {
+            "@type": "Corporation",
+            "name": "Altivum Inc.",
+            "url": "https://altivum.ai",
+            "logo": "https://altivum.ai/logo.png",
+            "description": "A veteran-founded technology firm building intelligent, cloud-native architectures.",
+            "founder": {
+              "@type": "Person",
+              "name": "Christian Perez"
+            },
+            "slogan": "Intelligence. Structure. Impact.",
+            "sameAs": [
+              "https://www.linkedin.com/company/altivum",
+              "https://github.com/altivum"
+            ]
+          }
+        ]}
       />
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden opacity-0 animate-fade-in">

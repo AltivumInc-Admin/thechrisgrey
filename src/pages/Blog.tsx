@@ -115,15 +115,36 @@ const Blog = () => {
   const categories = ['All', 'Technology', 'Leadership', 'Veterans', 'Business'];
 
   return (
-    <div className="min-h-screen pt-20">
+    <div className="min-h-screen bg-altivum-dark">
       <SEO
-        title="Blog & Insights"
-        description="Insights from Christian Perez on cloud architecture, AI integration, military leadership, and entrepreneurship."
-        keywords="Christian Perez blog, Altivum insights, cloud architecture blog, AI technology articles, leadership thoughts"
+        title="Blog"
+        description="Insights on AI, Cloud Architecture, and Leadership from Christian Perez."
+        keywords="Christian Perez blog, AI insights, cloud architecture blog, veteran leadership, tech blog"
         url="https://thechrisgrey.com/blog"
+        structuredData={[
+          {
+            "@type": "Blog",
+            "name": "The Chris Grey Blog",
+            "url": "https://thechrisgrey.com/blog",
+            "description": "Insights on AI, Cloud Architecture, and Leadership",
+            "author": {
+              "@type": "Person",
+              "name": "Christian Perez"
+            },
+            "blogPost": blogPosts.map(post => ({
+              "@type": "BlogPosting",
+              "headline": post.title,
+              "description": post.excerpt,
+              "datePublished": post.date,
+              "author": {
+                "@type": "Person",
+                "name": "Christian Perez"
+              }
+            }))
+          }
+        ]}
         type="article"
       />
-      {/* Hero Section */}
       {/* Hero Section */}
       <section className="py-32 bg-altivum-dark">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">

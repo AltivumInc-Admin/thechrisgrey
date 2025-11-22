@@ -38,6 +38,19 @@ const Podcast = () => {
         description="The Vector Podcast, hosted by Christian Perez, explores the intersection of technology, business, and military leadership. Conversations on AI, defense, and innovation."
         keywords="The Vector Podcast, Christian Perez podcast, AI podcast, defense technology, veteran entrepreneurship"
         url="https://thechrisgrey.com/podcast"
+        structuredData={[
+          {
+            "@type": "PodcastSeries",
+            "name": "The Vector Podcast",
+            "url": "https://vector.altivum.ai",
+            "description": "Conversations at the intersection of veteran experience, small business, and modern technology.",
+            "webFeed": "https://feeds.buzzsprout.com/2554153.rss",
+            "author": {
+              "@type": "Person",
+              "name": "Christian Perez"
+            }
+          }
+        ]}
       />
       {/* Hero Section */}
       {/* Hero Section */}

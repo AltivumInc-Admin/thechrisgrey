@@ -15,13 +15,14 @@ export const SEO = ({
     keywords,
     image = 'https://thechrisgrey.com/og.png',
     url = 'https://thechrisgrey.com',
-    type = 'website'
-}: SEOProps) => {
+    type = 'website',
+    structuredData: customStructuredData
+}: SEOProps & { structuredData?: any }) => {
     const siteTitle = 'Christian Perez | thechrisgrey';
     const fullTitle = title === siteTitle ? title : `${title} | Christian Perez`;
 
-    // Structured Data (JSON-LD) for AI Discovery
-    const structuredData = {
+    // Default Structured Data (JSON-LD) for AI Discovery
+    const defaultStructuredData = {
         "@context": "https://schema.org",
         "@graph": [
             {
@@ -80,6 +81,11 @@ export const SEO = ({
         ]
     };
 
+    // Merge custom structured data if provided
+    const finalStructuredData = customStructuredData
+        ? { ...defaultStructuredData, "@graph": [...defaultStructuredData["@graph"], ...customStructuredData] }
+        : defaultStructuredData;
+
     return (
         <Helmet>
             {/* Standard Meta Tags */}
@@ -104,7 +110,7 @@ export const SEO = ({
 
             {/* Structured Data for AI */}
             <script type="application/ld+json">
-                {JSON.stringify(structuredData)}
+                {JSON.stringify(finalStructuredData)}
             </script>
         </Helmet>
     );
