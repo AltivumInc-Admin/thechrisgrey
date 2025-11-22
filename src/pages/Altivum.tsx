@@ -119,25 +119,6 @@ const Altivum = () => {
             businesses seeking to compete in the AI era. Not the biggest company, but the most impactful—measured
             in lives changed, businesses saved, and communities strengthened.
           </p>
-          <h4 className="text-white mt-6" style={typography.cardTitleSmall}>What Success Looks Like</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div className="p-4 bg-altivum-navy/30 rounded-lg">
-              <div className="text-altivum-gold mb-2" style={typography.cardTitleLarge}>1,000+</div>
-              <p className="text-altivum-silver" style={typography.smallText}>Veterans successfully transitioned to tech careers</p>
-            </div>
-            <div className="p-4 bg-altivum-navy/30 rounded-lg">
-              <div className="text-altivum-gold mb-2" style={typography.cardTitleLarge}>5,000+</div>
-              <p className="text-altivum-silver" style={typography.smallText}>Small businesses using our cloud infrastructure</p>
-            </div>
-            <div className="p-4 bg-altivum-navy/30 rounded-lg">
-              <div className="text-altivum-gold mb-2" style={typography.cardTitleLarge}>$50M+</div>
-              <p className="text-altivum-silver" style={typography.smallText}>Saved by clients vs. traditional platforms</p>
-            </div>
-            <div className="p-4 bg-altivum-navy/30 rounded-lg">
-              <div className="text-altivum-gold mb-2" style={typography.cardTitleLarge}>100%</div>
-              <p className="text-altivum-silver" style={typography.smallText}>Commitment to our PBC mission</p>
-            </div>
-          </div>
           <h4 className="text-white mt-6" style={typography.cardTitleSmall}>On the Horizon</h4>
           <ul className="space-y-3">
             <li className="flex items-start text-altivum-silver" style={typography.bodyText}>
