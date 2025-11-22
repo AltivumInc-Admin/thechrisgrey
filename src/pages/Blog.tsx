@@ -22,6 +22,7 @@ const Blog = () => {
     type: 'idle' | 'loading' | 'success' | 'error';
     message: string;
   }>({ type: 'idle', message: '' });
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -49,11 +50,9 @@ const Blog = () => {
       const result = await response.json();
 
       if (response.ok) {
-        setSubscribeStatus({
-          type: 'success',
-          message: result.message || 'Successfully subscribed! Check your email for confirmation.'
-        });
         setSubscribeEmail('');
+        setSubscribeStatus({ type: 'idle', message: '' });
+        setShowSuccessModal(true);
       } else if (response.status === 429) {
         setSubscribeStatus({
           type: 'error',
@@ -427,6 +426,46 @@ const Blog = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setShowSuccessModal(false)}
+          ></div>
+          <div className="relative bg-gradient-to-br from-altivum-navy to-altivum-blue max-w-md w-full p-8 border-2 border-altivum-gold/30 shadow-[0_0_60px_rgba(197,165,114,0.2)]">
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              className="absolute top-4 right-4 text-altivum-silver hover:text-white transition-colors"
+              aria-label="Close"
+            >
+              <span className="material-icons text-2xl">close</span>
+            </button>
+
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-altivum-gold/10 border-2 border-altivum-gold mb-6">
+                <span className="material-icons text-altivum-gold text-4xl">mark_email_read</span>
+              </div>
+
+              <h3 className="text-white mb-4" style={typography.cardTitleLarge}>
+                Thank You for Subscribing!
+              </h3>
+
+              <p className="text-altivum-silver mb-8" style={typography.bodyText}>
+                Check your email for a confirmation message. Be sure to check your spam folder and move it to your primary inbox if needed.
+              </p>
+
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="px-8 py-3 bg-altivum-gold text-altivum-dark font-medium uppercase tracking-wider text-sm hover:bg-white transition-colors duration-300"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
