@@ -1,6 +1,7 @@
 import { SEO } from '../components/SEO';
 import { typography } from '../utils/typography';
 import { useState, FormEvent } from 'react';
+import { contactFAQs, buildContactPageSchema } from '../utils/schemas';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -98,9 +99,15 @@ const Contact = () => {
     <div className="min-h-screen pt-20">
       <SEO
         title="Contact Christian Perez"
-        description="Get in touch with Christian Perez and Altivum Inc. for inquiries about cloud services, AI integration, or speaking engagements."
-        keywords="contact Christian Perez, hire Altivum, cloud consulting inquiry, AI integration services"
+        description="Get in touch with Christian Perez and Altivum Inc. for inquiries about cloud services, AI integration, speaking engagements, or collaboration opportunities."
+        keywords="contact Christian Perez, hire Altivum, cloud consulting inquiry, AI integration services, speaking engagements"
         url="https://thechrisgrey.com/contact"
+        faq={contactFAQs}
+        breadcrumbs={[
+          { name: "Home", url: "https://thechrisgrey.com" },
+          { name: "Contact", url: "https://thechrisgrey.com/contact" }
+        ]}
+        structuredData={[buildContactPageSchema()]}
       />
       {/* Hero Section */}
       {/* Hero Section */}

@@ -1,4 +1,21 @@
 import { Helmet } from 'react-helmet-async';
+import {
+    buildPersonSchema,
+    buildOrganizationSchema,
+    buildWebSiteSchema,
+    buildFAQSchema,
+    buildBreadcrumbSchema
+} from '../utils/schemas';
+
+interface BreadcrumbItem {
+    name: string;
+    url: string;
+}
+
+interface FAQItem {
+    question: string;
+    answer: string;
+}
 
 interface SEOProps {
     title: string;
@@ -6,7 +23,11 @@ interface SEOProps {
     keywords?: string;
     image?: string;
     url?: string;
-    type?: 'website' | 'article' | 'profile';
+    type?: 'website' | 'article' | 'profile' | 'book';
+    breadcrumbs?: BreadcrumbItem[];
+    faq?: FAQItem[];
+    datePublished?: string;
+    dateModified?: string;
 }
 
 export const SEO = ({
@@ -16,69 +37,34 @@ export const SEO = ({
     image = 'https://thechrisgrey.com/og.png',
     url = 'https://thechrisgrey.com',
     type = 'website',
+    breadcrumbs,
+    faq,
     structuredData: customStructuredData
 }: SEOProps & { structuredData?: Record<string, unknown>[] }) => {
     const siteTitle = 'Christian Perez | thechrisgrey';
     const fullTitle = title === siteTitle ? title : `${title} | Christian Perez`;
 
+    // Build default structured data graph
+    const defaultGraph: Record<string, unknown>[] = [
+        buildPersonSchema(),
+        buildOrganizationSchema(),
+        buildWebSiteSchema()
+    ];
+
+    // Add breadcrumbs if provided
+    if (breadcrumbs && breadcrumbs.length > 0) {
+        defaultGraph.push(buildBreadcrumbSchema(breadcrumbs));
+    }
+
+    // Add FAQ schema if provided (critical for AEO)
+    if (faq && faq.length > 0) {
+        defaultGraph.push(buildFAQSchema(faq));
+    }
+
     // Default Structured Data (JSON-LD) for AI Discovery
     const defaultStructuredData = {
         "@context": "https://schema.org",
-        "@graph": [
-            {
-                "@type": "Person",
-                "@id": "https://thechrisgrey.com/#person",
-                "name": "Christian Perez",
-                "alternateName": ["thechrisgrey", "Chris Perez"],
-                "url": "https://thechrisgrey.com",
-                "image": "https://thechrisgrey.com/tcg.png",
-                "description": "Founder & CEO of Altivum Inc., Former Green Beret, and Host of The Vector Podcast.",
-                "jobTitle": "Founder & CEO",
-                "worksFor": {
-                    "@type": "Organization",
-                    "name": "Altivum Inc.",
-                    "url": "https://altivum.ai"
-                },
-                "knowsAbout": [
-                    "Cloud Architecture",
-                    "Artificial Intelligence",
-                    "Defense Technology",
-                    "Entrepreneurship",
-                    "Military Leadership"
-                ],
-                "sameAs": [
-                    "https://www.linkedin.com/in/christian-perez-altivum/",
-                    "https://twitter.com/thechrisgrey",
-                    "https://github.com/thechrisgrey",
-                    "https://vector.altivum.ai",
-                    "https://logic.altivum.ai"
-                ]
-            },
-            {
-                "@type": "Organization",
-                "@id": "https://altivum.ai/#organization",
-                "name": "Altivum Inc.",
-                "url": "https://altivum.ai",
-                "logo": "https://altivum.ai/logo.png",
-                "founder": {
-                    "@id": "https://thechrisgrey.com/#person"
-                },
-                "sameAs": [
-                    "https://logic.altivum.ai",
-                    "https://vector.altivum.ai"
-                ]
-            },
-            {
-                "@type": "WebSite",
-                "@id": "https://thechrisgrey.com/#website",
-                "url": "https://thechrisgrey.com",
-                "name": "Christian Perez - thechrisgrey",
-                "description": "Personal website of Christian Perez, Founder of Altivum Inc.",
-                "publisher": {
-                    "@id": "https://thechrisgrey.com/#person"
-                }
-            }
-        ]
+        "@graph": defaultGraph
     };
 
     // Merge custom structured data if provided

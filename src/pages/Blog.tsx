@@ -3,6 +3,7 @@ import { SEO } from '../components/SEO';
 import { typography } from '../utils/typography';
 import vetImage from '../assets/vet.jpeg';
 import ktocImage from '../assets/ktoc.jpeg';
+import { blogFAQs } from '../utils/schemas';
 
 interface BlogPost {
   id: number;
@@ -170,32 +171,53 @@ const Blog = () => {
     <div className="min-h-screen bg-altivum-dark">
       <SEO
         title="Blog"
-        description="Insights on AI, Cloud Architecture, and Leadership from Christian Perez."
-        keywords="Christian Perez blog, AI insights, cloud architecture blog, veteran leadership, tech blog"
+        description="Insights on AI, Cloud Architecture, Leadership, and the Veteran Experience from Christian Perez. Articles on prompt engineering, AWS, and military-to-tech transition."
+        keywords="Christian Perez blog, AI insights, cloud architecture blog, veteran leadership, tech blog, prompt engineering, AWS"
         url="https://thechrisgrey.com/blog"
+        type="article"
+        faq={blogFAQs}
+        breadcrumbs={[
+          { name: "Home", url: "https://thechrisgrey.com" },
+          { name: "Blog", url: "https://thechrisgrey.com/blog" }
+        ]}
         structuredData={[
           {
             "@type": "Blog",
-            "name": "The Chris Grey Blog",
+            "@id": "https://thechrisgrey.com/blog/#blog",
+            "name": "Christian Perez Blog",
             "url": "https://thechrisgrey.com/blog",
-            "description": "Insights on AI, Cloud Architecture, and Leadership",
+            "description": "Insights on AI, Cloud Architecture, Leadership, and the Veteran Experience",
+            "inLanguage": "en-US",
             "author": {
-              "@type": "Person",
-              "name": "Christian Perez"
+              "@id": "https://thechrisgrey.com/#person"
+            },
+            "publisher": {
+              "@id": "https://altivum.ai/#organization"
             },
             "blogPost": blogPosts.map(post => ({
               "@type": "BlogPosting",
+              "@id": `https://thechrisgrey.com/blog#post-${post.id}`,
               "headline": post.title,
               "description": post.excerpt,
               "datePublished": post.date,
+              "dateModified": post.date,
               "author": {
-                "@type": "Person",
-                "name": "Christian Perez"
+                "@id": "https://thechrisgrey.com/#person"
+              },
+              "publisher": {
+                "@id": "https://altivum.ai/#organization"
+              },
+              "image": typeof post.image === 'string' ? `https://thechrisgrey.com${post.image}` : "https://thechrisgrey.com/og.png",
+              "wordCount": post.content.join(' ').split(/\s+/).length,
+              "articleSection": post.category,
+              "inLanguage": "en-US",
+              "mainEntityOfPage": {
+                "@type": "WebPage",
+                "@id": `https://thechrisgrey.com/blog#post-${post.id}`
               }
             }))
           }
         ]}
-        type="article"
       />
       {/* Hero Section */}
       <section className="py-32 bg-altivum-dark">

@@ -4,6 +4,7 @@ import { SEO } from '../components/SEO';
 import profileImage from '../assets/profile1.jpeg';
 import heroImage from '../assets/hero2.png';
 import { typography } from '../utils/typography';
+import { homeFAQs, buildWebPageSchema } from '../utils/schemas';
 
 const Home = () => {
   const [scrollProgress, setScrollProgress] = useState(-1);
@@ -53,8 +54,17 @@ const Home = () => {
     <div className="min-h-screen">
       <SEO
         title="Christian Perez"
-        description="Personal website of Christian Perez, Founder & CEO of Altivum Inc., Former Green Beret, and Host of The Vector Podcast."
-        keywords="Christian Perez, thechrisgrey, Altivum Inc, Green Beret, The Vector Podcast, veteran entrepreneur, AI technology"
+        description="Personal website of Christian Perez, Founder & CEO of Altivum Inc., Former Green Beret, Bronze Star Recipient, and Host of The Vector Podcast."
+        keywords="Christian Perez, thechrisgrey, Altivum Inc, Green Beret, The Vector Podcast, veteran entrepreneur, AI technology, cloud architecture"
+        url="https://thechrisgrey.com"
+        faq={homeFAQs}
+        structuredData={[
+          buildWebPageSchema({
+            name: "Christian Perez - thechrisgrey",
+            description: "Personal website of Christian Perez, Founder & CEO of Altivum Inc., Former Green Beret, and Host of The Vector Podcast.",
+            url: "https://thechrisgrey.com"
+          })
+        ]}
       />
       {/* Hero Section with fade-in animation */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden opacity-0 animate-fade-in">

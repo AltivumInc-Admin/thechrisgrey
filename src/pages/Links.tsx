@@ -1,6 +1,7 @@
 import { SEO } from '../components/SEO';
 import { typography } from '../utils/typography';
 import builderQR from '../assets/builder-qr.png';
+import { buildProfilePageSchema } from '../utils/schemas';
 
 const Links = () => {
   const websites = [
@@ -185,8 +186,19 @@ const Links = () => {
       <SEO
         title="Links & Resources"
         description="Connect with Christian Perez across the web. Links to Altivum Inc., The Vector Podcast, social media profiles, and featured projects."
-        keywords="Christian Perez links, social media, Altivum links, podcast links, contact Christian Perez"
+        keywords="Christian Perez links, social media, Altivum links, podcast links, thechrisgrey socials"
         url="https://thechrisgrey.com/links"
+        breadcrumbs={[
+          { name: "Home", url: "https://thechrisgrey.com" },
+          { name: "Links", url: "https://thechrisgrey.com/links" }
+        ]}
+        structuredData={[
+          buildProfilePageSchema({
+            name: "Christian Perez Links & Resources",
+            description: "Connect with Christian Perez across the web. All social profiles and projects in one place.",
+            url: "https://thechrisgrey.com/links"
+          })
+        ]}
       />
       {/* Hero Section */}
       {/* Hero Section */}

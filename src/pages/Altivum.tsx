@@ -5,6 +5,7 @@ import altivumImage from '../assets/altivum.jpg';
 import awsPartnerLogo from '../assets/aws-partner-dark.png';
 import altivumLogo from '../assets/altivum.png';
 import { typography } from '../utils/typography';
+import { altivumFAQs, buildAltivumServicesSchemas } from '../utils/schemas';
 
 const Altivum = () => {
   // const [expandedSection, setExpandedSection] = useState<number | null>(null);
@@ -140,26 +141,58 @@ const Altivum = () => {
     <div className="min-h-screen bg-altivum-dark">
       <SEO
         title="Altivum Inc."
-        description="Altivum Inc. is a cloud architecture and AI integration firm founded by Christian Perez. We build resilient, scalable systems for the future."
-        keywords="Altivum Inc, Altivum Logic, Altivum Vanguard, Altivum Press, Cloud Architecture, AI Integration, Christian Perez"
+        description="Altivum Inc. is a veteran-founded public benefit corporation building intelligent, cloud-native architectures. Three divisions: Vanguard (veteran services), Logic (web & AI), Press (media)."
+        keywords="Altivum Inc, Altivum Logic, Altivum Vanguard, Altivum Press, VetROI, Cloud Architecture, AI Integration, Christian Perez, veteran entrepreneur"
         url="https://thechrisgrey.com/altivum"
+        faq={altivumFAQs}
+        breadcrumbs={[
+          { name: "Home", url: "https://thechrisgrey.com" },
+          { name: "Altivum", url: "https://thechrisgrey.com/altivum" }
+        ]}
         structuredData={[
           {
             "@type": "Corporation",
+            "@id": "https://altivum.ai/#organization",
             "name": "Altivum Inc.",
+            "legalName": "Altivum Inc.",
             "url": "https://altivum.ai",
             "logo": "https://altivum.ai/logo.png",
-            "description": "A veteran-founded technology firm building intelligent, cloud-native architectures.",
-            "founder": {
-              "@type": "Person",
-              "name": "Christian Perez"
-            },
+            "image": "https://altivum.ai/logo.png",
+            "description": "A veteran-founded public benefit corporation building intelligent, cloud-native architectures that integrate AI at the core of operations.",
             "slogan": "Intelligence. Structure. Impact.",
+            "foundingDate": "2025-02",
+            "foundingLocation": {
+              "@type": "Place",
+              "name": "Clarksville, Tennessee",
+              "address": {
+                "@type": "PostalAddress",
+                "addressLocality": "Clarksville",
+                "addressRegion": "TN",
+                "addressCountry": "US"
+              }
+            },
+            "founder": {
+              "@id": "https://thechrisgrey.com/#person"
+            },
+            "numberOfEmployees": {
+              "@type": "QuantitativeValue",
+              "value": 1
+            },
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "email": "info@altivum.ai",
+              "telephone": "+1-615-219-9425",
+              "contactType": "customer service"
+            },
+            "knowsAbout": ["Cloud Architecture", "AI Integration", "Veteran Services", "Web Development"],
             "sameAs": [
-              "https://www.linkedin.com/company/altivum",
-              "https://github.com/altivum"
+              "https://www.linkedin.com/company/altivum-inc",
+              "https://github.com/AltivumInc-Admin",
+              "https://logic.altivum.ai",
+              "https://vector.altivum.ai"
             ]
-          }
+          },
+          ...buildAltivumServicesSchemas()
         ]}
       />
       {/* Hero Section */}

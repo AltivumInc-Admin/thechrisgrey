@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { typography } from '../utils/typography';
 import { SEO } from '../components/SEO';
 import tvpLogo from '../assets/tvp.png';
+import { podcastFAQs, buildPodcastSeriesSchema } from '../utils/schemas';
 
 const Podcast = () => {
   useEffect(() => {
@@ -35,22 +36,15 @@ const Podcast = () => {
     <div className="min-h-screen">
       <SEO
         title="The Vector Podcast"
-        description="The Vector Podcast, hosted by Christian Perez, explores the intersection of technology, business, and military leadership. Conversations on AI, defense, and innovation."
-        keywords="The Vector Podcast, Christian Perez podcast, AI podcast, defense technology, veteran entrepreneurship"
+        description="The Vector Podcast, hosted by Christian Perez, explores veteran experience, emerging technology, and purposeful entrepreneurship. Conversations on AI, cloud technology, and innovation."
+        keywords="The Vector Podcast, Christian Perez podcast, AI podcast, veteran entrepreneurship, technology podcast, Altivum Press"
         url="https://thechrisgrey.com/podcast"
-        structuredData={[
-          {
-            "@type": "PodcastSeries",
-            "name": "The Vector Podcast",
-            "url": "https://vector.altivum.ai",
-            "description": "Conversations at the intersection of veteran experience, small business, and modern technology.",
-            "webFeed": "https://feeds.buzzsprout.com/2554153.rss",
-            "author": {
-              "@type": "Person",
-              "name": "Christian Perez"
-            }
-          }
+        faq={podcastFAQs}
+        breadcrumbs={[
+          { name: "Home", url: "https://thechrisgrey.com" },
+          { name: "Podcast", url: "https://thechrisgrey.com/podcast" }
         ]}
+        structuredData={[buildPodcastSeriesSchema()]}
       />
       {/* Hero Section */}
       {/* Hero Section */}

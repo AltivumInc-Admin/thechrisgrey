@@ -1,14 +1,29 @@
 import mpbLogo from '../assets/mpb.png';
 import { SEO } from '../components/SEO';
 import { typography } from '../utils/typography';
+import { aboutFAQs, buildProfilePageSchema } from '../utils/schemas';
 
 const About = () => {
   return (
     <div className="min-h-screen bg-altivum-dark">
       <SEO
         title="About Christian Perez"
-        description="Biography of Christian Perez: From Special Forces Medic (18D) to Founder & CEO of Altivum Inc. A journey of service, leadership, and innovation."
-        keywords="Christian Perez bio, Green Beret, 18D, Special Forces Medic, Altivum founder, veteran entrepreneur"
+        description="Biography of Christian Perez: From Special Forces Medic (18D) and Green Beret to Founder & CEO of Altivum Inc. Bronze Star recipient. A journey of service, leadership, and innovation."
+        keywords="Christian Perez bio, Green Beret, 18D, Special Forces Medic, Altivum founder, veteran entrepreneur, Bronze Star, 1st Special Forces Group"
+        url="https://thechrisgrey.com/about"
+        type="profile"
+        faq={aboutFAQs}
+        breadcrumbs={[
+          { name: "Home", url: "https://thechrisgrey.com" },
+          { name: "About", url: "https://thechrisgrey.com/about" }
+        ]}
+        structuredData={[
+          buildProfilePageSchema({
+            name: "About Christian Perez",
+            description: "Biography of Christian Perez: From Special Forces Medic (18D) to Founder & CEO of Altivum Inc.",
+            url: "https://thechrisgrey.com/about"
+          })
+        ]}
       />
       {/* Hero Section */}
       <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden opacity-0 animate-fade-in">

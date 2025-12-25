@@ -2,16 +2,23 @@ import { SEO } from '../components/SEO';
 import btaLogo from '../assets/bta.png';
 import readingImage from '../assets/reading.jpeg';
 import { typography } from '../utils/typography';
+import { bookFAQs, buildBookSchema } from '../utils/schemas';
 
 const BeyondTheAssessment = () => {
   return (
     <div className="min-h-screen bg-altivum-dark">
       <SEO
-        title="Beyond the Assessment | Christian Perez"
-        description="Beyond the Assessment: A book by Christian Perez on leadership, resilience, and the human element in special operations and business."
-        keywords="Beyond the Assessment, Christian Perez book, leadership book, special operations leadership, resilience, Green Beret author"
+        title="Beyond the Assessment"
+        description="Beyond the Assessment: A book by Christian Perez exploring leadership, resilience, and the intangible qualities that define success in high-stakes environments. Available on Amazon."
+        keywords="Beyond the Assessment, Christian Perez book, leadership book, special operations leadership, resilience, Green Beret author, military leadership"
         url="https://thechrisgrey.com/beyond-the-assessment"
-        type="article"
+        type="book"
+        faq={bookFAQs}
+        breadcrumbs={[
+          { name: "Home", url: "https://thechrisgrey.com" },
+          { name: "Beyond the Assessment", url: "https://thechrisgrey.com/beyond-the-assessment" }
+        ]}
+        structuredData={[buildBookSchema()]}
       />
 
       {/* Hero Section - Standard Style */}
