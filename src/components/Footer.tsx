@@ -1,4 +1,6 @@
+import { Link } from 'react-router-dom';
 import { typography } from '../utils/typography';
+import { SOCIAL_LINKS } from '../constants/links';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -26,24 +28,24 @@ const Footer = () => {
             </h4>
             <ul className="space-y-1 sm:space-y-2">
               <li>
-                <a href="/about" className="text-altivum-silver hover:text-altivum-gold transition-colors" style={typography.smallText}>
+                <Link to="/about" className="text-altivum-silver hover:text-altivum-gold transition-colors" style={typography.smallText}>
                   About
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/altivum" className="text-altivum-silver hover:text-altivum-gold transition-colors" style={typography.smallText}>
+                <Link to="/altivum" className="text-altivum-silver hover:text-altivum-gold transition-colors" style={typography.smallText}>
                   Altivum Inc.
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/podcast" className="text-altivum-silver hover:text-altivum-gold transition-colors" style={typography.smallText}>
+                <Link to="/podcast" className="text-altivum-silver hover:text-altivum-gold transition-colors" style={typography.smallText}>
                   The Vector Podcast
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/blog" className="text-altivum-silver hover:text-altivum-gold transition-colors" style={typography.smallText}>
+                <Link to="/blog" className="text-altivum-silver hover:text-altivum-gold transition-colors" style={typography.smallText}>
                   Blog
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -55,13 +57,13 @@ const Footer = () => {
             </h4>
             <ul className="space-y-1 sm:space-y-2">
               <li>
-                <a href="/contact" className="text-altivum-silver hover:text-altivum-gold transition-colors" style={typography.smallText}>
+                <Link to="/contact" className="text-altivum-silver hover:text-altivum-gold transition-colors" style={typography.smallText}>
                   Get in Touch
-                </a>
+                </Link>
               </li>
               <li>
                 <a
-                  href="https://github.com/AltivumInc-Admin"
+                  href={SOCIAL_LINKS.github}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-altivum-silver hover:text-altivum-gold transition-colors"
@@ -72,7 +74,7 @@ const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://linkedin.com"
+                  href={SOCIAL_LINKS.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-altivum-silver hover:text-altivum-gold transition-colors"

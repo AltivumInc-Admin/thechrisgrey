@@ -2,6 +2,7 @@ import { SEO } from '../components/SEO';
 import { typography } from '../utils/typography';
 import { useState, FormEvent } from 'react';
 import { contactFAQs, buildContactPageSchema } from '../utils/schemas';
+import { SOCIAL_LINKS } from '../constants/links';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -323,7 +324,7 @@ const Contact = () => {
                 </a>
 
                 {/* LinkedIn */}
-                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="block group">
+                <a href={SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" className="block group">
                   <div className="flex items-start gap-6">
                     <div className="w-12 h-12 flex items-center justify-center text-altivum-gold/50 group-hover:text-altivum-gold transition-colors">
                       <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">

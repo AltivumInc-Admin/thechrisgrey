@@ -5,6 +5,7 @@ import profileImage from '../assets/profile1.jpeg';
 import heroImage from '../assets/hero2.png';
 import { typography } from '../utils/typography';
 import { homeFAQs, buildWebPageSchema } from '../utils/schemas';
+import { SOCIAL_LINKS } from '../constants/links';
 
 const Home = () => {
   const [scrollProgress, setScrollProgress] = useState(-1);
@@ -149,7 +150,7 @@ const Home = () => {
           {/* Social Links - Neon Glow Style */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
             <a
-              href="https://linkedin.com"
+              href={SOCIAL_LINKS.linkedin}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 py-3.5 sm:py-3 bg-transparent border-2 border-altivum-gold text-altivum-gold font-semibold rounded-md hover:shadow-[0_0_20px_rgba(197,165,114,0.6)] hover:bg-altivum-gold/10 active:bg-altivum-gold/20 transition-all duration-300 touch-manipulation min-h-[48px]"
