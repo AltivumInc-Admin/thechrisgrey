@@ -58,7 +58,7 @@ const Contact = () => {
     setFormStatus({ type: 'loading', message: 'Sending...' });
 
     try {
-      const response = await fetch('https://vrs4egsi745nep54y6abvwlcwq0smqak.lambda-url.us-east-2.on.aws/', {
+      const response = await fetch(import.meta.env.VITE_CONTACT_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

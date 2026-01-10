@@ -112,7 +112,7 @@ const Blog = () => {
     setSubscribeStatus({ type: 'loading', message: 'Subscribing...' });
 
     try {
-      const response = await fetch('https://sf5bejshafrb6t7zbbfw5knu7a0axlyp.lambda-url.us-east-2.on.aws/', {
+      const response = await fetch(import.meta.env.VITE_NEWSLETTER_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
