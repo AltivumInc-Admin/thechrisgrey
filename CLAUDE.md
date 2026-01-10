@@ -11,7 +11,7 @@ Personal website for Christian Perez (@thechrisgrey) - Founder & CEO of Altivum 
 **Local Development:**
 ```bash
 npm run dev          # Start dev server at http://localhost:5173
-npm run build        # TypeScript compile + production build (outputs to dist/)
+npm run build        # TypeScript compile + production build + sitemap generation
 npm run preview      # Preview production build locally
 npm run lint         # Run ESLint on TypeScript files
 ```
@@ -26,7 +26,7 @@ npm run lint         # Run ESLint on TypeScript files
 ### Routing & Layout
 - React Router v6 with client-side routing
 - Global layout in `App.tsx`: `<ScrollToTop>` → `<Navigation>` → `<Routes>` → `<Footer>`
-- 8 main routes: `/` (Home), `/about`, `/altivum`, `/podcast`, `/beyond-the-assessment`, `/blog`, `/links`, `/contact`
+- 9 routes: `/` (Home), `/about`, `/altivum`, `/podcast`, `/beyond-the-assessment`, `/blog`, `/blog/:slug`, `/links`, `/contact`
 
 ### Design System (Tailwind)
 
@@ -120,9 +120,45 @@ The Navigation component (`src/components/Navigation.tsx`) features a dropdown s
   title="Page Title"
   description="Page description"
   keywords="optional, keywords"
-  structuredData={[...]} // optional additional schemas
+  faq={faqArray}           // optional FAQ schema for AEO
+  breadcrumbs={[...]}      // optional breadcrumb schema
+  structuredData={[...]}   // optional additional schemas
 />
 ```
+
+**Schema Builders** (`src/utils/schemas.ts`):
+- Pre-built schema generators: `buildPersonSchema()`, `buildOrganizationSchema()`, `buildFAQSchema()`, `buildBreadcrumbSchema()`, `buildPodcastSeriesSchema()`, `buildBookSchema()`, etc.
+- Pre-defined FAQ content for each page (e.g., `homeFAQs`, `aboutFAQs`, `podcastFAQs`)
+- Organization schema includes Chamber of Commerce "Veteran Business of the Month" award
+
+### Sanity CMS (Blog)
+
+The blog is powered by Sanity CMS with content fetched at runtime.
+
+**Configuration** (`src/sanity/`):
+- `client.ts`: Sanity client (project: `k5950b3w`, dataset: `production`)
+- `queries.ts`: GROQ queries for posts, tags, series
+- `types.ts`: TypeScript interfaces for Sanity documents
+- `PortableTextComponents.tsx`: Custom renderers for rich text
+
+**Content Types:**
+- Posts with categories, tags, series support
+- Featured posts, reading time, related posts
+- Images with alt text via `@sanity/image-url`
+
+**Usage:**
+```tsx
+import { client, urlFor, POSTS_QUERY } from '../sanity';
+const posts = await client.fetch(POSTS_QUERY);
+```
+
+### Dynamic Sitemap
+
+Sitemap is generated at build time via `scripts/generate-sitemap.js`:
+- Fetches all blog posts from Sanity
+- Combines static pages + dynamic blog post URLs
+- Outputs to `dist/sitemap.xml`
+- Runs automatically during `npm run build`
 
 ### Component Patterns
 
@@ -141,11 +177,21 @@ The Navigation component (`src/components/Navigation.tsx`) features a dropdown s
 
 - `tailwind.config.js`: Custom colors, fonts, animations
 - `src/utils/typography.ts`: Centralized typography system
+- `src/utils/schemas.ts`: Schema.org structured data builders for SEO/AEO
+- `src/constants/links.ts`: Centralized social media and external links
 - `src/components/Navigation.tsx`: Fixed nav with scroll-based transparency and dropdown menu
 - `src/components/SEO.tsx`: SEO/metadata management with structured data
 - `src/pages/Home.tsx`: Complex scroll animations and sticky sections
+- `src/sanity/`: Sanity CMS client, queries, types for blog
+- `scripts/generate-sitemap.js`: Build-time sitemap generator
 - `amplify.yml`: AWS Amplify build configuration
 - `index.html`: Material Icons CDN link, favicon, base meta tags
+
+## Environment Variables
+
+Required for forms (set in AWS Amplify console):
+- `VITE_CONTACT_ENDPOINT`: AWS Lambda URL for contact form submissions
+- `VITE_NEWSLETTER_ENDPOINT`: AWS Lambda URL for newsletter subscriptions
 
 ## Deployment Notes
 
