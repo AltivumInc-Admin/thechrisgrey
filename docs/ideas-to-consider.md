@@ -63,3 +63,76 @@ Clean card grid with static screenshots. Click opens a modal with the live ifram
 - GradROI
 - The Vector Podcast site
 - Client projects (with permission)
+
+---
+
+## AI Chat: Amazon Bedrock Knowledge Base
+
+**Goal:** Upgrade the AI assistant from static system prompt to dynamic RAG (Retrieval-Augmented Generation) so it can answer specific questions about blog posts, podcast episodes, book content, etc.
+
+---
+
+### Current State
+
+The AI chat uses a hardcoded system prompt in `lambda/chat-stream/index.mjs` with general facts about Christian. It works well for broad questions but can't answer specifics like "What did you discuss in episode 12?" or "What's in Chapter 3 of your book?"
+
+---
+
+### Proposed Architecture
+
+```
+User question
+    → Query Bedrock Knowledge Base
+    → Retrieve relevant chunks
+    → Inject into prompt
+    → Claude generates contextual response
+```
+
+---
+
+### Components
+
+1. **S3 Bucket** - Store source documents:
+   - Blog posts (exported from Sanity or scraped)
+   - Podcast transcripts
+   - Book excerpts / chapter summaries
+   - Website page content
+
+2. **Bedrock Knowledge Base** - Managed RAG service:
+   - Auto-chunks documents
+   - Embeds with Titan Embeddings
+   - Stores vectors in OpenSearch Serverless
+
+3. **Updated Lambda** - Modified chat handler:
+   - Call `RetrieveAndGenerate` or `Retrieve` API
+   - Pass retrieved context to Claude
+   - Maintain conversation flow
+
+---
+
+### Benefits
+
+- AI can answer specific questions about any indexed content
+- No need to manually update system prompt when content changes
+- Scales with content volume
+- Could index new blog posts automatically via webhook
+
+---
+
+### Considerations
+
+- **Cost**: OpenSearch Serverless has baseline cost (~$700/mo minimum for production)
+  - Alternative: Use Pinecone free tier for experimentation
+- **Sync**: Need process to keep knowledge base updated when Sanity content changes
+- **Chunking strategy**: May need tuning for optimal retrieval
+
+---
+
+### Implementation Steps
+
+1. Create S3 bucket for source documents
+2. Export/sync content (blog posts, transcripts, etc.)
+3. Create Bedrock Knowledge Base with OpenSearch Serverless (or Pinecone)
+4. Update Lambda to query knowledge base before calling Claude
+5. Test retrieval quality and tune chunking if needed
+6. Set up sync process for new content
