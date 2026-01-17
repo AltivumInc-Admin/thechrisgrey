@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
@@ -14,6 +14,9 @@ import BeyondTheAssessment from './pages/BeyondTheAssessment';
 import Chat from './pages/Chat';
 
 function App() {
+  const location = useLocation();
+  const isFullscreenPage = location.pathname === '/chat';
+
   return (
     <div className="min-h-screen bg-altivum-dark">
       <ScrollToTop />
@@ -32,7 +35,7 @@ function App() {
         <Route path="/chat" element={<Chat />} />
       </Routes>
       </main>
-      <Footer />
+      {!isFullscreenPage && <Footer />}
     </div>
   );
 }

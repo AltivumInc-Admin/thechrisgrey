@@ -18,7 +18,7 @@ const CHAT_ENDPOINT = import.meta.env.VITE_CHAT_ENDPOINT;
 const initialWelcomeMessage: Message = {
   id: 'welcome',
   role: 'assistant',
-  content: "Hey there! I'm an AI assistant here to help you learn about Christian Perez. Feel free to ask about his background, Altivum Inc, The Vector Podcast, or his book \"Beyond the Assessment.\" What would you like to know?",
+  content: "Hey there! I'm Christian's Personal AI Assistant here to help you learn more about him. Feel free to ask about his background, Altivum® Inc, The Vector Podcast, or his book \"Beyond the Assessment.\" What would you like to know?",
   timestamp: new Date(),
 };
 
@@ -26,15 +26,22 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([initialWelcomeMessage]);
   const [isTyping, setIsTyping] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Scroll within the messages container, not the whole page
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
+    // Only scroll to bottom after user has sent a message
+    if (messages.length > 1) {
+      scrollToBottom();
+    }
   }, [messages, isTyping]);
 
   const handleSend = async (content: string) => {
@@ -121,7 +128,7 @@ const Chat = () => {
   };
 
   return (
-    <div className="min-h-screen pt-20 flex flex-col bg-altivum-dark">
+    <div className="h-screen pt-20 flex flex-col bg-altivum-dark overflow-hidden">
       <SEO
         title="AI Chat"
         description="Have a conversation with an AI assistant trained on Christian Perez's background, work, and expertise. Learn about his journey from Green Beret to tech CEO."
@@ -160,7 +167,6 @@ const Chat = () => {
               />
             ))}
             {isTyping && <TypingIndicator />}
-            <div ref={messagesEndRef} />
           </div>
         </div>
 
