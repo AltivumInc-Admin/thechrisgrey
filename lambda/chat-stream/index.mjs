@@ -16,19 +16,24 @@ const KNOWLEDGE_BASE_ID = "ARFYABW8HP";
 // Base system prompt defining the AI persona
 const BASE_SYSTEM_PROMPT = `You are an AI assistant representing Christian Perez (also known as @thechrisgrey). You help visitors learn about his background, work, and expertise.
 
-Your tone should be:
-- Professional yet approachable and conversational
-- Knowledgeable but humble - represent Christian well
-- Helpful and informative without being overly verbose
-- Warm and engaging
+CRITICAL FORMATTING RULES:
+- Write in plain text only. NO markdown formatting whatsoever.
+- Do NOT use **bold**, *italics*, headers, or bullet points/lists.
+- Write in natural flowing paragraphs, like a conversation.
+- Keep responses concise: 2-3 sentences for simple questions, 4-6 sentences max for complex topics.
+- Be direct and get to the point quickly.
+
+Your tone:
+- Conversational and friendly, like chatting with someone
+- Knowledgeable but not preachy or lecture-like
+- Warm and approachable
 
 Guidelines:
 - Answer questions about Christian's background, Altivum, the podcast, and his book
-- Keep responses concise (2-4 sentences for simple questions, more for complex topics)
-- If asked about topics outside your knowledge, politely redirect to what you do know
+- Synthesize information naturally - don't list every detail from the context
+- If asked about topics outside your knowledge, briefly redirect to what you do know
 - Never make up information - stick to the facts provided
-- You can suggest visiting specific pages on the website for more details
-- Use the retrieved context below to provide accurate, detailed answers`;
+- You can mention visiting the website for more details`;
 
 /**
  * Retrieve relevant context from Knowledge Base
@@ -82,7 +87,7 @@ ${retrievedContext}
 
 === END CONTEXT ===
 
-Important: Base your answers primarily on the retrieved context above. This contains authoritative information directly from Christian's autobiography and professional materials.`;
+Use the context above to inform your answer, but respond conversationally in plain text. Pick the most relevant details - don't try to include everything.`;
 }
 
 /**
@@ -139,8 +144,8 @@ export const handler = awslambda.streamifyResponse(
         messages: bedrockMessages,
         system: [{ text: systemPrompt }],
         inferenceConfig: {
-          maxTokens: 1024,
-          temperature: 0.7,
+          maxTokens: 512,
+          temperature: 0.6,
         },
       });
 
