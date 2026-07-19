@@ -2,6 +2,7 @@ import { SEO } from '../components/SEO';
 import { typography } from '../utils/typography';
 import { isValidEmail } from '../utils/validators';
 import { useState, useEffect, FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { contactFAQs, buildContactPageSchema } from '../utils/schemas';
 import { SOCIAL_LINKS } from '../constants/links';
 import { useFocusTrap } from '../hooks';
@@ -14,6 +15,28 @@ import { withTraceId } from '../utils/traceId';
 const log = createLogger('Contact');
 
 type FieldName = 'name' | 'email' | 'message';
+
+const CONTACT_INTENTS = [
+  { value: 'general', label: 'General inquiry' },
+  { value: 'speaking', label: 'Speaking engagement' },
+  { value: 'podcast', label: 'Podcast invitation' },
+  { value: 'consulting', label: 'Consulting inquiry' },
+  { value: 'collaboration', label: 'Collaboration' },
+  { value: 'media', label: 'Media / press' },
+] as const;
+
+type ContactIntent = (typeof CONTACT_INTENTS)[number]['value'];
+
+const isContactIntent = (value: string): value is ContactIntent =>
+  CONTACT_INTENTS.some((intent) => intent.value === value);
+
+const AUDIENCE_SIZES = ['Under 50', '50-200', '200-500', '500+'] as const;
+const EVENT_FORMATS = ['Keynote', 'Panel discussion', 'Workshop', 'Podcast recording', 'Other'] as const;
+
+const EMPTY_EVENT_DETAILS = { organization: '', eventDate: '', audienceSize: '', eventFormat: '' };
+
+const SELECT_CLASS =
+  'w-full px-0 py-4 bg-transparent border-b-2 border-white/10 text-white focus:border-altivum-gold focus:outline-hidden transition-all duration-300 rounded-none appearance-none cursor-pointer';
 
 type ContactChannel = {
   href: string;
@@ -64,6 +87,7 @@ const CONTACT_CHANNELS: ContactChannel[] = [
 ];
 
 const Contact = () => {
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -71,6 +95,8 @@ const Contact = () => {
     message: '',
     website: '', // honeypot field
   });
+  const [intent, setIntent] = useState<ContactIntent>('general');
+  const [eventDetails, setEventDetails] = useState(EMPTY_EVENT_DETAILS);
   const [formStatus, setFormStatus] = useState<{
     type: 'idle' | 'loading' | 'error';
     message: string;
@@ -79,12 +105,36 @@ const Contact = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const { containerRef: modalRef, handleKeyDown: handleModalKeyDown } = useFocusTrap(showSuccessModal);
 
+  // Prefill from the Alti draft_message handoff (/contact?subject=...&message=...&intent=...).
+  // State is adjusted during render (not in an effect) so a repeat handoff while the page
+  // is already mounted still prefills. URLSearchParams.get returns decoded values; sliced
+  // to the same caps the inputs enforce.
+  const paramsKey = searchParams.toString();
+  const [appliedParamsKey, setAppliedParamsKey] = useState<string | null>(null);
+  if (appliedParamsKey !== paramsKey) {
+    setAppliedParamsKey(paramsKey);
+    const subjectParam = searchParams.get('subject');
+    const messageParam = searchParams.get('message');
+    const intentParam = searchParams.get('intent');
+    if (subjectParam || messageParam) {
+      setFormData((prev) => ({
+        ...prev,
+        subject: subjectParam ? subjectParam.slice(0, 200) : prev.subject,
+        message: messageParam ? messageParam.slice(0, 5000) : prev.message,
+      }));
+    }
+    if (intentParam && isContactIntent(intentParam)) {
+      setIntent(intentParam);
+    }
+  }
+
   // Dirty-form detection
   const isDirty = !!(
     formData.name.trim() ||
     formData.email.trim() ||
     formData.subject.trim() ||
-    formData.message.trim()
+    formData.message.trim() ||
+    Object.values(eventDetails).some((value) => value.trim())
   );
 
   // Browser beforeunload guard for tab close/refresh
@@ -143,6 +193,20 @@ const Contact = () => {
 
     setFormStatus({ type: 'loading', message: 'Sending...' });
 
+    const intentLabel = CONTACT_INTENTS.find((option) => option.value === intent)?.label ?? intent;
+    const detailLines = [
+      intent !== 'general' ? `Intent: ${intentLabel}` : '',
+      ...(intent === 'speaking'
+        ? [
+            eventDetails.organization.trim() && `Organization: ${eventDetails.organization.trim()}`,
+            eventDetails.eventDate.trim() && `Event date: ${eventDetails.eventDate.trim()}`,
+            eventDetails.audienceSize && `Audience size: ${eventDetails.audienceSize}`,
+            eventDetails.eventFormat && `Event format: ${eventDetails.eventFormat}`,
+          ]
+        : []),
+    ].filter(Boolean);
+    const detailBlock = detailLines.length > 0 ? `${detailLines.join('\n')}\n\n` : '';
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
@@ -157,7 +221,7 @@ const Contact = () => {
           body: JSON.stringify({
             name: formData.name.trim(),
             email: formData.email.trim(),
-            message: `Subject: ${formData.subject.trim() || 'No subject'}\n\n${formData.message.trim()}`,
+            message: `Subject: ${formData.subject.trim() || 'No subject'}\n\n${detailBlock}${formData.message.trim()}`,
             website: formData.website, // honeypot
           }),
           signal: controller.signal,
@@ -168,6 +232,7 @@ const Contact = () => {
 
       if (response.ok) {
         setFormData({ name: '', email: '', subject: '', message: '', website: '' });
+        setEventDetails(EMPTY_EVENT_DETAILS);
         setFormStatus({ type: 'idle', message: '' });
         setShowSuccessModal(true);
         trackEvent('Contact Submit');
@@ -198,6 +263,11 @@ const Contact = () => {
     } finally {
       clearTimeout(timeoutId);
     }
+  };
+
+  const handleEventDetailChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setEventDetails((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -330,7 +400,121 @@ const Contact = () => {
               <h2 className="text-white mb-8" style={typography.sectionHeader}>
                 Send a Message
               </h2>
-              <form className="space-y-10" onSubmit={handleSubmit}>
+              <form className="space-y-10" onSubmit={handleSubmit} noValidate>
+                <div className="group">
+                  <label
+                    htmlFor="intent"
+                    className="block text-xs font-medium text-altivum-silver mb-3 uppercase tracking-widest"
+                  >
+                    I'm Reaching Out About
+                  </label>
+                  <select
+                    id="intent"
+                    name="intent"
+                    value={intent}
+                    onChange={(e) => setIntent(e.target.value as ContactIntent)}
+                    className={SELECT_CLASS}
+                  >
+                    {CONTACT_INTENTS.map((option) => (
+                      <option key={option.value} value={option.value} className="bg-altivum-navy">
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {intent === 'speaking' && (
+                  <fieldset className="space-y-8 border border-altivum-gold/20 p-6">
+                    <legend className="px-2 text-xs font-medium text-altivum-gold uppercase tracking-widest">
+                      Event Details
+                    </legend>
+                    <div className="group">
+                      <label
+                        htmlFor="organization"
+                        className="block text-xs font-medium text-altivum-silver mb-3 uppercase tracking-widest"
+                      >
+                        Organization
+                      </label>
+                      <input
+                        type="text"
+                        id="organization"
+                        name="organization"
+                        value={eventDetails.organization}
+                        onChange={handleEventDetailChange}
+                        maxLength={200}
+                        className="w-full px-0 py-4 bg-transparent border-b-2 border-white/10 text-white placeholder-white/70 focus:border-altivum-gold transition-all duration-300 rounded-none"
+                        placeholder="Who's hosting the event?"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                      <div className="group">
+                        <label
+                          htmlFor="eventDate"
+                          className="block text-xs font-medium text-altivum-silver mb-3 uppercase tracking-widest"
+                        >
+                          Event Date
+                        </label>
+                        <input
+                          type="date"
+                          id="eventDate"
+                          name="eventDate"
+                          value={eventDetails.eventDate}
+                          onChange={handleEventDetailChange}
+                          className="w-full px-0 py-4 bg-transparent border-b-2 border-white/10 text-white focus:border-altivum-gold transition-all duration-300 rounded-none [color-scheme:dark]"
+                        />
+                      </div>
+                      <div className="group">
+                        <label
+                          htmlFor="audienceSize"
+                          className="block text-xs font-medium text-altivum-silver mb-3 uppercase tracking-widest"
+                        >
+                          Audience Size
+                        </label>
+                        <select
+                          id="audienceSize"
+                          name="audienceSize"
+                          value={eventDetails.audienceSize}
+                          onChange={handleEventDetailChange}
+                          className={SELECT_CLASS}
+                        >
+                          <option value="" className="bg-altivum-navy">
+                            Select a range
+                          </option>
+                          {AUDIENCE_SIZES.map((size) => (
+                            <option key={size} value={size} className="bg-altivum-navy">
+                              {size}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="group">
+                      <label
+                        htmlFor="eventFormat"
+                        className="block text-xs font-medium text-altivum-silver mb-3 uppercase tracking-widest"
+                      >
+                        Event Format
+                      </label>
+                      <select
+                        id="eventFormat"
+                        name="eventFormat"
+                        value={eventDetails.eventFormat}
+                        onChange={handleEventDetailChange}
+                        className={SELECT_CLASS}
+                      >
+                        <option value="" className="bg-altivum-navy">
+                          Select a format
+                        </option>
+                        {EVENT_FORMATS.map((format) => (
+                          <option key={format} value={format} className="bg-altivum-navy">
+                            {format}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </fieldset>
+                )}
+
                 <div className="group">
                   <label
                     htmlFor="name"
