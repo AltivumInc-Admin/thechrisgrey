@@ -1,10 +1,16 @@
 import mpbLogo from '../assets/mpb.png';
 import ViewTransitionLink from '../components/ViewTransitionLink';
 import { SEO } from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import { typography } from '../utils/typography';
 import { aboutFAQs, buildProfilePageSchema } from '../utils/schemas';
 import NewsletterCTA from '../components/NewsletterCTA';
 import Credentials from '../components/Credentials';
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://thechrisgrey.com' },
+  { name: 'About', url: 'https://thechrisgrey.com/about' },
+];
 
 const About = () => {
   return (
@@ -16,10 +22,7 @@ const About = () => {
         url="https://thechrisgrey.com/about"
         type="profile"
         faq={aboutFAQs}
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'About', url: 'https://thechrisgrey.com/about' },
-        ]}
+        breadcrumbs={breadcrumbs}
         structuredData={[
           buildProfilePageSchema({
             name: 'About Christian Perez',
@@ -29,6 +32,13 @@ const About = () => {
           }),
         ]}
       />
+
+      {/* Visible breadcrumb trail — mirrors the BreadcrumbList JSON-LD emitted
+          by <SEO> above. Ancestors are SPA-transition links; the current page
+          carries aria-current="page". */}
+      <div className="pt-24 pb-3 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Breadcrumbs items={breadcrumbs} />
+      </div>
       {/* Hero Section */}
       <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden opacity-0 animate-fade-in">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 md:py-32">

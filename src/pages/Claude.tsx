@@ -1,4 +1,5 @@
 import { SEO } from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterCTA from '../components/NewsletterCTA';
 import CrossLinkBand from '../components/CrossLinkBand';
 import { typography } from '../utils/typography';
@@ -7,6 +8,11 @@ import claudeHero from '../assets/claude-hero.png';
 import claudeBedrockCert from '../assets/claude-bedrock-cert.png';
 import { ArchitectureXRay } from '../components/claude/ArchitectureXRay';
 import { McpInstallBadge } from '../components/McpInstallBadge';
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://thechrisgrey.com' },
+  { name: 'Claude', url: 'https://thechrisgrey.com/claude' },
+];
 
 const Claude = () => {
   const featuredCert = {
@@ -116,10 +122,7 @@ const Claude = () => {
         description="Christian Perez is an Applied AI Engineer building production systems with Claude, Anthropic's AI. From RAG pipelines to AI-augmented development, designing intelligent applications that solve real problems."
         keywords="Claude AI, Applied AI Engineer, Anthropic, Claude API, Claude Code, RAG systems, AI engineering, Christian Perez AI, Anthropic Academy, Claude certifications"
         url="https://thechrisgrey.com/claude"
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'Claude', url: 'https://thechrisgrey.com/claude' },
-        ]}
+        breadcrumbs={breadcrumbs}
         structuredData={[
           buildWebPageSchema({
             name: 'Claude - Christian Perez',
@@ -128,6 +131,13 @@ const Claude = () => {
           }),
         ]}
       />
+
+      {/* Visible breadcrumb trail — mirrors the BreadcrumbList JSON-LD emitted
+          by <SEO> above. Ancestors are SPA-transition links; the current page
+          carries aria-current="page". */}
+      <div className="pt-24 pb-3 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Breadcrumbs items={breadcrumbs} />
+      </div>
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden opacity-0 animate-fade-in">

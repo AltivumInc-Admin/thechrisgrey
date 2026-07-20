@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react';
 import { typography } from '../utils/typography';
 import { SEO } from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import tvpLogo from '../assets/tvp.png';
 // Profile image served from public/ at full quality (no Vite optimization)
 const profileImage = '/profile1.jpeg';
 import { podcastFAQs, buildPodcastSeriesSchema, buildVideoObjectSchema } from '../utils/schemas';
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://thechrisgrey.com' },
+  { name: 'Podcast', url: 'https://thechrisgrey.com/podcast' },
+];
+
 import {
   PODCAST_EPISODES,
   PODCAST_PLATFORMS,
@@ -76,10 +83,7 @@ const Podcast = () => {
         keywords="The Vector Podcast, Christian Perez podcast, AI podcast, veteran entrepreneurship, technology podcast, Altivum Press"
         url="https://thechrisgrey.com/podcast"
         faq={podcastFAQs}
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'Podcast', url: 'https://thechrisgrey.com/podcast' },
-        ]}
+        breadcrumbs={breadcrumbs}
         structuredData={[
           buildPodcastSeriesSchema(),
           ...(LATEST_VIDEO_ID && LATEST_EPISODE_DATE
@@ -94,6 +98,13 @@ const Podcast = () => {
             : []),
         ]}
       />
+
+      {/* Visible breadcrumb trail — mirrors the BreadcrumbList JSON-LD emitted
+          by <SEO> above. Ancestors are SPA-transition links; the current page
+          carries aria-current="page". */}
+      <div className="pt-24 pb-3 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Breadcrumbs items={breadcrumbs} />
+      </div>
 
       {/* Hero Section */}
       <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden opacity-0 animate-fade-in">

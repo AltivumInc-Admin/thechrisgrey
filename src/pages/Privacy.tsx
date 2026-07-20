@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { SEO } from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import { typography } from '../utils/typography';
 import ViewTransitionLink from '../components/ViewTransitionLink';
 import { buildWebPageSchema } from '../utils/schemas';
@@ -8,6 +9,11 @@ import { disablePostHog, isPostHogConfigured } from '../utils/posthog';
 import { revokeRumCookies } from '../utils/rum';
 import { disableSentry } from '../utils/sentry';
 import { isPrerender } from '../utils/prerender';
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://thechrisgrey.com' },
+  { name: 'Privacy Policy', url: 'https://thechrisgrey.com/privacy' },
+];
 
 const Privacy = () => {
   const lastUpdated = 'June 14, 2026';
@@ -33,23 +39,25 @@ const Privacy = () => {
         title="Privacy Policy"
         description="Privacy policy for thechrisgrey.com - how we collect, use, and protect your personal information."
         url="https://thechrisgrey.com/privacy"
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'Privacy Policy', url: 'https://thechrisgrey.com/privacy' },
-        ]}
+        breadcrumbs={breadcrumbs}
         structuredData={[
           buildWebPageSchema({
             name: 'Privacy Policy - Christian Perez',
             description:
               'Privacy policy for thechrisgrey.com - how we collect, use, and protect your personal information.',
             url: 'https://thechrisgrey.com/privacy',
-            breadcrumbs: [
-              { name: 'Home', url: 'https://thechrisgrey.com' },
-              { name: 'Privacy Policy', url: 'https://thechrisgrey.com/privacy' },
-            ],
+            breadcrumbs,
           }),
         ]}
       />
+
+      {/* Visible breadcrumb trail — mirrors the BreadcrumbList JSON-LD emitted
+          by <SEO> above. Ancestors are SPA-transition links; the current page
+          carries aria-current="page". The wrapper's `pt-20` clears the fixed
+          nav, so this bar only adds bottom spacing before the hero. */}
+      <div className="pb-3 max-w-7xl mx-auto px-6 lg:px-8">
+        <Breadcrumbs items={breadcrumbs} />
+      </div>
 
       {/* Hero Section */}
       <section className="py-32 bg-altivum-dark">

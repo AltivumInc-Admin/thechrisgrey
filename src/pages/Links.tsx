@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { SEO } from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import { typography } from '../utils/typography';
 import ViewTransitionLink from '../components/ViewTransitionLink';
 import builderQR from '../assets/builder-qr.png';
@@ -7,6 +8,11 @@ import { buildProfilePageSchema } from '../utils/schemas';
 import { SOCIAL_LINKS } from '../constants/links';
 import SocialIcon from '../components/SocialIcon';
 import NewsletterCTA from '../components/NewsletterCTA';
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://thechrisgrey.com' },
+  { name: 'Links', url: 'https://thechrisgrey.com/links' },
+];
 
 interface SocialLink {
   name: string;
@@ -145,10 +151,7 @@ const Links = () => {
         description="Connect with Christian Perez across the web. Links to Altivum Inc., The Vector Podcast, social media profiles, and featured projects."
         keywords="Christian Perez links, social media, Altivum links, podcast links, thechrisgrey socials"
         url="https://thechrisgrey.com/links"
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'Links', url: 'https://thechrisgrey.com/links' },
-        ]}
+        breadcrumbs={breadcrumbs}
         structuredData={[
           buildProfilePageSchema({
             name: 'Christian Perez Links & Resources',
@@ -157,6 +160,14 @@ const Links = () => {
           }),
         ]}
       />
+
+      {/* Visible breadcrumb trail — mirrors the BreadcrumbList JSON-LD emitted
+          by <SEO> above. Ancestors are SPA-transition links; the current page
+          carries aria-current="page". The wrapper's `pt-20` clears the fixed
+          nav, so this bar only adds bottom spacing before the hero. */}
+      <div className="pb-3 max-w-7xl mx-auto px-6 lg:px-8">
+        <Breadcrumbs items={breadcrumbs} />
+      </div>
       {/* Hero Section */}
       <section className="py-32 bg-altivum-dark">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">

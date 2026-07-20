@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { SEO } from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import { typography } from '../utils/typography';
 import ChatMessage from '../components/chat/ChatMessage';
 import ChatInput, { type ChatInputHandle } from '../components/chat/ChatInput';
@@ -9,6 +10,11 @@ import TypingIndicator from '../components/chat/TypingIndicator';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { ChatErrorFallback } from '../components/ErrorFallbacks';
 import { useChatEngine, usePageContext, CHAT_STORAGE_KEY } from '../hooks';
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://thechrisgrey.com' },
+  { name: 'Alti', url: 'https://thechrisgrey.com/chat' },
+];
 
 const ChatContent = () => {
   const pageContext = usePageContext();
@@ -51,16 +57,17 @@ const ChatContent = () => {
         description="Meet Alti, Altivum's AI agent. Have a conversation about Christian Perez's journey from Green Beret to tech founder, Altivum Inc, The Vector Podcast, and more."
         keywords="Alti, AI agent, Christian Perez, conversation, Altivum, veteran entrepreneur"
         url="https://thechrisgrey.com/chat"
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'Alti', url: 'https://thechrisgrey.com/chat' },
-        ]}
+        breadcrumbs={breadcrumbs}
       />
 
       {/* Header */}
       <div className="border-b border-white/10 bg-altivum-dark/80 backdrop-blur-xs">
         <div className="max-w-4xl mx-auto px-6 py-6 flex items-start justify-between">
           <div>
+            {/* Visible breadcrumb trail — mirrors the BreadcrumbList JSON-LD
+                emitted by <SEO> above. Sits above the Alti heading so the
+                current-page crumb anchors the visitor within the site. */}
+            <Breadcrumbs items={breadcrumbs} className="mb-3" />
             <h1 className="text-white mb-2" style={typography.cardTitleLarge}>
               Alti<sup className="text-xs">TM</sup>
             </h1>

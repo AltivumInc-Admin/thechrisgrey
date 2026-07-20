@@ -1,4 +1,5 @@
 import { SEO } from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterCTA from '../components/NewsletterCTA';
 import CrossLinkBand from '../components/CrossLinkBand';
 import btaLogo from '../assets/bta.png';
@@ -7,6 +8,11 @@ import { typography } from '../utils/typography';
 import { bookFAQs, buildBookSchema } from '../utils/schemas';
 import { trackEvent } from '../utils/analytics';
 import Testimonials from '../components/Testimonials';
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://thechrisgrey.com' },
+  { name: 'Beyond the Assessment', url: 'https://thechrisgrey.com/beyond-the-assessment' },
+];
 
 const BeyondTheAssessment = () => {
   return (
@@ -18,12 +24,16 @@ const BeyondTheAssessment = () => {
         url="https://thechrisgrey.com/beyond-the-assessment"
         type="book"
         faq={bookFAQs}
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'Beyond the Assessment', url: 'https://thechrisgrey.com/beyond-the-assessment' },
-        ]}
+        breadcrumbs={breadcrumbs}
         structuredData={[buildBookSchema()]}
       />
+
+      {/* Visible breadcrumb trail — mirrors the BreadcrumbList JSON-LD emitted
+          by <SEO> above. Ancestors are SPA-transition links; the current page
+          carries aria-current="page". */}
+      <div className="pt-24 pb-3 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Breadcrumbs items={breadcrumbs} />
+      </div>
 
       {/* Hero Section - Standard Style */}
       <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden opacity-0 animate-fade-in">

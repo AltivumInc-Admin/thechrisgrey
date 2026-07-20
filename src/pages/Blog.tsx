@@ -2,10 +2,17 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ViewTransitionLink from '../components/ViewTransitionLink';
 import { SEO } from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterForm from '../components/NewsletterForm';
 import { typography } from '../utils/typography';
 import { formatDate } from '../utils/dateFormatter';
 import { blogFAQs, buildItemListSchema } from '../utils/schemas';
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://thechrisgrey.com' },
+  { name: 'Blog', url: 'https://thechrisgrey.com/blog' },
+];
+
 import {
   client,
   BLOG_LISTING_QUERY,
@@ -170,10 +177,7 @@ const Blog = () => {
         url="https://thechrisgrey.com/blog"
         type="article"
         faq={blogFAQs}
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'Blog', url: 'https://thechrisgrey.com/blog' },
-        ]}
+        breadcrumbs={breadcrumbs}
         structuredData={[
           {
             '@type': 'Blog',
@@ -204,6 +208,13 @@ const Blog = () => {
             : []),
         ]}
       />
+
+      {/* Visible breadcrumb trail — mirrors the BreadcrumbList JSON-LD emitted
+          by <SEO> above. Ancestors are SPA-transition links; the current page
+          carries aria-current="page". */}
+      <div className="pt-24 pb-3 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Breadcrumbs items={breadcrumbs} />
+      </div>
 
       {/* Hero Section */}
       <section className="py-32 bg-altivum-dark">

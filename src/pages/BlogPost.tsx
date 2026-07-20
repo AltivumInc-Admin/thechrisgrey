@@ -26,6 +26,7 @@ import {
 } from '../sanity';
 import ReadingProgressBar from '../components/ReadingProgressBar';
 import BlogPostArticleSkeleton from '../components/BlogPostArticleSkeleton';
+import Breadcrumbs from '../components/Breadcrumbs';
 import SanityResponsiveImage from '../components/SanityResponsiveImage';
 import { getYouTubeId } from '../utils/youtube';
 import { buildVideoObjectSchema } from '../utils/schemas';
@@ -300,6 +301,12 @@ const BlogPost = () => {
     );
   }
 
+  const breadcrumbs = [
+    { name: 'Home', url: 'https://thechrisgrey.com' },
+    { name: 'Blog', url: 'https://thechrisgrey.com/blog' },
+    { name: post.title, url: shareUrl },
+  ];
+
   return (
     <div className="min-h-screen bg-altivum-dark">
       <ReadingProgressBar />
@@ -313,11 +320,7 @@ const BlogPost = () => {
         type="article"
         datePublished={post.publishedAt}
         dateModified={post._updatedAt || post.publishedAt}
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'Blog', url: 'https://thechrisgrey.com/blog' },
-          { name: post.title, url: shareUrl },
-        ]}
+        breadcrumbs={breadcrumbs}
         structuredData={[
           {
             '@type': 'BlogPosting',
@@ -378,6 +381,11 @@ const BlogPost = () => {
         )}
 
         <div className="relative max-w-4xl mx-auto px-6 lg:px-8 pt-16">
+          {/* Visible breadcrumb trail — mirrors the BreadcrumbList JSON-LD
+              emitted by <SEO> above. Ancestors are SPA-transition links; the
+              current page (this post) carries aria-current="page". */}
+          <Breadcrumbs items={breadcrumbs} className="mb-6" />
+
           {/* Back link */}
           <ViewTransitionLink
             to="/blog"

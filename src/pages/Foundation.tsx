@@ -1,10 +1,16 @@
 import ViewTransitionLink from '../components/ViewTransitionLink';
 import { SEO } from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterCTA from '../components/NewsletterCTA';
 import CrossLinkBand from '../components/CrossLinkBand';
 import foundationImage from '../assets/foundation.webp';
 import { typography } from '../utils/typography';
 import { foundationFAQs, buildFoundationOrganizationSchema } from '../utils/schemas';
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://thechrisgrey.com' },
+  { name: 'The Altivum Foundation', url: 'https://thechrisgrey.com/foundation' },
+];
 
 const FOCUS_AREAS = [
   {
@@ -73,12 +79,16 @@ const Foundation = () => {
         keywords="The Altivum Foundation, Altivum Foundation, veteran scholarships, 501c3, cloud computing education, AI education, robotics education, cybersecurity education, Christian Perez Founder"
         url="https://thechrisgrey.com/foundation"
         faq={foundationFAQs}
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'The Altivum Foundation', url: 'https://thechrisgrey.com/foundation' },
-        ]}
+        breadcrumbs={breadcrumbs}
         structuredData={[buildFoundationOrganizationSchema()]}
       />
+
+      {/* Visible breadcrumb trail — mirrors the BreadcrumbList JSON-LD emitted
+          by <SEO> above. Ancestors are SPA-transition links; the current page
+          carries aria-current="page". */}
+      <div className="pt-24 pb-3 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Breadcrumbs items={breadcrumbs} />
+      </div>
 
       {/* Hero */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden opacity-0 animate-fade-in">

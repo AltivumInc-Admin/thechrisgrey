@@ -4,7 +4,38 @@ import { isRenderableImageSource } from './guards';
 import YouTubeFacade from '../components/YouTubeFacade';
 import HighlightedCodeBlock from '../components/HighlightedCodeBlock';
 import SanityResponsiveImage from '../components/SanityResponsiveImage';
+import ViewTransitionLink from '../components/ViewTransitionLink';
 import { getYouTubeId } from '../utils/youtube';
+
+const SITE_ORIGIN = 'https://thechrisgrey.com';
+
+/**
+ * Resolve a Portable Text `link` mark `href` to an internal route path when it
+ * points at this site, or return `null` when it is an external URL.
+ *
+ *   - Relative paths (`/blog/foo`) are internal — returned as-is.
+ *   - Same-origin absolute URLs (`https://thechrisgrey.com/blog/foo`) are
+ *     internal — the pathname is returned (`/blog/foo`).
+ *   - Anything else (`https://example.com/...`, `mailto:`, etc.) is external
+ *     and returns `null` so the caller keeps the plain `<a>` rendering.
+ *
+ * Internal links render as `ViewTransitionLink` so in-blog cross-links perform
+ * an SPA transition (preserving chat state and avoiding a full reload); external
+ * links keep their existing plain-anchor `target`/`rel` behavior.
+ */
+const resolveInternalPath = (href: string): string | null => {
+  if (!href) return null;
+  if (!href.startsWith('http')) return href;
+  try {
+    const parsed = new URL(href);
+    if (parsed.origin === SITE_ORIGIN || parsed.origin === 'http://thechrisgrey.com') {
+      return parsed.pathname || '/';
+    }
+  } catch {
+    // Malformed absolute URL — treat as external so we don't silently misroute.
+  }
+  return null;
+};
 
 // Callout icons and styles based on type
 const calloutStyles = {
@@ -199,8 +230,25 @@ export const portableTextComponents: PortableTextComponents = {
     // Links
     link: ({ children, value }) => {
       const href = value?.href || '';
-      const isExternal = href.startsWith('http');
-      const opensInNewTab = value?.openInNewTab || isExternal;
+      const internalPath = resolveInternalPath(href);
+      const isExternal = internalPath === null;
+      // Authors can force a new tab on internal links (rare); external links
+      // always open in a new tab. When `openInNewTab` is set we keep a plain
+      // anchor so the browser actually opens a new tab instead of an in-app
+      // SPA transition.
+      const opensInNewTab = Boolean(value?.openInNewTab) || isExternal;
+
+      if (!opensInNewTab && internalPath) {
+        return (
+          <ViewTransitionLink
+            to={internalPath}
+            className="text-altivum-gold hover:text-white underline underline-offset-2 transition-colors"
+          >
+            {children}
+          </ViewTransitionLink>
+        );
+      }
+
       return (
         <a
           href={href}

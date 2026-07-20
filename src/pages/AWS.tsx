@@ -1,4 +1,5 @@
 import { SEO } from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterCTA from '../components/NewsletterCTA';
 import CrossLinkBand from '../components/CrossLinkBand';
 import awsHero from '../assets/aws-hero.png';
@@ -6,6 +7,11 @@ import awsCommunityBuilder from '../assets/aws-community-builder.webp';
 import { typography } from '../utils/typography';
 import { buildWebPageSchema } from '../utils/schemas';
 import { InfraTopology } from '../components/aws/InfraTopology';
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://thechrisgrey.com' },
+  { name: 'Amazon Web Services', url: 'https://thechrisgrey.com/aws' },
+];
 
 const AWS = () => {
   return (
@@ -15,10 +21,7 @@ const AWS = () => {
         description="Christian Perez is an AWS Community Builder in AI Engineering, building intelligent cloud-native systems with Amazon Bedrock, Lambda, and serverless architectures."
         keywords="AWS Community Builder, AI Engineering, Amazon Bedrock, cloud architecture, serverless, Christian Perez AWS, Amazon Web Services"
         url="https://thechrisgrey.com/aws"
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'Amazon Web Services', url: 'https://thechrisgrey.com/aws' },
-        ]}
+        breadcrumbs={breadcrumbs}
         structuredData={[
           buildWebPageSchema({
             name: 'Amazon Web Services - Christian Perez',
@@ -27,6 +30,13 @@ const AWS = () => {
           }),
         ]}
       />
+
+      {/* Visible breadcrumb trail — mirrors the BreadcrumbList JSON-LD emitted
+          by <SEO> above. Ancestors are SPA-transition links; the current page
+          carries aria-current="page". */}
+      <div className="pt-24 pb-3 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Breadcrumbs items={breadcrumbs} />
+      </div>
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden opacity-0 animate-fade-in">

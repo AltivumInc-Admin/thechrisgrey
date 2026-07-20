@@ -1,5 +1,6 @@
 import ViewTransitionLink from '../components/ViewTransitionLink';
 import { SEO } from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterCTA from '../components/NewsletterCTA';
 import CrossLinkBand from '../components/CrossLinkBand';
 import altivumImage from '../assets/altivum.jpg';
@@ -7,6 +8,11 @@ import awsPartnerLogo from '../assets/aws-partner-dark.png';
 import altivumLogo from '../assets/altivum.png';
 import { typography } from '../utils/typography';
 import { altivumFAQs, buildAltivumServicesSchemas } from '../utils/schemas';
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://thechrisgrey.com' },
+  { name: 'Altivum', url: 'https://thechrisgrey.com/altivum' },
+];
 
 const IMPERATIVES = [
   {
@@ -158,12 +164,16 @@ const Altivum = () => {
         keywords="Altivum Inc, Altivum Logic, Altivum Vanguard, Altivum Press, VetROI, Elo, Cloud Architecture, AI Integration, Christian Perez, veteran entrepreneur"
         url="https://thechrisgrey.com/altivum"
         faq={altivumFAQs}
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'Altivum', url: 'https://thechrisgrey.com/altivum' },
-        ]}
+        breadcrumbs={breadcrumbs}
         structuredData={[...buildAltivumServicesSchemas()]}
       />
+
+      {/* Visible breadcrumb trail — mirrors the BreadcrumbList JSON-LD emitted
+          by <SEO> above. Ancestors are SPA-transition links; the current page
+          carries aria-current="page". */}
+      <div className="pt-24 pb-3 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Breadcrumbs items={breadcrumbs} />
+      </div>
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden opacity-0 animate-fade-in">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 md:py-32">

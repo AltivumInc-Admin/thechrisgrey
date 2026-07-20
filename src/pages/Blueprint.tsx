@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { SEO } from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import { typography } from '../utils/typography';
 import { buildWebPageSchema } from '../utils/schemas';
 import { useBlueprint } from '../hooks/useBlueprint';
@@ -9,6 +10,11 @@ import { BlueprintResult } from '../components/blueprint/BlueprintResult';
 import { LoadingSkeleton } from '../components/blueprint/LoadingSkeleton';
 import { Waitlist } from '../components/blueprint/Waitlist';
 import { RateLimitedCard } from '../components/blueprint/RateLimitedCard';
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://thechrisgrey.com' },
+  { name: 'Blueprint', url: 'https://thechrisgrey.com/blueprint' },
+];
 
 const HIGHLIGHT_ITEMS: Array<{ icon: string; title: string; body: string }> = [
   {
@@ -124,13 +130,13 @@ export default function Blueprint() {
           description="thechrisgrey Blueprint turns a short spec into a production-ready AWS architecture, IaC, IAM guidance, cost estimate, and Claude Code artifacts. Join the waitlist."
           keywords="AWS architecture generator, blueprint, Claude Opus, IaC, Claude Code skills, Christian Perez"
           url="https://thechrisgrey.com/blueprint"
-          breadcrumbs={[
-            { name: 'Home', url: 'https://thechrisgrey.com' },
-            { name: 'Blueprint', url: 'https://thechrisgrey.com/blueprint' },
-          ]}
+          breadcrumbs={breadcrumbs}
           structuredData={structuredData}
           noindex
         />
+        <div className="pb-3 max-w-4xl mx-auto px-6 lg:px-8">
+          <Breadcrumbs items={breadcrumbs} />
+        </div>
         <WaitlistPlaceholder />
       </div>
     );
@@ -148,12 +154,13 @@ export default function Blueprint() {
         description="Describe what you want to build and receive an AWS architecture blueprint: Mermaid diagram, IaC scaffold, IAM highlights, cost estimate, and Claude Code artifacts — powered by Claude Opus 4.6."
         keywords="AWS architecture, blueprint, AWS CDK, SAM, Terraform, Claude Opus, serverless, RAG, Christian Perez"
         url="https://thechrisgrey.com/blueprint"
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'Blueprint', url: 'https://thechrisgrey.com/blueprint' },
-        ]}
+        breadcrumbs={breadcrumbs}
         structuredData={structuredData}
       />
+
+      <div className="pb-3 max-w-4xl mx-auto px-6 lg:px-8">
+        <Breadcrumbs items={breadcrumbs} />
+      </div>
 
       <div className="max-w-4xl mx-auto px-6 lg:px-8 space-y-12">
         <BlueprintHero />

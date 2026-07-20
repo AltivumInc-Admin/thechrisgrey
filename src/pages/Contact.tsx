@@ -1,4 +1,5 @@
 import { SEO } from '../components/SEO';
+import Breadcrumbs from '../components/Breadcrumbs';
 import { typography } from '../utils/typography';
 import { isValidEmail } from '../utils/validators';
 import { useState, useEffect, FormEvent } from 'react';
@@ -13,6 +14,11 @@ import { createLogger } from '../utils/logger';
 import { withTraceId } from '../utils/traceId';
 
 const log = createLogger('Contact');
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://thechrisgrey.com' },
+  { name: 'Contact', url: 'https://thechrisgrey.com/contact' },
+];
 
 type FieldName = 'name' | 'email' | 'message';
 
@@ -291,12 +297,17 @@ const Contact = () => {
         keywords="contact Christian Perez, speaking engagements, keynote speaker, veteran speaker, cloud consulting, AI integration services, podcast guest, media appearances"
         url="https://thechrisgrey.com/contact"
         faq={contactFAQs}
-        breadcrumbs={[
-          { name: 'Home', url: 'https://thechrisgrey.com' },
-          { name: 'Contact', url: 'https://thechrisgrey.com/contact' },
-        ]}
+        breadcrumbs={breadcrumbs}
         structuredData={[buildContactPageSchema()]}
       />
+
+      {/* Visible breadcrumb trail — mirrors the BreadcrumbList JSON-LD emitted
+          by <SEO> above. Ancestors are SPA-transition links; the current page
+          carries aria-current="page". The wrapper's `pt-20` clears the fixed
+          nav, so this bar only adds bottom spacing before the hero. */}
+      <div className="pb-3 max-w-7xl mx-auto px-6 lg:px-8">
+        <Breadcrumbs items={breadcrumbs} />
+      </div>
       {/* Hero Section */}
       <section className="py-32 bg-altivum-dark">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
