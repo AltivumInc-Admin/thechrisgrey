@@ -103,9 +103,9 @@ describe('AWS Page Integration', () => {
   });
 
   describe('Infrastructure Topology section', () => {
-    it('renders "The Stack" section heading', () => {
+    it('renders the infrastructure stack section heading', () => {
       renderAWS();
-      expect(screen.getByRole('heading', { name: /the stack/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /infrastructure stack/i })).toBeInTheDocument();
     });
 
     it('renders all 6 cluster labels in the 2D fallback', () => {

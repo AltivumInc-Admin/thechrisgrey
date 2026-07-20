@@ -6,6 +6,7 @@ import HighlightedCodeBlock from '../components/HighlightedCodeBlock';
 import SanityResponsiveImage from '../components/SanityResponsiveImage';
 import ViewTransitionLink from '../components/ViewTransitionLink';
 import { getYouTubeId } from '../utils/youtube';
+import { slugify, textFromChildren } from '../utils/slugify';
 
 const SITE_ORIGIN = 'https://thechrisgrey.com';
 
@@ -202,9 +203,19 @@ export const portableTextComponents: PortableTextComponents = {
   },
 
   block: {
-    // Headings
-    h2: ({ children }) => <h2 className="text-2xl font-semibold text-white mt-10 mb-4">{children}</h2>,
-    h3: ({ children }) => <h3 className="text-xl font-semibold text-white mt-8 mb-3">{children}</h3>,
+    // Headings — each gets a stable slug-form id for fragment linking (VAL-AEO-005).
+    // The id is derived from the heading text via slugify, so it is stable across
+    // builds unless the heading text changes.
+    h2: ({ children }) => (
+      <h2 id={slugify(textFromChildren(children))} className="text-2xl font-semibold text-white mt-10 mb-4">
+        {children}
+      </h2>
+    ),
+    h3: ({ children }) => (
+      <h3 id={slugify(textFromChildren(children))} className="text-xl font-semibold text-white mt-8 mb-3">
+        {children}
+      </h3>
+    ),
     h4: ({ children }) => <h4 className="text-lg font-semibold text-white mt-6 mb-2">{children}</h4>,
     // Normal paragraph
     normal: ({ children }) => <p className="text-altivum-silver mb-6 leading-relaxed font-light">{children}</p>,

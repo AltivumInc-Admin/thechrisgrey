@@ -10,6 +10,7 @@ import type { TopologyControlHandle } from './TopologyScene';
 import { TopologyFallback2D } from './TopologyFallback2D';
 import { TopologyControls } from './TopologyControls';
 import { FallbackDetail } from './FallbackDetail';
+import QuestionHeading from '../aeo/QuestionHeading';
 
 export function InfraTopology() {
   const isDesktop = useMediaQuery('(min-width: 768px)');
@@ -38,9 +39,9 @@ export function InfraTopology() {
   return (
     <section className="h-screen flex flex-col">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-6 shrink-0">
-        <h2 style={typography.sectionHeader} className="text-white mb-2 text-center">
-          The Stack
-        </h2>
+        <QuestionHeading as="h2" className="mb-2 text-center">
+          What is the infrastructure stack?
+        </QuestionHeading>
         <p style={typography.subtitle} className="text-altivum-silver text-center">
           Infrastructure powering thechrisgrey.com
         </p>

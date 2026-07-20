@@ -1,5 +1,6 @@
 import ViewTransitionLink from './ViewTransitionLink';
 import { typography } from '../utils/typography';
+import { slugify } from '../utils/slugify';
 
 interface CrossLink {
   /** Internal site path (must match a route in src/routes.ts). */
@@ -56,6 +57,7 @@ const CrossLinkBand = ({ heading = 'Explore more', eyebrow = 'Keep exploring', l
             >
               <div className="flex items-start justify-between gap-3">
                 <h3
+                  id={slugify(link.label)}
                   className="text-white group-hover:text-altivum-gold transition-colors"
                   style={typography.cardTitleSmall}
                 >

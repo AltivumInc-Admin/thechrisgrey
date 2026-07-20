@@ -1,5 +1,6 @@
 import NewsletterForm from './NewsletterForm';
 import { typography } from '../utils/typography';
+import { slugify } from '../utils/slugify';
 
 interface NewsletterCTAProps {
   /** Surface name passed through to the Plausible "Newsletter Subscribe" goal. */
@@ -26,7 +27,7 @@ const NewsletterCTA = ({
       <div className="inline-block px-4 py-1 bg-altivum-gold/10 border border-altivum-gold/20 rounded-full mb-6">
         <span className="text-altivum-gold text-xs uppercase tracking-widest font-medium">{eyebrow}</span>
       </div>
-      <h2 className="text-white mb-4" style={typography.cardTitleLarge}>
+      <h2 id={slugify(heading)} className="text-white mb-4" style={typography.cardTitleLarge}>
         {heading}
       </h2>
       <p className="text-altivum-silver mb-8 max-w-xl mx-auto" style={typography.bodyText}>

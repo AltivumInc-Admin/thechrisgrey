@@ -3,6 +3,7 @@ import { typography } from '../../utils/typography';
 import { useChatEngine, usePageContext } from '../../hooks';
 import type { DraftActionPodcastCitation } from '../../utils/chatEvents';
 import ToolDraftCard from '../chat/ToolDraftCard';
+import { slugify } from '../../utils/slugify';
 
 const PODCAST_ASK_STORAGE_KEY = 'podcast-ask-messages';
 
@@ -62,7 +63,7 @@ const AskTheVector = () => {
             <span className="material-icons text-altivum-gold/80 text-xl" aria-hidden="true">
               graphic_eq
             </span>
-            <h2 className="text-white" style={typography.cardTitleSmall}>
+            <h2 id={slugify('Ask The Vector')} className="text-white" style={typography.cardTitleSmall}>
               Ask The Vector
             </h2>
           </div>

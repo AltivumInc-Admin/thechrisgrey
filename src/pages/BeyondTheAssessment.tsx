@@ -8,6 +8,10 @@ import { typography } from '../utils/typography';
 import { bookFAQs, buildBookSchema } from '../utils/schemas';
 import { trackEvent } from '../utils/analytics';
 import Testimonials from '../components/Testimonials';
+import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
+import FAQSection from '../components/aeo/FAQSection';
+import QuestionHeading from '../components/aeo/QuestionHeading';
+import { AEO_SUMMARIES } from '../data/aeoSummaries';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -50,6 +54,8 @@ const BeyondTheAssessment = () => {
               />
               <h1 className="sr-only">Beyond the Assessment - A Book by Christian Perez</h1>
             </div>
+            {/* Direct-answer summary — first viewport, before the first H2 (VAL-AEO-001, VAL-AEO-002). */}
+            <DirectAnswerSummary text={AEO_SUMMARIES['/beyond-the-assessment']} className="max-w-2xl mx-auto mt-6" />
           </div>
         </div>
       </section>
@@ -83,9 +89,9 @@ const BeyondTheAssessment = () => {
 
             {/* Text Column */}
             <div className="opacity-0 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-              <h2 className="text-white mb-6" style={typography.sectionHeader}>
-                You Are Always <span className="text-altivum-gold">Being Assessed</span>
-              </h2>
+              <QuestionHeading as="h2" className="mb-6">
+                What is Beyond the Assessment about?
+              </QuestionHeading>
 
               <div className="space-y-6 text-white/80" style={typography.subtitle}>
                 <p>
@@ -139,6 +145,10 @@ const BeyondTheAssessment = () => {
 
       {/* Reader proof (renders only once real testimonials exist) */}
       <Testimonials eyebrow="From readers" heading="What readers are saying" />
+
+      {/* Visible FAQ — mirrors the FAQPage JSON-LD emitted by <SEO faq={bookFAQs}>
+          so the DOM text and structured data agree (VAL-AEO-004). */}
+      <FAQSection faqs={bookFAQs} />
 
       <NewsletterCTA
         source="beyond-the-assessment"

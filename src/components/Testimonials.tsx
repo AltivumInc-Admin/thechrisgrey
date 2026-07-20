@@ -1,4 +1,5 @@
 import { typography } from '../utils/typography';
+import { slugify } from '../utils/slugify';
 import { TESTIMONIALS, type Testimonial } from '../data/testimonials';
 
 interface TestimonialsProps {
@@ -27,7 +28,7 @@ const Testimonials = ({
           <div className="inline-block px-4 py-1 bg-altivum-gold/10 border border-altivum-gold/20 rounded-full mb-6">
             <span className="text-altivum-gold text-xs uppercase tracking-widest font-medium">{eyebrow}</span>
           </div>
-          <h2 className="text-white" style={typography.cardTitleLarge}>
+          <h2 id={slugify(heading)} className="text-white" style={typography.cardTitleLarge}>
             {heading}
           </h2>
         </div>

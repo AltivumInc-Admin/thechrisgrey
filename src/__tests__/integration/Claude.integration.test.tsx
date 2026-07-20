@@ -120,9 +120,9 @@ describe('Claude Page Integration', () => {
   });
 
   describe('Architecture X-Ray section', () => {
-    it('renders "The Architecture" section heading', () => {
+    it('renders the "What is the architecture behind Alti?" section heading', () => {
       renderClaude();
-      expect(screen.getByRole('heading', { name: /the architecture/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /architecture behind alti/i })).toBeInTheDocument();
     });
 
     it('renders the pipeline diagram with accessible label', () => {
@@ -136,9 +136,9 @@ describe('Claude Page Integration', () => {
   });
 
   describe('What I Build (Focus Areas) section', () => {
-    it('renders the "What I Build" heading', () => {
+    it('renders the "What does Christian build with Claude?" heading', () => {
       renderClaude();
-      expect(screen.getByRole('heading', { name: /what i build/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /what does christian build with claude/i })).toBeInTheDocument();
     });
 
     it('renders all 3 focus area cards', () => {
@@ -150,16 +150,16 @@ describe('Claude Page Integration', () => {
   });
 
   describe('How I Work With Claude section', () => {
-    it('renders the "How I Work With Claude" heading', () => {
+    it('renders the "How does Christian work with Claude?" heading', () => {
       renderClaude();
-      expect(screen.getByRole('heading', { name: /how i work with claude/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /how does christian work with claude/i })).toBeInTheDocument();
     });
 
-    it('renders all 3 subsections (Production First, Human in the Loop, Full-Stack AI)', () => {
+    it('renders all 3 subsections (Why production first, Why keep humans in the loop, What does full-stack AI mean)', () => {
       renderClaude();
-      expect(screen.getByRole('heading', { name: /production first/i })).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: /human in the loop/i })).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: /full-stack ai/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /why production first/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /why keep humans in the loop/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /what does full-stack ai mean/i })).toBeInTheDocument();
     });
   });
 

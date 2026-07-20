@@ -12,7 +12,7 @@ const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
           {/* Brand - Hidden on mobile, shown on desktop */}
           <div className="hidden md:block">
-            <h3 className="text-white mb-2" style={typography.cardTitleSmall}>
+            <h3 id="footer-christian-perez" className="text-white mb-2" style={typography.cardTitleSmall}>
               Christian Perez
             </h3>
             <p className="text-altivum-silver" style={typography.smallText}>

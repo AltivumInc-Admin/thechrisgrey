@@ -34,11 +34,11 @@ describe('InfraTopology', () => {
     mockedIsPrerender.mockReturnValue(false);
   });
 
-  it('renders section header "The Stack"', () => {
+  it('renders section header "What is the infrastructure stack?"', () => {
     mockedCheckWebGL.mockReturnValue(false);
     render(<InfraTopology />);
 
-    expect(screen.getByText('The Stack')).toBeInTheDocument();
+    expect(screen.getByText('What is the infrastructure stack?')).toBeInTheDocument();
   });
 
   it('renders the fallback when checkWebGLSupport returns false', () => {

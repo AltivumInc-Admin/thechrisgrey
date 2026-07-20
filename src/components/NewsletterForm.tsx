@@ -5,6 +5,7 @@ import { useFocusTrap } from '../hooks';
 import { trackEvent } from '../utils/analytics';
 import { createLogger } from '../utils/logger';
 import { withTraceId } from '../utils/traceId';
+import { slugify } from '../utils/slugify';
 
 const log = createLogger('NewsletterForm');
 
@@ -113,7 +114,7 @@ const NewsletterForm = ({ variant = 'full', source }: NewsletterFormProps) => {
               <div className="inline-block px-4 py-1 bg-altivum-gold/10 border border-altivum-gold/20 rounded-full mb-6">
                 <span className="text-altivum-gold text-xs uppercase tracking-widest font-medium">Newsletter</span>
               </div>
-              <h2 className="text-white mb-6" style={typography.sectionHeader}>
+              <h2 id={slugify('Stay Informed')} className="text-white mb-6" style={typography.sectionHeader}>
                 Stay Informed
               </h2>
               <p className="text-altivum-silver mb-12 max-w-2xl mx-auto" style={typography.bodyText}>

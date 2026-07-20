@@ -3,6 +3,7 @@ import { PodcastEpisode } from '../types/podcast';
 import { typography } from '../utils/typography';
 import { formatDate } from '../utils/dateFormatter';
 import { SpotifyIcon, ApplePodcastIcon, YouTubeIcon } from './PodcastPlatformIcons';
+import { slugify } from '../utils/slugify';
 
 interface EpisodeCardProps {
   episode: PodcastEpisode;
@@ -41,7 +42,10 @@ const EpisodeCard = ({ episode, variant = 'standard' }: EpisodeCardProps) => {
                 </span>
 
                 {/* Title */}
-                <h3 className="text-white text-sm font-medium truncate group-hover:text-altivum-gold transition-colors">
+                <h3
+                  id={slugify(episode.title)}
+                  className="text-white text-sm font-medium truncate group-hover:text-altivum-gold transition-colors"
+                >
                   {episode.title}
                 </h3>
               </div>
@@ -172,6 +176,7 @@ const EpisodeCard = ({ episode, variant = 'standard' }: EpisodeCardProps) => {
 
           {/* Title */}
           <h3
+            id={slugify(episode.title)}
             className="text-white mb-4 group-hover:text-altivum-gold transition-colors"
             style={isFeatured ? typography.cardTitleLarge : typography.cardTitleSmall}
           >

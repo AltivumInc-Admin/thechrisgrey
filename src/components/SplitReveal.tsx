@@ -12,6 +12,8 @@ interface SplitRevealProps {
   className?: string;
   style?: CSSProperties;
   as?: 'h2' | 'h3' | 'p' | 'span';
+  /** Stable id for the rendered heading (fragment linking, VAL-AEO-005). */
+  id?: string;
   triggerRef?: RefObject<HTMLElement | null>;
   triggerStart?: string;
   triggerEnd?: string;
@@ -24,6 +26,7 @@ const SplitReveal = ({
   className = '',
   style,
   as: Tag = 'span',
+  id,
   triggerRef,
   triggerStart = 'top 82%',
   triggerEnd = 'top 50%',
@@ -66,7 +69,7 @@ const SplitReveal = ({
   // that doesn't execute JS).
   if (isMotionDisabled()) {
     return (
-      <Tag className={className} style={style}>
+      <Tag id={id} className={className} style={style}>
         {children}
       </Tag>
     );
@@ -75,7 +78,7 @@ const SplitReveal = ({
   const words = children.split(/\s+/);
 
   return (
-    <Tag ref={containerRef as never} className={className} style={style}>
+    <Tag id={id} ref={containerRef as never} className={className} style={style}>
       {words.map((word, i) => (
         <span key={i} className="inline-block overflow-hidden">
           <span className="split-word-inner inline-block">{word}</span>

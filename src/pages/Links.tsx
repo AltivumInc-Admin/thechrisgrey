@@ -8,6 +8,9 @@ import { buildProfilePageSchema } from '../utils/schemas';
 import { SOCIAL_LINKS } from '../constants/links';
 import SocialIcon from '../components/SocialIcon';
 import NewsletterCTA from '../components/NewsletterCTA';
+import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
+import { AEO_SUMMARIES } from '../data/aeoSummaries';
+import { slugify } from '../utils/slugify';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -37,7 +40,11 @@ const SocialCard = ({ social }: { social: SocialLink }) => (
         {social.icon}
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className="text-white group-hover:text-altivum-gold transition-colors" style={typography.cardTitleSmall}>
+        <h3
+          id={slugify(social.name)}
+          className="text-white group-hover:text-altivum-gold transition-colors"
+          style={typography.cardTitleSmall}
+        >
           {social.name}
         </h3>
         <p className="text-altivum-silver/60 text-xs truncate">{social.handle}</p>
@@ -180,9 +187,8 @@ const Links = () => {
             </h1>
             <div className="h-px w-24 bg-altivum-gold mx-auto mb-8"></div>
 
-            <p className="text-altivum-silver" style={typography.subtitle}>
-              Connect with me across the web. Find all my websites, social profiles, and projects in one place.
-            </p>
+            {/* Direct-answer summary — first viewport, before the first H2 (VAL-AEO-001, VAL-AEO-002). */}
+            <DirectAnswerSummary text={AEO_SUMMARIES['/links']} className="max-w-2xl mx-auto" />
           </div>
         </div>
       </section>
@@ -202,7 +208,7 @@ const Links = () => {
                 <div className="inline-block px-3 py-1 bg-altivum-gold/20 rounded-sm text-xs font-medium text-altivum-gold mb-4">
                   Featured
                 </div>
-                <h2 className="text-white mb-4" style={typography.sectionHeader}>
+                <h2 id={slugify('AWS Community Builder')} className="text-white mb-4" style={typography.sectionHeader}>
                   AWS Community Builder
                 </h2>
                 <div className="h-px w-16 bg-altivum-gold mb-6"></div>
@@ -247,7 +253,7 @@ const Links = () => {
       <section className="py-24 bg-altivum-dark">
         <div className="max-w-5xl mx-auto px-6 lg:px-8">
           <div className="mb-12">
-            <h2 className="text-white mb-4" style={typography.sectionHeader}>
+            <h2 id={slugify('Websites & Projects')} className="text-white mb-4" style={typography.sectionHeader}>
               Websites & Projects
             </h2>
             <div className="h-px w-16 bg-altivum-gold"></div>
@@ -266,6 +272,7 @@ const Links = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3
+                        id={slugify(site.name)}
                         className="text-white group-hover:text-altivum-gold transition-colors"
                         style={typography.cardTitleLarge}
                       >
@@ -293,7 +300,7 @@ const Links = () => {
       <section className="py-24 bg-altivum-dark">
         <div className="max-w-5xl mx-auto px-6 lg:px-8">
           <div className="mb-12">
-            <h2 className="text-white mb-4" style={typography.sectionHeader}>
+            <h2 id={slugify('Personal - Social Media')} className="text-white mb-4" style={typography.sectionHeader}>
               Personal - Social Media
             </h2>
             <div className="h-px w-16 bg-altivum-gold"></div>
@@ -312,7 +319,7 @@ const Links = () => {
       <section className="py-24 bg-altivum-dark">
         <div className="max-w-5xl mx-auto px-6 lg:px-8">
           <div className="mb-12">
-            <h2 className="text-white mb-4" style={typography.sectionHeader}>
+            <h2 id={slugify('Company - Social Media')} className="text-white mb-4" style={typography.sectionHeader}>
               Company - Social Media
             </h2>
             <div className="h-px w-16 bg-altivum-gold"></div>
@@ -330,7 +337,7 @@ const Links = () => {
       <div className="h-px bg-linear-to-r from-transparent via-altivum-gold/15 to-transparent" />
       <section className="py-24 bg-altivum-dark">
         <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
-          <h2 className="text-white mb-6" style={typography.sectionHeader}>
+          <h2 id={slugify('Want to Work Together?')} className="text-white mb-6" style={typography.sectionHeader}>
             Want to Work Together?
           </h2>
           <p className="text-altivum-silver mb-10" style={typography.bodyText}>

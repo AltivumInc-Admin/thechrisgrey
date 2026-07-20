@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { typography } from '../../utils/typography';
+import { slugify } from '../../utils/slugify';
 import type { ClusterData } from '../../data/infrastructureTopology';
 
 interface FallbackDetailProps {
@@ -37,6 +38,7 @@ export function FallbackDetail({ cluster, allClusters, onClose }: FallbackDetail
 
   if (!cluster) return null;
 
+  const headingId = slugify(cluster.label) || cluster.id;
   const connectedClusterNames = cluster.connections
     .map((id) => allClusters.find((c) => c.id === id))
     .filter((c): c is ClusterData => c !== undefined)
@@ -53,7 +55,7 @@ export function FallbackDetail({ cluster, allClusters, onClose }: FallbackDetail
       }}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="fallback-detail-heading"
+      aria-labelledby={headingId}
       onKeyDown={handleFocusTrapKeyDown}
       className="bg-altivum-navy/30 border border-altivum-slate/30 rounded-lg p-6 mt-4"
       style={{ overflow: 'hidden' }}
@@ -61,7 +63,7 @@ export function FallbackDetail({ cluster, allClusters, onClose }: FallbackDetail
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 id="fallback-detail-heading" style={typography.cardTitleSmall} className="text-white">
+          <h3 id={headingId} style={typography.cardTitleSmall} className="text-white">
             {cluster.label}
           </h3>
           <p style={typography.smallText} className="text-altivum-silver mt-1">

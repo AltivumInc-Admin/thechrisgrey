@@ -8,6 +8,10 @@ import awsPartnerLogo from '../assets/aws-partner-dark.png';
 import altivumLogo from '../assets/altivum.png';
 import { typography } from '../utils/typography';
 import { altivumFAQs, buildAltivumServicesSchemas } from '../utils/schemas';
+import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
+import FAQSection from '../components/aeo/FAQSection';
+import QuestionHeading from '../components/aeo/QuestionHeading';
+import { AEO_SUMMARIES } from '../data/aeoSummaries';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -35,7 +39,7 @@ const IMPERATIVES = [
 const Altivum = () => {
   const timelineItems = [
     {
-      title: 'The Vision',
+      title: 'Why does Altivum exist?',
       preview: "Why Altivum exists and the future I'm building",
       content: (
         <div className="space-y-4">
@@ -63,7 +67,7 @@ const Altivum = () => {
       ),
     },
     {
-      title: 'Building for Impact',
+      title: 'How does Altivum build for impact?',
       preview: 'Three imperatives that drive everything we build',
       content: (
         <div className="space-y-4">
@@ -92,7 +96,7 @@ const Altivum = () => {
       ),
     },
     {
-      title: 'The Road Ahead',
+      title: 'What is the road ahead for Altivum?',
       preview: 'Operational excellence criteria that define our standard',
       content: (
         <div className="space-y-4">
@@ -189,6 +193,8 @@ const Altivum = () => {
               />
               <h1 className="sr-only">Altivum Inc. - Veteran-Founded AI Technology Company</h1>
             </div>
+            {/* Direct-answer summary — first viewport, before the first H2 (VAL-AEO-001, VAL-AEO-002). */}
+            <DirectAnswerSummary text={AEO_SUMMARIES['/altivum']} className="max-w-2xl mx-auto mt-6" />
           </div>
         </div>
 
@@ -218,9 +224,9 @@ const Altivum = () => {
       <section className="py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
-            <h2 className="text-white mb-4" style={typography.sectionHeader}>
-              The Ecosystem
-            </h2>
+            <QuestionHeading as="h2" className="mb-4">
+              What is the Altivum ecosystem?
+            </QuestionHeading>
             <p className="text-altivum-silver max-w-2xl mx-auto" style={typography.subtitle}>
               A unified structure designed for impact
             </p>
@@ -235,6 +241,7 @@ const Altivum = () => {
             <div className="flex justify-center mb-16 md:mb-24 relative z-10">
               <div className="bg-altivum-dark border border-altivum-gold/50 px-8 py-6 rounded-lg text-center min-w-[200px] shadow-[0_0_30px_rgba(197,165,114,0.1)]">
                 <h3
+                  id="altivum-hq"
                   className="text-altivum-gold font-semibold tracking-widest uppercase"
                   style={typography.cardTitleSmall}
                 >
@@ -382,9 +389,9 @@ const Altivum = () => {
       <section className="py-24 bg-altivum-dark">
         <div className="max-w-3xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-white mb-4" style={typography.sectionHeader}>
-              My Founder Journey
-            </h2>
+            <QuestionHeading as="h2" className="mb-4">
+              What is Christian Perez's founder journey?
+            </QuestionHeading>
           </div>
 
           {/* Timeline Items */}
@@ -394,12 +401,12 @@ const Altivum = () => {
                 <div className="absolute left-[-5px] top-0 w-2.5 h-2.5 rounded-full bg-altivum-slate/50 group-hover:bg-altivum-gold transition-colors duration-300"></div>
 
                 <div className="mb-4">
-                  <h3
-                    className="text-white mb-2 group-hover:text-altivum-gold transition-colors duration-300"
-                    style={typography.cardTitleLarge}
+                  <QuestionHeading
+                    as="h3"
+                    className="mb-2 group-hover:text-altivum-gold transition-colors duration-300"
                   >
                     {item.title}
-                  </h3>
+                  </QuestionHeading>
                   <p className="text-altivum-silver/80 italic" style={typography.bodyText}>
                     {item.preview}
                   </p>
@@ -418,9 +425,9 @@ const Altivum = () => {
       <section className="py-24">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center mb-16">
-            <h2 className="text-white mb-6" style={typography.sectionHeader}>
-              Our Mission
-            </h2>
+            <QuestionHeading as="h2" className="mb-6">
+              What is Altivum's mission?
+            </QuestionHeading>
             <p className="text-altivum-silver" style={typography.subtitle}>
               To engineer artificial intelligence systems that empower people and organizations to adapt and excel. From
               local business enablement to national mission alignment, we translate real-world experience into
@@ -429,9 +436,9 @@ const Altivum = () => {
           </div>
 
           <div className="max-w-4xl mx-auto mb-16">
-            <h3 className="text-white mb-8 text-center" style={typography.cardTitleLarge}>
-              Our Imperatives
-            </h3>
+            <QuestionHeading as="h3" className="text-white mb-8 text-center">
+              What are Altivum's imperatives?
+            </QuestionHeading>
             <div className="space-y-6">
               {IMPERATIVES.map((imperative) => (
                 <div
@@ -454,9 +461,9 @@ const Altivum = () => {
       {/* Learn More Section */}
       <section className="py-24 bg-altivum-navy/10">
         <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
-          <h2 className="text-white mb-6" style={typography.sectionHeader}>
-            Want to Learn More?
-          </h2>
+          <QuestionHeading as="h2" className="mb-6">
+            Want to learn more about Altivum?
+          </QuestionHeading>
           <div className="flex flex-col sm:flex-row gap-6 justify-center mt-12">
             <a
               href="https://altivum.ai"
@@ -475,6 +482,10 @@ const Altivum = () => {
           </div>
         </div>
       </section>
+
+      {/* Visible FAQ — mirrors the FAQPage JSON-LD emitted by <SEO faq={altivumFAQs}>
+          so the DOM text and structured data agree (VAL-AEO-004). */}
+      <FAQSection faqs={altivumFAQs} />
 
       <NewsletterCTA
         source="altivum"

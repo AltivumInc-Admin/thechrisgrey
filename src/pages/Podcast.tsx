@@ -6,6 +6,11 @@ import tvpLogo from '../assets/tvp.png';
 // Profile image served from public/ at full quality (no Vite optimization)
 const profileImage = '/profile1.jpeg';
 import { podcastFAQs, buildPodcastSeriesSchema, buildVideoObjectSchema } from '../utils/schemas';
+import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
+import FAQSection from '../components/aeo/FAQSection';
+import QuestionHeading from '../components/aeo/QuestionHeading';
+import { AEO_SUMMARIES } from '../data/aeoSummaries';
+import { slugify } from '../utils/slugify';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -120,6 +125,9 @@ const Podcast = () => {
               <h1 className="sr-only">The Vector Podcast - Hosted by Christian Perez</h1>
             </div>
 
+            {/* Direct-answer summary — first viewport, before the first H2 (VAL-AEO-001, VAL-AEO-002). */}
+            <DirectAnswerSummary text={AEO_SUMMARIES['/podcast']} className="max-w-2xl mx-auto" />
+
             {/* Podcast Stats */}
             <div className="flex justify-center gap-12 mt-10">
               <div className="text-center">
@@ -148,9 +156,9 @@ const Podcast = () => {
       {/* About Section */}
       <section className="py-24 bg-altivum-dark">
         <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
-          <h2 className="text-white mb-6" style={typography.sectionHeader}>
-            About The Vector Podcast
-          </h2>
+          <QuestionHeading as="h2" className="mb-6">
+            What is The Vector Podcast about?
+          </QuestionHeading>
           <div className="h-px w-24 bg-altivum-gold mx-auto mb-8"></div>
           <p className="text-altivum-silver leading-relaxed" style={typography.subtitle}>
             The Vector Podcast delivers mission-focused conversations at the intersection of veteran experience, small
@@ -168,9 +176,7 @@ const Podcast = () => {
             <div className="inline-block px-4 py-2 bg-altivum-gold/10 rounded-md mb-4">
               <span className="text-altivum-gold font-semibold text-sm uppercase tracking-wider">Latest Episode</span>
             </div>
-            <h2 className="text-white" style={typography.sectionHeader}>
-              Now Playing
-            </h2>
+            <QuestionHeading as="h2">What is the latest episode?</QuestionHeading>
           </div>
 
           {LATEST_VIDEO_ID ? (
@@ -198,7 +204,7 @@ const Podcast = () => {
                 <span className="text-altivum-silver">|</span>
                 <span className="text-altivum-silver">{featuredEpisode.duration}</span>
               </div>
-              <h3 className="text-white mb-4" style={typography.cardTitleLarge}>
+              <h3 id={slugify(featuredEpisode.title)} className="text-white mb-4" style={typography.cardTitleLarge}>
                 {featuredEpisode.title}
               </h3>
               <p className="text-altivum-silver" style={typography.bodyText}>
@@ -265,9 +271,9 @@ const Podcast = () => {
           <section className="py-24 bg-altivum-dark">
             <div className="max-w-4xl mx-auto px-6 lg:px-8">
               <div className="text-center mb-12">
-                <h2 className="text-white mb-4" style={typography.sectionHeader}>
-                  All Episodes
-                </h2>
+                <QuestionHeading as="h2" className="mb-4">
+                  What episodes are available?
+                </QuestionHeading>
                 <div className="h-px w-24 bg-altivum-gold mx-auto"></div>
               </div>
 
@@ -299,9 +305,9 @@ const Podcast = () => {
           <section className="py-24 bg-altivum-dark">
             <div className="max-w-7xl mx-auto px-6 lg:px-8">
               <div className="text-center mb-12">
-                <h2 className="text-white mb-4" style={typography.sectionHeader}>
-                  Featured Veterans
-                </h2>
+                <QuestionHeading as="h2" className="mb-4">
+                  Who are the featured veterans?
+                </QuestionHeading>
                 <div className="h-px w-24 bg-altivum-gold mx-auto"></div>
               </div>
 
@@ -319,9 +325,9 @@ const Podcast = () => {
       <div className="h-px bg-linear-to-r from-transparent via-altivum-gold/15 to-transparent" />
       <section className="py-24 bg-linear-to-b from-altivum-dark to-altivum-navy">
         <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
-          <h2 className="text-white mb-6" style={typography.sectionHeader}>
-            Listen & Subscribe
-          </h2>
+          <QuestionHeading as="h2" className="mb-6">
+            How can I listen and subscribe?
+          </QuestionHeading>
           <p className="text-altivum-silver mb-12 max-w-2xl mx-auto" style={typography.bodyText}>
             Never miss an episode. Subscribe on your favorite podcast platform.
           </p>
@@ -345,9 +351,9 @@ const Podcast = () => {
               <img src={profileImage} alt="Christian Perez" className="w-full h-full object-cover" />
             </div>
             <div className="text-center md:text-left">
-              <h3 className="text-white mb-2" style={typography.cardTitleLarge}>
-                Your Host
-              </h3>
+              <QuestionHeading as="h3" className="mb-2">
+                Who hosts The Vector Podcast?
+              </QuestionHeading>
               <h4 className="text-altivum-gold mb-4" style={typography.subtitle}>
                 Christian Perez
               </h4>
@@ -361,6 +367,10 @@ const Podcast = () => {
           </div>
         </div>
       </section>
+
+      {/* Visible FAQ — mirrors the FAQPage JSON-LD emitted by <SEO faq={podcastFAQs}>
+          so the DOM text and structured data agree (VAL-AEO-004). */}
+      <FAQSection faqs={podcastFAQs} />
     </div>
   );
 };

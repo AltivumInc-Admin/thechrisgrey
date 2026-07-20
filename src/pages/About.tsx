@@ -6,6 +6,10 @@ import { typography } from '../utils/typography';
 import { aboutFAQs, buildProfilePageSchema } from '../utils/schemas';
 import NewsletterCTA from '../components/NewsletterCTA';
 import Credentials from '../components/Credentials';
+import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
+import FAQSection from '../components/aeo/FAQSection';
+import QuestionHeading from '../components/aeo/QuestionHeading';
+import { AEO_SUMMARIES } from '../data/aeoSummaries';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -43,6 +47,7 @@ const About = () => {
       <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden opacity-0 animate-fade-in">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center">
+            <h1 className="sr-only">About Christian Perez - Personal Biography</h1>
             <div className="mb-6 sm:mb-8">
               <img
                 src={mpbLogo}
@@ -53,6 +58,8 @@ const About = () => {
                 fetchPriority="high"
               />
             </div>
+            {/* Direct-answer summary — first viewport, before the first H2 (VAL-AEO-001, VAL-AEO-002). */}
+            <DirectAnswerSummary text={AEO_SUMMARIES['/about']} className="mt-8 max-w-2xl mx-auto" />
           </div>
         </div>
       </section>
@@ -60,9 +67,11 @@ const About = () => {
       {/* Biography Content */}
       <section className="pb-24 md:pb-32 lg:pb-40">
         <div className="max-w-3xl mx-auto px-6 lg:px-8">
-          <h1 className="sr-only">About Christian Perez - Personal Biography</h1>
           {/* Opening Statement */}
-          <div className="mb-24 md:mb-32 text-center">
+          <div className="mb-20 md:mb-24 text-center">
+            <QuestionHeading as="h2" className="mb-8">
+              Who is Christian Perez?
+            </QuestionHeading>
             <p className="text-white" style={typography.sectionHeader}>
               My name is <span className="text-altivum-gold">Christian Perez</span>, and I'm the Founder & CEO of{' '}
               <ViewTransitionLink to="/altivum" className="text-altivum-gold link-underline">
@@ -73,6 +82,9 @@ const About = () => {
 
           {/* Early Life */}
           <div className="mb-20 md:mb-24">
+            <QuestionHeading as="h2" className="mb-8">
+              Where did Christian Perez grow up?
+            </QuestionHeading>
             <p className="text-white/80" style={typography.subtitle}>
               I was born in <span className="text-white">Guatemala City</span> and came to the United States with my
               family when I was two. <span className="text-white">Boston</span> shaped me. From enjoying Italian cuisine
@@ -82,6 +94,9 @@ const About = () => {
 
           {/* Military Service */}
           <div className="mb-20 md:mb-24">
+            <QuestionHeading as="h2" className="mb-8">
+              What was Christian Perez's military service?
+            </QuestionHeading>
             <p className="text-white/80" style={typography.subtitle}>
               In <span className="text-white">2012</span>, I joined the Army and later earned my{' '}
               <span className="text-altivum-gold">Green Beret</span> as a Special Forces Medic (18D). I was then
@@ -98,6 +113,9 @@ const About = () => {
 
           {/* Career Evolution */}
           <div className="mb-20 md:mb-24">
+            <QuestionHeading as="h2" className="mb-8">
+              How did Christian Perez transition to tech?
+            </QuestionHeading>
             <p className="text-white/80" style={typography.subtitle}>
               Throughout my military career, I watched the rapid evolution of computing and artificial intelligence. In{' '}
               <span className="text-white">February 2025</span>, I founded{' '}
@@ -111,6 +129,9 @@ const About = () => {
 
           {/* Core Mission */}
           <div className="mt-32">
+            <QuestionHeading as="h2" className="mb-8">
+              What drives Christian Perez?
+            </QuestionHeading>
             <p className="text-white mb-8" style={typography.cardTitleLarge}>
               At my core, I'm a <span className="text-altivum-gold">builder</span>.
             </p>
@@ -133,6 +154,10 @@ const About = () => {
           Community Builder, Anthropic Academy certifications, Veteran Business
           of the Month). */}
       <Credentials />
+
+      {/* Visible FAQ — mirrors the FAQPage JSON-LD emitted by <SEO faq={aboutFAQs}>
+          so the DOM text and structured data agree (VAL-AEO-004). */}
+      <FAQSection faqs={aboutFAQs} />
 
       <NewsletterCTA
         source="about"

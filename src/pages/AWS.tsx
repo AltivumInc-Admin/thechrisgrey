@@ -7,6 +7,9 @@ import awsCommunityBuilder from '../assets/aws-community-builder.webp';
 import { typography } from '../utils/typography';
 import { buildWebPageSchema } from '../utils/schemas';
 import { InfraTopology } from '../components/aws/InfraTopology';
+import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
+import QuestionHeading from '../components/aeo/QuestionHeading';
+import { AEO_SUMMARIES } from '../data/aeoSummaries';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -53,6 +56,8 @@ const AWS = () => {
               />
               <h1 className="sr-only">Amazon Web Services - AWS Community Builder in AI Engineering</h1>
             </div>
+            {/* Direct-answer summary — first viewport, before the first H2 (VAL-AEO-001, VAL-AEO-002). */}
+            <DirectAnswerSummary text={AEO_SUMMARIES['/aws']} className="max-w-2xl mx-auto mt-6" />
           </div>
         </div>
       </section>
@@ -87,6 +92,9 @@ const AWS = () => {
           </div>
 
           <div className="mb-20 md:mb-24">
+            <QuestionHeading as="h2" className="mb-6">
+              What is the AWS Community Builders program?
+            </QuestionHeading>
             <p className="text-white/80" style={typography.subtitle}>
               The <span className="text-white">AWS Community Builders</span> program provides technical resources,
               mentorship, and networking opportunities to AWS enthusiasts and emerging thought leaders who are
@@ -95,6 +103,9 @@ const AWS = () => {
           </div>
 
           <div className="mb-20 md:mb-24">
+            <QuestionHeading as="h2" className="mb-6">
+              How did Christian join the AI Engineering track?
+            </QuestionHeading>
             <p className="text-white/80" style={typography.subtitle}>
               I was accepted into the program under the <span className="text-altivum-gold">AI Engineering</span> track,
               reflecting the work I do every day at <span className="text-white">Altivum Inc.</span> — building
@@ -104,6 +115,9 @@ const AWS = () => {
           </div>
 
           <div className="mb-20 md:mb-24">
+            <QuestionHeading as="h2" className="mb-6">
+              What does being a Community Builder mean?
+            </QuestionHeading>
             <p className="text-white/80" style={typography.subtitle}>
               This isn't a certification or a partnership. It's a{' '}
               <span className="text-white">recognition of builders</span> — people who are actively creating, learning,

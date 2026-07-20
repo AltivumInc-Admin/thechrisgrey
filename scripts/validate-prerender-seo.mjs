@@ -12,6 +12,13 @@
  *     (trailing-slash-insensitive),
  *   - any same-origin og:image (/og/<slug>.png) resolves to a file in dist/.
  *
+ * AEO assertions (VAL-AEO-001 through VAL-AEO-006, VAL-CROSS-009):
+ *   - every content route has a [data-aio-summary] element with non-empty text
+ *     that appears BEFORE the first <h2> in source order,
+ *   - every <h2> and <h3> on content routes has a non-empty slug-form id,
+ *   - routes with a FAQPage JSON-LD node have a visible [data-aio-faq] section
+ *     whose Q/A text matches the JSON-LD mainEntity text.
+ *
  * #1 SAFETY CONSTRAINT (mirrors prerender.js): this step is NON-FATAL by
  * default. A route that degraded to a CSR shell (no prerendered file) is
  * reported but never fails the build, and violations only set a non-zero exit
@@ -28,6 +35,22 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST = resolve(__dirname, '../dist');
 const SITE_URL = 'https://thechrisgrey.com';
 
+// Content routes that must carry a direct-answer summary (VAL-AEO-001).
+// Excludes app-shell / non-content routes: /chat, /admin, /privacy.
+const CONTENT_ROUTES = new Set([
+  '/',
+  '/about',
+  '/altivum',
+  '/foundation',
+  '/podcast',
+  '/aws',
+  '/claude',
+  '/beyond-the-assessment',
+  '/blog',
+  '/links',
+  '/contact',
+]);
+
 // File form written by prerender.js (outPathsFor): '/' -> dist/index.html,
 // '/aws' -> dist/aws.html (the bare-URL artifact that returns 200, no redirect).
 function fileForRoute(route) {
@@ -41,6 +64,125 @@ function fileForRoute(route) {
 function sameUrl(a, b) {
   const norm = (u) => u.replace(/\/+$/, '');
   return norm(a) === norm(b);
+}
+
+/**
+ * Extract the FAQPage mainEntity Q/A pairs from a parsed JSON-LD @graph.
+ * Returns an array of { question, answer } or [] when no FAQPage node exists.
+ */
+function extractFaqFromGraph(graph) {
+  if (!Array.isArray(graph['@graph'])) return [];
+  for (const node of graph['@graph']) {
+    if (node['@type'] === 'FAQPage' && Array.isArray(node.mainEntity)) {
+      return node.mainEntity.map((q) => ({
+        question: q.name || '',
+        answer: q.acceptedAnswer?.text || '',
+      }));
+    }
+  }
+  return [];
+}
+
+/**
+ * Decode HTML entities in a text snippet extracted from raw HTML so the DOM
+ * text and JSON-LD text can be compared byte-for-byte. Covers the entities
+ * Sanity / react-helmet-async emit most often.
+ */
+function decodeEntities(text) {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&rsquo;/g, '\u2019')
+    .replace(/&lsquo;/g, '\u2018')
+    .replace(/&ldquo;/g, '\u201C')
+    .replace(/&rdquo;/g, '\u201D')
+    .replace(/&nbsp;/g, ' ');
+}
+
+/**
+ * AEO-specific violations for a single prerendered HTML string (VAL-AEO-001,
+ * VAL-AEO-002, VAL-AEO-004, VAL-AEO-005). Exported so the test suite can
+ * exercise it against fixture HTML without reading dist/.
+ */
+export function aeoViolations(html, route) {
+  const violations = [];
+  if (!CONTENT_ROUTES.has(route)) return violations;
+
+  // --- VAL-AEO-001 / VAL-AEO-002: direct-answer summary before the first H2 ---
+  const summaryMatch = html.match(/data-aio-summary="[^"]*"[^>]*>([\s\S]*?)<\//);
+  const firstH2Index = html.search(/<h2[\s>]/);
+  const summaryTagIndex = html.search(/data-aio-summary=/);
+  if (summaryTagIndex === -1) {
+    violations.push('missing [data-aio-summary] direct-answer element (VAL-AEO-001)');
+  } else {
+    const summaryText = decodeEntities((summaryMatch?.[1] || '').replace(/<[^>]+>/g, '').trim());
+    if (!summaryText) {
+      violations.push('[data-aio-summary] element has empty text (VAL-AEO-001)');
+    } else {
+      const words = summaryText.split(/\s+/).filter(Boolean).length;
+      if (words < 40 || words > 80) {
+        violations.push(`[data-aio-summary] is ${words} words; expected 40-80 (VAL-AEO-001)`);
+      }
+    }
+    if (firstH2Index !== -1 && summaryTagIndex > firstH2Index) {
+      violations.push('[data-aio-summary] appears AFTER the first <h2> in source order (VAL-AEO-002)');
+    }
+  }
+
+  // --- VAL-AEO-005: every H2/H3 has a non-empty slug-form id ---
+  const headingMatches = [...html.matchAll(/<(h[23])(\s[^>]*)?>/g)];
+  for (const m of headingMatches) {
+    const tag = m[1];
+    const attrs = m[2] || '';
+    const idMatch = attrs.match(/id="([^"]*)"/);
+    if (!idMatch || !idMatch[1]) {
+      violations.push(`<${tag}> without an id attribute (VAL-AEO-005)`);
+    } else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(idMatch[1])) {
+      violations.push(`<${tag}> id "${idMatch[1]}" is not slug-form (VAL-AEO-005)`);
+    }
+  }
+
+  // --- VAL-AEO-004: FAQ content visible in DOM and matches JSON-LD ---
+  const ldMatches = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+  let faqFromJsonLd = [];
+  if (ldMatches.length === 1) {
+    try {
+      const graph = JSON.parse(ldMatches[0][1]);
+      faqFromJsonLd = extractFaqFromGraph(graph);
+    } catch {
+      // JSON-LD validity is checked by the caller; skip FAQ cross-check on parse error.
+    }
+  }
+  if (faqFromJsonLd.length > 0) {
+    const faqSectionMatch = html.match(/data-aio-faq/);
+    if (!faqSectionMatch) {
+      violations.push('FAQPage JSON-LD present but no visible [data-aio-faq] section in DOM (VAL-AEO-004)');
+    } else {
+      // Extract the text content of each visible FAQ question (<h3>) and answer
+      // ([data-aio-answer]) from the DOM. We decode HTML entities so the
+      // comparison against the JSON-LD text (which carries raw `&`, `'`, etc.)
+      // is byte-for-byte rather than being thrown off by entity encoding.
+      const visibleQuestions = [...html.matchAll(/<h3[^>]*id="[^"]*"[^>]*>([\s\S]*?)<\/h3>/g)].map((m) =>
+        decodeEntities(m[1].replace(/<[^>]+>/g, '').trim()),
+      );
+      const visibleAnswers = [...html.matchAll(/data-aio-answer="[^"]*"[^>]*>([\s\S]*?)<\/p>/g)].map((m) =>
+        decodeEntities(m[1].replace(/<[^>]+>/g, '').trim()),
+      );
+      for (const qa of faqFromJsonLd) {
+        if (!visibleQuestions.includes(qa.question)) {
+          violations.push(`FAQ question "${qa.question.slice(0, 50)}..." not visible in DOM (VAL-AEO-004)`);
+        }
+        if (!visibleAnswers.includes(qa.answer)) {
+          violations.push(`FAQ answer for "${qa.question.slice(0, 50)}..." not visible in DOM (VAL-AEO-004)`);
+        }
+      }
+    }
+  }
+
+  return violations;
 }
 
 function validateRoute(route) {
@@ -94,6 +236,9 @@ function validateRoute(route) {
     }
   }
 
+  // --- AEO assertions (VAL-AEO-001/002/004/005) ---
+  violations.push(...aeoViolations(html, route));
+
   return { route, degraded: false, violations };
 }
 
@@ -126,4 +271,9 @@ function main() {
   process.exit(0);
 }
 
-main();
+// Only run main() when executed directly (not when imported by the test suite).
+// The test suite imports `aeoViolations` and should not trigger the dist scan.
+const isDirectInvocation = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isDirectInvocation) {
+  main();
+}

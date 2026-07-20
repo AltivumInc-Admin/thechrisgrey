@@ -12,6 +12,10 @@ import { trackEvent } from '../utils/analytics';
 import Testimonials from '../components/Testimonials';
 import { createLogger } from '../utils/logger';
 import { withTraceId } from '../utils/traceId';
+import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
+import FAQSection from '../components/aeo/FAQSection';
+import { AEO_SUMMARIES } from '../data/aeoSummaries';
+import { slugify } from '../utils/slugify';
 
 const log = createLogger('Contact');
 
@@ -317,10 +321,8 @@ const Contact = () => {
             </h1>
             <div className="h-px w-24 bg-altivum-gold mb-8"></div>
 
-            <p className="text-altivum-silver" style={typography.subtitle}>
-              Whether you're interested in cloud migration, AI integration, speaking engagements, or collaboration
-              opportunities, I'd love to hear from you.
-            </p>
+            {/* Direct-answer summary — first viewport, before the first H2 (VAL-AEO-001, VAL-AEO-002). */}
+            <DirectAnswerSummary text={AEO_SUMMARIES['/contact']} className="max-w-2xl" />
           </div>
         </div>
       </section>
@@ -332,7 +334,7 @@ const Contact = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
             {/* Speaking Topics */}
             <div>
-              <h2 className="text-white mb-6" style={typography.sectionHeader}>
+              <h2 id={slugify('Speaking & Media')} className="text-white mb-6" style={typography.sectionHeader}>
                 Speaking & Media
               </h2>
               <p className="text-altivum-silver mb-8" style={typography.bodyText}>
@@ -351,7 +353,9 @@ const Contact = () => {
                     className="p-5 bg-altivum-dark/50 border border-white/5 hover:border-altivum-gold/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-altivum-gold/5 transition-all duration-300"
                   >
                     <span className="material-icons text-altivum-gold mb-3 block">{topic.icon}</span>
-                    <h3 className="text-white text-sm font-medium mb-1">{topic.title}</h3>
+                    <h3 id={slugify(topic.title)} className="text-white text-sm font-medium mb-1">
+                      {topic.title}
+                    </h3>
                     <p className="text-altivum-silver text-xs">{topic.desc}</p>
                   </div>
                 ))}
@@ -360,7 +364,7 @@ const Contact = () => {
 
             {/* Event Types & Press Kit */}
             <div className="lg:pt-16">
-              <h3 className="text-white mb-6" style={typography.cardTitleLarge}>
+              <h3 id={slugify('Event Types')} className="text-white mb-6" style={typography.cardTitleLarge}>
                 Event Types
               </h3>
               <ul className="space-y-3 mb-10">
@@ -408,7 +412,7 @@ const Contact = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
             {/* Contact Form */}
             <div>
-              <h2 className="text-white mb-8" style={typography.sectionHeader}>
+              <h2 id={slugify('Send a Message')} className="text-white mb-8" style={typography.sectionHeader}>
                 Send a Message
               </h2>
               <form className="space-y-10" onSubmit={handleSubmit} noValidate>
@@ -679,7 +683,7 @@ const Contact = () => {
             {/* Contact Information */}
             <div className="space-y-12 lg:pt-20">
               <div>
-                <h2 className="text-white mb-6" style={typography.cardTitleLarge}>
+                <h2 id={slugify('Other Ways to Connect')} className="text-white mb-6" style={typography.cardTitleLarge}>
                   Other Ways to Connect
                 </h2>
                 <p className="text-altivum-silver" style={typography.bodyText}>
@@ -707,6 +711,7 @@ const Contact = () => {
                       </div>
                       <div>
                         <h3
+                          id={slugify(channel.title)}
                           className="text-white mb-1 group-hover:text-altivum-gold transition-colors"
                           style={typography.cardTitleSmall}
                         >
@@ -724,7 +729,7 @@ const Contact = () => {
                 className="pt-8 border-t border-white/3"
                 style={{ borderImage: 'linear-gradient(to right, transparent, rgba(197,165,114,0.15), transparent) 1' }}
               >
-                <h3 className="text-white mb-4" style={typography.cardTitleSmall}>
+                <h3 id={slugify('Availability')} className="text-white mb-4" style={typography.cardTitleSmall}>
                   Availability
                 </h3>
                 <ul className="space-y-3">
@@ -753,6 +758,10 @@ const Contact = () => {
 
       {/* Social proof for speaking/consulting (renders only once real testimonials exist) */}
       <Testimonials eyebrow="Trusted by" heading="What clients and partners say" />
+
+      {/* Visible FAQ — mirrors the FAQPage JSON-LD emitted by <SEO faq={contactFAQs}>
+          so the DOM text and structured data agree (VAL-AEO-004). */}
+      <FAQSection faqs={contactFAQs} />
 
       {/* Success Modal */}
       {showSuccessModal && (

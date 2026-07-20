@@ -6,6 +6,10 @@ import CrossLinkBand from '../components/CrossLinkBand';
 import foundationImage from '../assets/foundation.webp';
 import { typography } from '../utils/typography';
 import { foundationFAQs, buildFoundationOrganizationSchema } from '../utils/schemas';
+import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
+import FAQSection from '../components/aeo/FAQSection';
+import QuestionHeading from '../components/aeo/QuestionHeading';
+import { AEO_SUMMARIES } from '../data/aeoSummaries';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -111,10 +115,8 @@ const Foundation = () => {
               Veteran scholarships in AI, Cloud, Robotics &amp; Cybersecurity.
             </h1>
             <div className="h-px w-16 bg-altivum-gold mx-auto mb-6 sm:mb-8" />
-            <p className="text-altivum-silver max-w-2xl mx-auto mb-8 sm:mb-10" style={typography.subtitle}>
-              A 501(c)(3) nonprofit funding U.S. military veterans pursuing education in the technologies defining the
-              next economy. At no cost to the scholar.
-            </p>
+            {/* Direct-answer summary — first viewport, before the first H2 (VAL-AEO-001, VAL-AEO-002). */}
+            <DirectAnswerSummary text={AEO_SUMMARIES['/foundation']} className="max-w-2xl mx-auto mb-8 sm:mb-10" />
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <FoundationCtaButton href={FOUNDATION_URL} variant="gold">
                 Visit altivumfoundation.org
@@ -133,9 +135,9 @@ const Foundation = () => {
           <p className="text-altivum-gold uppercase tracking-[0.25em] mb-4" style={typography.smallText}>
             Our Vision
           </p>
-          <h2 className="text-white mb-6" style={typography.sectionHeader}>
-            The military trains the operators the AI economy is looking for.
-          </h2>
+          <QuestionHeading as="h2" className="mb-6">
+            What is the Altivum Foundation's vision?
+          </QuestionHeading>
           <div className="h-px w-16 bg-altivum-gold/60 mx-auto mb-8" />
           <p className="text-altivum-silver" style={typography.subtitle}>
             The men and women who served this country bring discipline, adaptability, and leadership forged under
@@ -184,11 +186,11 @@ const Foundation = () => {
             <p className="text-altivum-gold uppercase tracking-[0.25em] mb-4" style={typography.smallText}>
               Eligible Paths
             </p>
-            <h2 className="text-white mb-4" style={typography.sectionHeader}>
-              Four fields. One common thread.
-            </h2>
+            <QuestionHeading as="h2" className="mb-4">
+              What fields does the Foundation fund?
+            </QuestionHeading>
             <p className="text-altivum-silver max-w-2xl mx-auto" style={typography.subtitle}>
-              Each rewards exactly the skills veterans already have.
+              Four fields. Each rewards exactly the skills veterans already have.
             </p>
           </div>
 
@@ -201,12 +203,9 @@ const Foundation = () => {
                 <p className="text-altivum-gold/80 mb-3" style={typography.smallText}>
                   {area.ordinal}
                 </p>
-                <h3
-                  className="text-white mb-4 group-hover:text-altivum-gold transition-colors"
-                  style={typography.cardTitleLarge}
-                >
+                <QuestionHeading as="h3" className="mb-4 group-hover:text-altivum-gold transition-colors">
                   {area.name}
-                </h3>
+                </QuestionHeading>
                 <p className="text-altivum-silver" style={typography.bodyText}>
                   {area.description}
                 </p>
@@ -223,9 +222,9 @@ const Foundation = () => {
             <p className="text-altivum-gold uppercase tracking-[0.25em] mb-3" style={typography.smallText}>
               Founder &amp; President
             </p>
-            <h2 className="text-white mb-6" style={typography.sectionHeader}>
-              Why I built this.
-            </h2>
+            <QuestionHeading as="h2" className="mb-6">
+              Why did I build the Foundation?
+            </QuestionHeading>
             <div className="space-y-4">
               <p className="text-altivum-silver" style={typography.bodyText}>
                 When I took off the uniform, the path from special operations to cloud architecture was not a roadmap.
@@ -267,9 +266,9 @@ const Foundation = () => {
       {/* CTA */}
       <section className="py-24 md:py-32 bg-linear-to-br from-altivum-navy to-altivum-blue">
         <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
-          <h2 className="text-white mb-6" style={typography.sectionHeader}>
+          <QuestionHeading as="h2" className="mb-6">
             Ready to invest in a veteran's future?
-          </h2>
+          </QuestionHeading>
           <p className="text-altivum-silver mb-4" style={typography.subtitle}>
             Every contribution is tax-deductible.
           </p>
@@ -286,6 +285,10 @@ const Foundation = () => {
           </div>
         </div>
       </section>
+
+      {/* Visible FAQ — mirrors the FAQPage JSON-LD emitted by <SEO faq={foundationFAQs}>
+          so the DOM text and structured data agree (VAL-AEO-004). */}
+      <FAQSection faqs={foundationFAQs} />
 
       <NewsletterCTA
         source="foundation"

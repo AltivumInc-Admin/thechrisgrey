@@ -11,6 +11,10 @@ import { SOCIAL_LINKS } from '../constants/links';
 import SocialIcon from '../components/SocialIcon';
 import NewsletterForm from '../components/NewsletterForm';
 import Testimonials from '../components/Testimonials';
+import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
+import FAQSection from '../components/aeo/FAQSection';
+import { AEO_SUMMARIES } from '../data/aeoSummaries';
+import { slugify } from '../utils/slugify';
 
 const keyPoints = [
   { title: 'Personal Biography', subtitle: 'Christian Perez', link: '/about' },
@@ -51,6 +55,7 @@ const KeyPointTab = ({ point, index, triggerRef, mirrored = false }: KeyPointTab
       <ViewTransitionLink to={point.link} className={`${cardClass} ${linkHover}`}>
         <SplitReveal
           as="h2"
+          id={slugify(point.title)}
           direction={direction}
           stagger={0.04}
           className="text-white mb-1 sm:mb-2"
@@ -104,6 +109,12 @@ const Home = () => {
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-altivum-dark opacity-0 animate-fade-in">
         <HeroIntroVideo />
         <h1 className="sr-only">Christian Perez - Leadership Forged in Service</h1>
+        {/* Direct-answer summary — first viewport, before the first H2 (VAL-AEO-001, VAL-AEO-002).
+            Positioned at the bottom of the hero so it is visible in the first viewport
+            without competing with the brand intro video. */}
+        <div className="absolute bottom-6 left-0 right-0 z-20 px-4">
+          <DirectAnswerSummary text={AEO_SUMMARIES['/']} className="text-center max-w-2xl mx-auto" />
+        </div>
       </section>
 
       {/* Sticky Profile Image Section with Scrolling Summary Tabs */}
@@ -142,10 +153,14 @@ const Home = () => {
       {/* Social proof (renders only once real testimonials exist) */}
       <Testimonials />
 
+      {/* Visible FAQ — mirrors the FAQPage JSON-LD emitted by <SEO faq={homeFAQs}>
+          so the DOM text and structured data agree (VAL-AEO-004). */}
+      <FAQSection faqs={homeFAQs} />
+
       {/* CTA Section */}
       <section className="bg-linear-to-br from-altivum-navy to-altivum-blue py-16 sm:py-24 md:py-32 lg:py-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-white mb-4 sm:mb-6" style={typography.sectionHeader}>
+          <h2 id={slugify("Let's Connect")} className="text-white mb-4 sm:mb-6" style={typography.sectionHeader}>
             Let's Connect
           </h2>
           <p className="text-altivum-silver mb-8 sm:mb-10 max-w-2xl mx-auto" style={typography.subtitle}>

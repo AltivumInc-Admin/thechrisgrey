@@ -8,6 +8,10 @@ import claudeHero from '../assets/claude-hero.png';
 import claudeBedrockCert from '../assets/claude-bedrock-cert.png';
 import { ArchitectureXRay } from '../components/claude/ArchitectureXRay';
 import { McpInstallBadge } from '../components/McpInstallBadge';
+import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
+import QuestionHeading from '../components/aeo/QuestionHeading';
+import { AEO_SUMMARIES } from '../data/aeoSummaries';
+import { slugify } from '../utils/slugify';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -152,6 +156,8 @@ const Claude = () => {
               />
               <h1 className="sr-only">Claude - Applied AI Engineer</h1>
             </div>
+            {/* Direct-answer summary — first viewport, before the first H2 (VAL-AEO-001, VAL-AEO-002). */}
+            <DirectAnswerSummary text={AEO_SUMMARIES['/claude']} className="max-w-2xl mx-auto mt-6" />
           </div>
         </div>
       </section>
@@ -160,6 +166,9 @@ const Claude = () => {
       <section className="pb-24 md:pb-32 pt-8 md:pt-16">
         <div className="max-w-3xl mx-auto px-6 lg:px-8">
           <div className="mb-20 md:mb-24">
+            <QuestionHeading as="h2" className="mb-6">
+              How does Christian use Claude in production?
+            </QuestionHeading>
             <p className="text-white/80" style={typography.subtitle}>
               Claude isn't just a tool I use — it's the foundation of the{' '}
               <span className="text-white">AI systems I build</span>. Every conversational interface, every RAG
@@ -169,6 +178,9 @@ const Claude = () => {
           </div>
 
           <div className="mb-20 md:mb-24">
+            <QuestionHeading as="h2" className="mb-6">
+              What AI systems run on Claude?
+            </QuestionHeading>
             <p className="text-white/80" style={typography.subtitle}>
               From the AI chat on this site — powered by Claude Haiku 4.5 with retrieval-augmented generation — to the
               development workflows that built it, Claude is embedded in how I think about and deliver{' '}
@@ -177,6 +189,9 @@ const Claude = () => {
           </div>
 
           <div className="mb-20 md:mb-24">
+            <QuestionHeading as="h2" className="mb-6">
+              What is applied AI engineering?
+            </QuestionHeading>
             <p className="text-white/80" style={typography.subtitle}>
               This page represents the applied side of AI engineering:{' '}
               <span className="text-white">building real systems</span> that are reliable, observable, and secure — not
@@ -199,9 +214,9 @@ const Claude = () => {
       <section className="py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
-            <h2 className="text-white mb-4" style={typography.sectionHeader}>
-              What I Build
-            </h2>
+            <QuestionHeading as="h2" className="mb-4">
+              What does Christian build with Claude?
+            </QuestionHeading>
             <p className="text-altivum-silver max-w-2xl mx-auto" style={typography.subtitle}>
               Production systems powered by Claude
             </p>
@@ -216,6 +231,7 @@ const Claude = () => {
               >
                 <div className="bg-altivum-navy/30 border border-altivum-slate/30 p-8 rounded-lg hover:border-altivum-gold/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-altivum-gold/5 transition-all duration-300 group h-full flex flex-col">
                   <h3
+                    id={slugify(area.title)}
                     className="text-white mb-4 group-hover:text-altivum-gold transition-colors duration-300"
                     style={typography.cardTitleLarge}
                   >
@@ -246,20 +262,17 @@ const Claude = () => {
       <section className="py-24 bg-altivum-navy/10">
         <div className="max-w-3xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-white mb-4" style={typography.sectionHeader}>
-              How I Work With Claude
-            </h2>
+            <QuestionHeading as="h2" className="mb-4">
+              How does Christian work with Claude?
+            </QuestionHeading>
           </div>
 
           <div className="space-y-8">
             <div className="border-l border-altivum-slate/30 pl-8 relative group">
               <div className="absolute left-[-5px] top-0 w-2.5 h-2.5 rounded-full bg-altivum-slate/50 group-hover:bg-altivum-gold transition-colors duration-300" />
-              <h3
-                className="text-white mb-2 group-hover:text-altivum-gold transition-colors duration-300"
-                style={typography.cardTitleLarge}
-              >
-                Production First
-              </h3>
+              <QuestionHeading as="h3" className="mb-2 group-hover:text-altivum-gold transition-colors duration-300">
+                Why production first?
+              </QuestionHeading>
               <p className="text-altivum-silver" style={typography.bodyText}>
                 Every system ships with guardrails, rate limiting, cost monitoring, and observability built in. AI in
                 production isn't a demo — it requires the same engineering rigor as any critical infrastructure.
@@ -268,12 +281,9 @@ const Claude = () => {
 
             <div className="border-l border-altivum-slate/30 pl-8 relative group">
               <div className="absolute left-[-5px] top-0 w-2.5 h-2.5 rounded-full bg-altivum-slate/50 group-hover:bg-altivum-gold transition-colors duration-300" />
-              <h3
-                className="text-white mb-2 group-hover:text-altivum-gold transition-colors duration-300"
-                style={typography.cardTitleLarge}
-              >
-                Human in the Loop
-              </h3>
+              <QuestionHeading as="h3" className="mb-2 group-hover:text-altivum-gold transition-colors duration-300">
+                Why keep humans in the loop?
+              </QuestionHeading>
               <p className="text-altivum-silver" style={typography.bodyText}>
                 Claude augments decision-making — it doesn't replace it. The best AI systems are designed to make people
                 more effective, not to remove them from the process. Every system I build keeps humans at the center.
@@ -282,12 +292,9 @@ const Claude = () => {
 
             <div className="border-l border-altivum-slate/30 pl-8 relative group">
               <div className="absolute left-[-5px] top-0 w-2.5 h-2.5 rounded-full bg-altivum-slate/50 group-hover:bg-altivum-gold transition-colors duration-300" />
-              <h3
-                className="text-white mb-2 group-hover:text-altivum-gold transition-colors duration-300"
-                style={typography.cardTitleLarge}
-              >
-                Full-Stack AI
-              </h3>
+              <QuestionHeading as="h3" className="mb-2 group-hover:text-altivum-gold transition-colors duration-300">
+                What does full-stack AI mean?
+              </QuestionHeading>
               <p className="text-altivum-silver" style={typography.bodyText}>
                 From prompt engineering and system design to frontend streaming and infrastructure — I own the entire
                 stack. Claude Code accelerates every layer, from architecture planning to automated test generation.
@@ -302,9 +309,9 @@ const Claude = () => {
       <section className="py-24">
         <div className="max-w-4xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-white mb-4" style={typography.sectionHeader}>
-              Anthropic Academy
-            </h2>
+            <QuestionHeading as="h2" className="mb-4">
+              What Anthropic Academy certifications does Christian hold?
+            </QuestionHeading>
             <div className="h-px w-24 bg-altivum-gold mx-auto mb-6"></div>
             <p className="text-altivum-silver" style={typography.bodyText}>
               Certifications completed through Anthropic's training program
@@ -325,7 +332,7 @@ const Claude = () => {
                 <div className="inline-block px-3 py-1 bg-altivum-gold/20 rounded-sm text-xs font-medium text-altivum-gold mb-3">
                   Featured
                 </div>
-                <h3 className="text-white mb-1" style={typography.cardTitleLarge}>
+                <h3 id={slugify(featuredCert.name)} className="text-white mb-1" style={typography.cardTitleLarge}>
                   {featuredCert.name}
                 </h3>
                 <p className="text-altivum-silver/60 text-sm mb-2">

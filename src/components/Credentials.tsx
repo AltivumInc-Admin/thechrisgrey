@@ -1,5 +1,6 @@
 import { CREDENTIALS, type Credential } from '../data/credentials';
 import { typography } from '../utils/typography';
+import { slugify } from '../utils/slugify';
 
 interface CredentialsProps {
   /** Override the global list (e.g. for testing or curated subsets). */
@@ -63,6 +64,7 @@ const Credentials = ({
                       {credential.category}
                     </p>
                     <h3
+                      id={slugify(credential.label)}
                       className="text-white font-medium mb-1 group-hover:text-altivum-gold transition-colors duration-300"
                       style={typography.cardTitleSmall}
                     >

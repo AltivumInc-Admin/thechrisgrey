@@ -10,6 +10,7 @@ import { PipelineEdge } from './PipelineEdge';
 import { NodeDetailPanel } from './NodeDetailPanel';
 import { TraceInput } from './TraceInput';
 import { TraceResponseBubble } from './TraceResponseBubble';
+import QuestionHeading from '../aeo/QuestionHeading';
 
 const NODE_WIDTH = 100;
 const NODE_HEIGHT = 60;
@@ -338,9 +339,9 @@ export function ArchitectureXRay() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="text-center mb-16">
-          <h2 className="text-white mb-4" style={typography.sectionHeader}>
-            The Architecture
-          </h2>
+          <QuestionHeading as="h2" className="mb-4">
+            What is the architecture behind Alti?
+          </QuestionHeading>
           <p className="text-altivum-silver" style={typography.subtitle}>
             How the Alti chat pipeline works
           </p>

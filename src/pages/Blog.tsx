@@ -7,6 +7,10 @@ import NewsletterForm from '../components/NewsletterForm';
 import { typography } from '../utils/typography';
 import { formatDate } from '../utils/dateFormatter';
 import { blogFAQs, buildItemListSchema } from '../utils/schemas';
+import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
+import FAQSection from '../components/aeo/FAQSection';
+import { AEO_SUMMARIES } from '../data/aeoSummaries';
+import { slugify } from '../utils/slugify';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -229,9 +233,8 @@ const Blog = () => {
             </h1>
             <div className="h-px w-24 bg-altivum-gold mb-8"></div>
 
-            <p className="text-altivum-silver" style={typography.subtitle}>
-              Long-form writing on leadership, technology, philosophy, history, and lessons from a life of service.
-            </p>
+            {/* Direct-answer summary — first viewport, before the first H2 (VAL-AEO-001, VAL-AEO-002). */}
+            <DirectAnswerSummary text={AEO_SUMMARIES['/blog']} className="mb-2" />
           </div>
         </div>
       </section>
@@ -368,7 +371,9 @@ const Blog = () => {
             <div className="mb-10 p-6 bg-altivum-navy/30 rounded-lg border border-white/5">
               <div className="flex items-center gap-3 mb-2">
                 <span className="material-icons text-altivum-gold">library_books</span>
-                <h2 className="text-white font-semibold text-lg">{filteredPosts[0].series.title}</h2>
+                <h2 id={slugify(filteredPosts[0].series.title)} className="text-white font-semibold text-lg">
+                  {filteredPosts[0].series.title}
+                </h2>
               </div>
               {filteredPosts[0].series.description && (
                 <p className="text-altivum-silver text-sm ml-9">{filteredPosts[0].series.description}</p>
@@ -458,6 +463,7 @@ const Blog = () => {
                         )}
                       </div>
                       <h3
+                        id={slugify(post.title)}
                         className="text-white group-hover:text-altivum-gold transition-colors"
                         style={typography.cardTitleLarge}
                       >
@@ -497,6 +503,10 @@ const Blog = () => {
           )}
         </div>
       </section>
+
+      {/* Visible FAQ — mirrors the FAQPage JSON-LD emitted by <SEO faq={blogFAQs}>
+          so the DOM text and structured data agree (VAL-AEO-004). */}
+      <FAQSection faqs={blogFAQs} />
 
       <NewsletterForm variant="full" />
     </div>

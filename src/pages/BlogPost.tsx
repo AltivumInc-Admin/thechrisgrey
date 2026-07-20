@@ -31,6 +31,8 @@ import SanityResponsiveImage from '../components/SanityResponsiveImage';
 import { getYouTubeId } from '../utils/youtube';
 import { buildVideoObjectSchema } from '../utils/schemas';
 import { createLogger } from '../utils/logger';
+import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
+import { slugify } from '../utils/slugify';
 
 const log = createLogger('BlogPost');
 
@@ -413,10 +415,11 @@ const BlogPost = () => {
             {post.title}
           </h1>
 
-          {/* Excerpt */}
-          <p className="text-altivum-silver/80 mb-8" style={typography.subtitle}>
-            {post.excerpt}
-          </p>
+          {/* Excerpt — also serves as the direct-answer summary (data-aio-summary)
+              before the first H2 in the article body (VAL-AEO-001, VAL-AEO-002).
+              The excerpt is the author's own concise summary; marking it with the
+              stable selector lets AI crawlers extract it from prerendered HTML. */}
+          <DirectAnswerSummary text={post.excerpt} className="mb-8" />
 
           {/* Tags */}
           {post.tags && post.tags.length > 0 && (
@@ -513,7 +516,9 @@ const BlogPost = () => {
                 <span className="material-icons text-altivum-gold">library_books</span>
                 <div>
                   <p className="text-altivum-silver text-sm">Part of series</p>
-                  <h3 className="text-white font-medium">{post.series.title}</h3>
+                  <h3 id={slugify(post.series.title)} className="text-white font-medium">
+                    {post.series.title}
+                  </h3>
                 </div>
               </div>
               {post.series.description && <p className="text-altivum-silver/70 text-sm">{post.series.description}</p>}
@@ -540,7 +545,9 @@ const BlogPost = () => {
               className="w-20 h-20 rounded-full object-cover border-2 border-altivum-gold/30 shrink-0"
             />
             <div>
-              <h3 className="text-white font-semibold text-lg mb-1">About the Author</h3>
+              <h3 id={slugify('About the Author')} className="text-white font-semibold text-lg mb-1">
+                About the Author
+              </h3>
               <p className="text-altivum-gold text-sm mb-3">Christian Perez - Founder & CEO, Altivum Inc.</p>
               <p className="text-altivum-silver text-sm leading-relaxed mb-4">
                 Former Green Beret, host of The Vector Podcast, and author of "Beyond the Assessment." Christian writes
@@ -562,7 +569,7 @@ const BlogPost = () => {
       {post.relatedPosts && post.relatedPosts.length > 0 && (
         <section className="py-16 border-t border-white/10">
           <div className="max-w-5xl mx-auto px-6 lg:px-8">
-            <h2 className="text-white mb-8" style={typography.sectionHeader}>
+            <h2 id={slugify('Related Articles')} className="text-white mb-8" style={typography.sectionHeader}>
               Related Articles
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -590,6 +597,7 @@ const BlogPost = () => {
                     {relatedPost.category}
                   </div>
                   <h3
+                    id={slugify(relatedPost.title)}
                     className="text-white group-hover:text-altivum-gold transition-colors"
                     style={typography.cardTitleSmall}
                   >
@@ -605,7 +613,7 @@ const BlogPost = () => {
       {/* Newsletter & CTA */}
       <section className="py-16 bg-linear-to-b from-altivum-dark to-altivum-navy/30 border-t border-white/10">
         <div className="max-w-3xl mx-auto px-6 lg:px-8 text-center">
-          <h3 className="text-white mb-4" style={typography.cardTitleLarge}>
+          <h3 id={slugify('Enjoyed this article?')} className="text-white mb-4" style={typography.cardTitleLarge}>
             Enjoyed this article?
           </h3>
           <p className="text-altivum-silver mb-8" style={typography.bodyText}>
