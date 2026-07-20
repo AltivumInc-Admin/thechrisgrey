@@ -23,9 +23,10 @@ describe('Testimonials', () => {
     expect(screen.getByText('John Roe')).toBeInTheDocument();
   });
 
-  it('uses the default (empty) global list when no items prop is given', () => {
-    // TESTIMONIALS ships empty, so the component should render nothing.
-    const { container } = render(<Testimonials />);
-    expect(container).toBeEmptyDOMElement();
+  it('uses the default global list when no items prop is given', () => {
+    // TESTIMONIALS ships with placeholder quotes so the section renders
+    // everywhere it is mounted; the component should render at least one card.
+    render(<Testimonials />);
+    expect(screen.getByText(/Christian brings the same clarity/)).toBeInTheDocument();
   });
 });

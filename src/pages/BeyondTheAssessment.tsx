@@ -100,10 +100,11 @@ const BeyondTheAssessment = () => {
                   href="https://a.co/d/iC9TEDW"
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Get the book — order Beyond the Assessment on Amazon"
                   onClick={() => trackEvent('Book Amazon Click')}
                   className="inline-flex items-center justify-center px-8 py-4 bg-altivum-gold hover:bg-altivum-gold/90 text-altivum-dark font-bold rounded-lg transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:shadow-altivum-gold/20 active:scale-[0.98] touch-manipulation min-h-[48px] min-w-[200px]"
                 >
-                  <span>Order on Amazon</span>
+                  <span>Get the book</span>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-5 w-5 ml-2"

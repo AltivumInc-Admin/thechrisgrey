@@ -4,6 +4,7 @@ import { SEO } from '../components/SEO';
 import { typography } from '../utils/typography';
 import { aboutFAQs, buildProfilePageSchema } from '../utils/schemas';
 import NewsletterCTA from '../components/NewsletterCTA';
+import Credentials from '../components/Credentials';
 
 const About = () => {
   return (
@@ -116,6 +117,12 @@ const About = () => {
           </div>
         </div>
       </section>
+
+      {/* Credentials & Recognition — visible trust signals mirroring the
+          Person / Organization JSON-LD (Bronze Star, Green Beret / 18D, AWS
+          Community Builder, Anthropic Academy certifications, Veteran Business
+          of the Month). */}
+      <Credentials />
 
       <NewsletterCTA
         source="about"

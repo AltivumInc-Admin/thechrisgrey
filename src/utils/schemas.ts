@@ -4,6 +4,7 @@
  */
 
 import { SOCIAL_LINKS } from '../constants/links';
+import { CREDENTIALS } from '../data/credentials';
 
 // Base URLs
 const SITE_URL = 'https://thechrisgrey.com';
@@ -49,27 +50,17 @@ export const buildPersonSchema = () => ({
     '@type': 'Place',
     name: 'Guatemala City, Guatemala',
   },
-  hasCredential: [
-    {
-      '@type': 'EducationalOccupationalCredential',
-      credentialCategory: 'Military Qualification',
-      name: 'Special Forces Medic (18D)',
-      description: 'U.S. Army Special Forces Medical Sergeant qualification',
-    },
-    {
-      '@type': 'EducationalOccupationalCredential',
-      credentialCategory: 'Military Qualification',
-      name: 'Green Beret',
-      description: 'Member of U.S. Army Special Forces',
-    },
-  ],
-  award: [
-    {
-      '@type': 'Award',
-      name: 'Bronze Star Medal',
-      description: 'Awarded for meritorious service in Afghanistan with SFOD-A 1236',
-    },
-  ],
+  hasCredential: CREDENTIALS.filter((c) => c.field === 'hasCredential').map((c) => ({
+    '@type': 'EducationalOccupationalCredential',
+    credentialCategory: c.credentialCategory ?? c.category,
+    name: c.label,
+    description: c.description,
+  })),
+  award: CREDENTIALS.filter((c) => c.field === 'award').map((c) => ({
+    '@type': 'Award',
+    name: c.label,
+    description: c.description,
+  })),
   alumniOf: {
     '@type': 'CollegeOrUniversity',
     name: 'Arizona State University',

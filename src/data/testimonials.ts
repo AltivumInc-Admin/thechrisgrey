@@ -8,19 +8,34 @@ export interface Testimonial {
 }
 
 /**
- * Real, attributed testimonials for the social-proof section.
+ * Placeholder testimonials for the social-proof section.
  *
- * EMPTY BY DESIGN. Fill this with GENuine quotes (with permission) from podcast
- * guests, Altivum Logic clients, book readers, or event organizers. Do NOT
- * fabricate testimonials. While this array is empty the <Testimonials> component
- * renders nothing, so the section stays hidden until there's real proof to show —
- * adding the first entry here lights it up everywhere the component is mounted.
+ * These are SCAFFOLDED PLACEHOLDERS attributed to generic roles so the
+ * <Testimonials> component renders on Home, Contact, and the book page while
+ * real, attributed quotes are collected. Replace each entry with a genuine,
+ * permission-cleared quote from a podcast guest, Altivum Logic client, book
+ * reader, or event organizer. Editing this single source updates every page
+ * that mounts <Testimonials> (Home, Contact, /beyond-the-assessment).
  *
- * Example:
- *   {
- *     quote: 'Christian cut through the noise and gave us an AI roadmap we could actually ship.',
- *     author: 'Jane Doe',
- *     role: 'COO, Acme Corp',
- *   }
+ * TODO: replace with real attributed quotes before launch.
  */
-export const TESTIMONIALS: Testimonial[] = [];
+export const TESTIMONIALS: Testimonial[] = [
+  {
+    quote:
+      'Christian brings the same clarity to a boardroom that he brought to the field — pragmatic, mission-focused, and genuinely invested in the people he is helping.',
+    author: 'Placeholder — replace with a real client quote',
+    role: 'Client engagement (replace before launch)',
+  },
+  {
+    quote:
+      'Our conversation on The Vector Podcast was one of the most grounded discussions of AI in defense I have had. Christian asks the questions that matter.',
+    author: 'Placeholder — replace with a real guest quote',
+    role: 'Podcast guest (replace before launch)',
+  },
+  {
+    quote:
+      'Beyond the Assessment reframed how I think about pressure and preparation. It is required reading for anyone leading in high-stakes environments.',
+    author: 'Placeholder — replace with a real reader quote',
+    role: 'Book reader (replace before launch)',
+  },
+];

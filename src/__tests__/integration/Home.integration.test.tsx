@@ -141,6 +141,18 @@ describe('Home Page Integration', () => {
     });
   });
 
+  describe('Testimonials section', () => {
+    it('renders at least one testimonial card with quote and attribution from the shared data source', () => {
+      renderHome();
+      // The Testimonials component renders from the default TESTIMONIALS array.
+      expect(screen.getByRole('heading', { name: /in their words/i })).toBeInTheDocument();
+      const firstQuote = screen.getByText(/Christian brings the same clarity/);
+      expect(firstQuote).toBeInTheDocument();
+      // Attribution is rendered as a figcaption author name.
+      expect(screen.getByText(/Placeholder — replace with a real client quote/)).toBeInTheDocument();
+    });
+  });
+
   describe('SEO metadata', () => {
     it('sets the page title correctly', async () => {
       renderHome();

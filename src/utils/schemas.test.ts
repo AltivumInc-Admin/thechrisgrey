@@ -47,9 +47,18 @@ describe('schemas', () => {
 
     it('should include credentials and awards', () => {
       const schema = buildPersonSchema();
-      expect(schema.hasCredential).toHaveLength(2);
+      // Green Beret, Special Forces Medic (18D), and Anthropic Academy certs.
+      expect(schema.hasCredential).toHaveLength(3);
       expect(schema.award).toHaveLength(1);
       expect(schema.award[0].name).toBe('Bronze Star Medal');
+    });
+
+    it('mirrors the Anthropic Academy certifications in hasCredential', () => {
+      const schema = buildPersonSchema();
+      const credentialNames = schema.hasCredential.map((c: { name: string }) => c.name);
+      expect(credentialNames).toContain('Anthropic Academy Certifications');
+      expect(credentialNames).toContain('Green Beret');
+      expect(credentialNames).toContain('Special Forces Medic (18D)');
     });
 
     it('should include alumni, membership, and sameAs links', () => {
