@@ -42,6 +42,11 @@ vi.mock('../../components/claude/TraceResponseBubble', () => ({
   TraceResponseBubble: () => null,
 }));
 
+// Mock prefetchRoute (consumed by ViewTransitionLink in the cross-link band).
+vi.mock('../../utils/routeManifest', () => ({
+  prefetchRoute: vi.fn(),
+}));
+
 const renderClaude = () => {
   return render(
     <HelmetProvider>
@@ -218,6 +223,26 @@ describe('Claude Page Integration', () => {
           .join('\n');
         expect(combined).toContain('BreadcrumbList');
       });
+    });
+  });
+
+  describe('Newsletter CTA + cross-link band', () => {
+    it('mounts the NewsletterCTA with an email input and subscribe control', () => {
+      renderClaude();
+      expect(screen.getByPlaceholderText('Enter your email address')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /subscribe/i })).toBeInTheDocument();
+    });
+
+    it('renders a cross-link band with at least two internal links to related pages', () => {
+      renderClaude();
+      const nav = screen.getByRole('navigation', { name: /explore more/i });
+      const anchors = nav.querySelectorAll('a[href]');
+      expect(anchors.length).toBeGreaterThanOrEqual(2);
+      const hrefs = Array.from(anchors).map((a) => a.getAttribute('href'));
+      hrefs.forEach((href) => {
+        expect(href).toMatch(/^\//);
+      });
+      expect(hrefs).not.toContain('/claude');
     });
   });
 });

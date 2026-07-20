@@ -1,4 +1,6 @@
 import { SEO } from '../components/SEO';
+import NewsletterCTA from '../components/NewsletterCTA';
+import CrossLinkBand from '../components/CrossLinkBand';
 import btaLogo from '../assets/bta.png';
 import readingImage from '../assets/reading.jpeg';
 import { typography } from '../utils/typography';
@@ -127,6 +129,34 @@ const BeyondTheAssessment = () => {
 
       {/* Reader proof (renders only once real testimonials exist) */}
       <Testimonials eyebrow="From readers" heading="What readers are saying" />
+
+      <NewsletterCTA
+        source="beyond-the-assessment"
+        heading="Read more from Christian"
+        blurb="New writing on leadership, service, and building in public. Get the next piece in your inbox."
+      />
+
+      <CrossLinkBand
+        heading="Explore more"
+        eyebrow="Keep exploring"
+        links={[
+          {
+            to: '/about',
+            label: 'About Christian',
+            description: 'The Green Beret-to-founder journey that this book reflects on.',
+          },
+          {
+            to: '/foundation',
+            label: 'Altivum Foundation',
+            description: 'The nonprofit extending this mission into veteran opportunity.',
+          },
+          {
+            to: '/podcast',
+            label: 'The Vector Podcast',
+            description: 'Long-form conversations with leaders at the intersection of service, tech, and AI.',
+          },
+        ]}
+      />
     </div>
   );
 };

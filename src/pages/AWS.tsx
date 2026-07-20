@@ -1,4 +1,6 @@
 import { SEO } from '../components/SEO';
+import NewsletterCTA from '../components/NewsletterCTA';
+import CrossLinkBand from '../components/CrossLinkBand';
 import awsHero from '../assets/aws-hero.png';
 import awsCommunityBuilder from '../assets/aws-community-builder.webp';
 import { typography } from '../utils/typography';
@@ -105,6 +107,35 @@ const AWS = () => {
       {/* Infrastructure Topology */}
       <div className="h-px bg-linear-to-r from-transparent via-altivum-gold/15 to-transparent" />
       <InfraTopology />
+
+      <NewsletterCTA
+        source="aws"
+        heading="Stay sharp on AWS + AI"
+        blurb="Field notes on building with Amazon Bedrock, serverless, and agentic AI on AWS. No spam; unsubscribe anytime."
+      />
+
+      <CrossLinkBand
+        heading="Explore more"
+        eyebrow="Keep exploring"
+        links={[
+          {
+            to: '/claude',
+            label: 'Claude in Production',
+            description:
+              "How Christian ships agentic systems with Anthropic's Claude and the Anthropic Academy certifications behind them.",
+          },
+          {
+            to: '/altivum',
+            label: 'Altivum Inc.',
+            description: 'The veteran-founded firm where this AWS work becomes production AI for real-world missions.',
+          },
+          {
+            to: '/about',
+            label: 'About Christian',
+            description: 'From Special Forces medic (18D) to AWS Community Builder in AI engineering.',
+          },
+        ]}
+      />
     </div>
   );
 };

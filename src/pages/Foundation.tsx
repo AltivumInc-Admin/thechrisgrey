@@ -1,5 +1,7 @@
 import ViewTransitionLink from '../components/ViewTransitionLink';
 import { SEO } from '../components/SEO';
+import NewsletterCTA from '../components/NewsletterCTA';
+import CrossLinkBand from '../components/CrossLinkBand';
 import foundationImage from '../assets/foundation.webp';
 import { typography } from '../utils/typography';
 import { foundationFAQs, buildFoundationOrganizationSchema } from '../utils/schemas';
@@ -274,6 +276,36 @@ const Foundation = () => {
           </div>
         </div>
       </section>
+
+      <NewsletterCTA
+        source="foundation"
+        heading="Follow the Foundation"
+        blurb="Updates on veteran grants, program launches, and partnerships. We email rarely and never share your address."
+      />
+
+      <CrossLinkBand
+        heading="Explore more"
+        eyebrow="Keep exploring"
+        links={[
+          {
+            to: '/altivum',
+            label: 'Altivum Inc.',
+            description:
+              'The public benefit corporation whose mission the Foundation extends into veteran opportunity.',
+          },
+          {
+            to: '/about',
+            label: 'About Christian',
+            description: "The Green Beret-to-founder story behind the Foundation's mission.",
+          },
+          {
+            to: '/beyond-the-assessment',
+            label: 'Beyond the Assessment',
+            description:
+              "Christian's book on leadership, resilience, and the intangibles that define high-stakes success.",
+          },
+        ]}
+      />
     </div>
   );
 };

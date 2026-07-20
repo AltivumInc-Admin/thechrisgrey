@@ -1,5 +1,7 @@
 import ViewTransitionLink from '../components/ViewTransitionLink';
 import { SEO } from '../components/SEO';
+import NewsletterCTA from '../components/NewsletterCTA';
+import CrossLinkBand from '../components/CrossLinkBand';
 import altivumImage from '../assets/altivum.jpg';
 import awsPartnerLogo from '../assets/aws-partner-dark.png';
 import altivumLogo from '../assets/altivum.png';
@@ -463,6 +465,35 @@ const Altivum = () => {
           </div>
         </div>
       </section>
+
+      <NewsletterCTA
+        source="altivum"
+        heading="Follow Altivum's build"
+        blurb="I share field notes on engineering AI systems, veteran opportunity, and the road from Special Operations to startup life. Get new pieces in your inbox."
+      />
+
+      <CrossLinkBand
+        heading="Explore more"
+        eyebrow="Keep exploring"
+        links={[
+          {
+            to: '/foundation',
+            label: 'Altivum Foundation',
+            description:
+              'The nonprofit arm investing in veteran futures across cloud, AI, robotics, and cybersecurity.',
+          },
+          {
+            to: '/aws',
+            label: 'AWS Work',
+            description: "Christian's AWS Community Builder practice in AI engineering and cloud-native architecture.",
+          },
+          {
+            to: '/about',
+            label: 'About Christian',
+            description: 'The journey from Green Beret medic to founder and CEO of Altivum Inc.',
+          },
+        ]}
+      />
     </div>
   );
 };

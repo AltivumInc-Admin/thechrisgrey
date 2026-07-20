@@ -1,4 +1,6 @@
 import { SEO } from '../components/SEO';
+import NewsletterCTA from '../components/NewsletterCTA';
+import CrossLinkBand from '../components/CrossLinkBand';
 import { typography } from '../utils/typography';
 import { buildWebPageSchema } from '../utils/schemas';
 import claudeHero from '../assets/claude-hero.png';
@@ -376,6 +378,34 @@ const Claude = () => {
           </div>
         </div>
       </section>
+
+      <NewsletterCTA
+        source="claude"
+        heading="Build with Claude, in your inbox"
+        blurb="Notes on shipping agentic systems with Claude, Bedrock, and the Model Context Protocol. Practical patterns, no hype."
+      />
+
+      <CrossLinkBand
+        heading="Explore more"
+        eyebrow="Keep exploring"
+        links={[
+          {
+            to: '/aws',
+            label: 'AWS Work',
+            description: 'The cloud-native architecture that hosts these Claude-powered agents on Amazon Bedrock.',
+          },
+          {
+            to: '/altivum',
+            label: 'Altivum Inc.',
+            description: 'The production AI systems where these Claude patterns are applied every day.',
+          },
+          {
+            to: '/about',
+            label: 'About Christian',
+            description: 'How a Green Beret medic became an Anthropic Academy-certified AI builder.',
+          },
+        ]}
+      />
     </div>
   );
 };
