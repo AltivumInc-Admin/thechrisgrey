@@ -92,6 +92,7 @@ const Home = () => {
         description="Personal website of Christian Perez, Founder & CEO of Altivum Inc., Former Green Beret, Bronze Star Recipient, and Host of The Vector Podcast."
         keywords="Christian Perez, thechrisgrey, Altivum Inc, Green Beret, The Vector Podcast, veteran entrepreneur, AI technology, cloud architecture"
         url="https://thechrisgrey.com"
+        imageAlt="Christian Perez — Founder & CEO of Altivum Inc., former Green Beret, host of The Vector Podcast"
         faq={homeFAQs}
         structuredData={[
           buildWebPageSchema({

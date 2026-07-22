@@ -4,11 +4,13 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import { typography } from '../utils/typography';
 import ViewTransitionLink from '../components/ViewTransitionLink';
 import builderQR from '../assets/builder-qr.png';
-import { buildProfilePageSchema } from '../utils/schemas';
+import { buildProfilePageSchema, linksFAQs } from '../utils/schemas';
+import { ogImageForUrl } from '../utils/ogCards';
 import { SOCIAL_LINKS } from '../constants/links';
 import SocialIcon from '../components/SocialIcon';
 import NewsletterCTA from '../components/NewsletterCTA';
 import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
+import FAQSection from '../components/aeo/FAQSection';
 import { AEO_SUMMARIES } from '../data/aeoSummaries';
 import { slugify } from '../utils/slugify';
 
@@ -158,12 +160,15 @@ const Links = () => {
         description="Connect with Christian Perez across the web. Links to Altivum Inc., The Vector Podcast, social media profiles, and featured projects."
         keywords="Christian Perez links, social media, Altivum links, podcast links, thechrisgrey socials"
         url="https://thechrisgrey.com/links"
+        imageAlt="All of Christian Perez's links — social profiles, projects, and contact"
         breadcrumbs={breadcrumbs}
+        faq={linksFAQs}
         structuredData={[
           buildProfilePageSchema({
             name: 'Christian Perez Links & Resources',
             description: 'Connect with Christian Perez across the web. All social profiles and projects in one place.',
             url: 'https://thechrisgrey.com/links',
+            image: ogImageForUrl('https://thechrisgrey.com/links'),
           }),
         ]}
       />
@@ -359,6 +364,10 @@ const Links = () => {
           </div>
         </div>
       </section>
+
+      {/* Visible FAQ — mirrors the FAQPage JSON-LD emitted by <SEO faq={linksFAQs}>
+          so the DOM text and structured data agree (VAL-AEO-004, VAL-SD-007). */}
+      <FAQSection faqs={linksFAQs} />
     </div>
   );
 };

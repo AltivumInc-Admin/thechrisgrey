@@ -5,7 +5,12 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import tvpLogo from '../assets/tvp.png';
 // Profile image served from public/ at full quality (no Vite optimization)
 const profileImage = '/profile1.jpeg';
-import { podcastFAQs, buildPodcastSeriesSchema, buildVideoObjectSchema } from '../utils/schemas';
+import {
+  podcastFAQs,
+  buildPodcastSeriesSchema,
+  buildVideoObjectSchema,
+  buildPodcastEpisodeSchema,
+} from '../utils/schemas';
 import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
 import FAQSection from '../components/aeo/FAQSection';
 import QuestionHeading from '../components/aeo/QuestionHeading';
@@ -87,10 +92,25 @@ const Podcast = () => {
         description="The Vector Podcast explores veteran experience, emerging technology, and purposeful entrepreneurship. Hosted by Christian Perez, featuring leaders navigating the transition from service to innovation."
         keywords="The Vector Podcast, Christian Perez podcast, AI podcast, veteran entrepreneurship, technology podcast, Altivum Press"
         url="https://thechrisgrey.com/podcast"
+        imageAlt="The Vector Podcast cover art — hosted by Christian Perez"
         faq={podcastFAQs}
         breadcrumbs={breadcrumbs}
         structuredData={[
           buildPodcastSeriesSchema(),
+          // PodcastEpisode nodes for each episode (VAL-SD-005). Google's
+          // podcast carousel keys off these; partOfSeries references the
+          // canonical PodcastSeries node above.
+          ...PODCAST_EPISODES.map((ep) =>
+            buildPodcastEpisodeSchema({
+              name: ep.title,
+              description: ep.description,
+              url: ep.links.youtube || ep.links.spotify || 'https://thechrisgrey.com/podcast',
+              datePublished: ep.publishedAt,
+              duration: ep.duration,
+              episodeNumber: ep.episodeNumber,
+              seasonNumber: ep.seasonNumber,
+            }),
+          ),
           ...(LATEST_VIDEO_ID && LATEST_EPISODE_DATE
             ? [
                 buildVideoObjectSchema({

@@ -71,14 +71,17 @@ export const buildPersonSchema = () => ({
       '@type': 'Organization',
       name: '1st Special Forces Group (Airborne)',
     },
-    {
+    // AWS Community Builder membership is derived from the shared CREDENTIALS
+    // source (field === 'memberOf') so the visible Credentials & Recognition
+    // section and this JSON-LD node cannot drift.
+    ...CREDENTIALS.filter((c) => c.field === 'memberOf').map((c) => ({
       '@type': 'ProgramMembership',
-      programName: 'AWS Community Builders',
+      programName: c.label,
       hostingOrganization: {
         '@type': 'Organization',
-        name: 'Amazon Web Services',
+        name: c.issuedBy ?? 'Amazon Web Services',
       },
-    },
+    })),
   ],
   knowsAbout: [
     'Cloud Architecture',
@@ -146,17 +149,27 @@ export const buildOrganizationSchema = () => ({
     name: 'United States',
   },
   knowsAbout: ['Cloud Architecture', 'AI Integration', 'Veteran Services', 'Web Development', 'SEO & AEO'],
-  award: {
+  // Organization awards are derived from the shared CREDENTIALS source
+  // (field === 'organizationAward') so the visible Credentials & Recognition
+  // section and this JSON-LD node cannot drift. Currently one entry: Veteran
+  // Business of the Month.
+  award: CREDENTIALS.filter((c) => c.field === 'organizationAward').map((c) => ({
     '@type': 'Award',
-    name: 'Veteran Business of the Month',
-    description: 'Recognized by Clarksville Area Chamber of Commerce, December 2025',
-    url: 'https://www.clarksvilleonline.com/2025/12/12/clarksville-area-chamber-of-commerces-veteran-business-of-the-month-altivum-inc/',
-  },
+    name: c.label,
+    description: c.description,
+    ...(c.url ? { url: c.url } : {}),
+  })),
   sameAs: [SOCIAL_LINKS.altivumLinkedIn, SOCIAL_LINKS.github, SOCIAL_LINKS.altivumLogic],
 });
 
 /**
- * WebSite schema with search action
+ * WebSite schema with a SearchAction.
+ *
+ * The site renders a visible search input on /blog (`?q=` query param) that
+ * filters the post listing, so the WebSite node declares a SearchAction whose
+ * target points at that endpoint. VAL-SD-009 requires that any declared
+ * SearchAction target a working search endpoint or a visible search box; the
+ * /blog search input satisfies both.
  */
 export const buildWebSiteSchema = () => ({
   '@type': 'WebSite',
@@ -169,6 +182,14 @@ export const buildWebSiteSchema = () => ({
     '@id': `${SITE_URL}/#person`,
   },
   inLanguage: 'en-US',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: `${SITE_URL}/blog?q={search_term_string}`,
+    },
+    'query-input': 'required name=search_term_string',
+  },
 });
 
 /**
@@ -208,12 +229,14 @@ export const buildWebPageSchema = (options: {
   description: string;
   url: string;
   breadcrumbs?: BreadcrumbItem[];
+  image?: string;
 }) => ({
   '@type': 'WebPage',
   '@id': `${options.url}/#webpage`,
   url: options.url,
   name: options.name,
   description: options.description,
+  ...(options.image ? { image: options.image } : {}),
   isPartOf: {
     '@id': `${SITE_URL}/#website`,
   },
@@ -231,12 +254,18 @@ export const buildWebPageSchema = (options: {
 /**
  * ProfilePage schema for About and Links pages
  */
-export const buildProfilePageSchema = (options: { name: string; description: string; url: string }) => ({
+export const buildProfilePageSchema = (options: {
+  name: string;
+  description: string;
+  url: string;
+  image?: string;
+}) => ({
   '@type': 'ProfilePage',
   '@id': `${options.url}/#profilepage`,
   url: options.url,
   name: options.name,
   description: options.description,
+  ...(options.image ? { image: options.image } : {}),
   mainEntity: {
     '@id': `${SITE_URL}/#person`,
   },
@@ -289,7 +318,7 @@ export const buildPodcastSeriesSchema = () => ({
   description:
     'The Vector Podcast explores conversations at the intersection of veteran experience, emerging technology, and purposeful entrepreneurship. Hosted by Christian Perez, each episode features leaders navigating the transition from service to innovation.',
   webFeed: 'https://api.riverside.fm/hosting/heA0qRHh.rss',
-  image: `${SITE_URL}/tvp.png`,
+  image: `${SITE_URL}/og/podcast.png`,
   author: {
     '@id': `${SITE_URL}/#person`,
   },
@@ -576,4 +605,253 @@ export const buildFoundationOrganizationSchema = () => ({
     '@type': 'Country',
     name: 'United States',
   },
+});
+
+// ============================================
+// Page-specific FAQ content (VAL-SD-007)
+// ============================================
+
+export const awsFAQs: FAQItem[] = [
+  {
+    question: 'What is the AWS Community Builders program?',
+    answer:
+      'The AWS Community Builders program offers technical resources, mentorship, and networking opportunities to AWS enthusiasts and emerging thought leaders who are passionate about sharing knowledge and connecting with the technical community.',
+  },
+  {
+    question: 'How did Christian join the AI Engineering track?',
+    answer:
+      'Christian was accepted into the program under the AI Engineering track, reflecting the work he does every day at Altivum Inc. building production AI systems on AWS, from RAG-powered conversational agents to serverless inference pipelines and intelligent document processing.',
+  },
+  {
+    question: 'What does being a Community Builder mean?',
+    answer:
+      "It isn't a certification or a partnership. It's a recognition of builders, people who are actively creating, learning, and sharing in the AWS ecosystem. For Christian, it's an extension of the same mission: translating complex cloud and AI capabilities into real-world impact.",
+  },
+  {
+    question: 'What AWS services does Christian work with?',
+    answer:
+      'Christian builds production AI systems on Amazon Web Services using Amazon Bedrock, serverless architectures, AWS Lambda, and retrieval-augmented generation (RAG) pipelines. His work spans conversational agents, inference pipelines, and intelligent document processing for veterans and small businesses.',
+  },
+];
+
+export const claudeFAQs: FAQItem[] = [
+  {
+    question: 'How does Christian use Claude in production?',
+    answer:
+      'Claude is the foundation of the AI systems Christian builds at Altivum Inc. Every conversational interface, RAG pipeline, and intelligent automation runs on Claude, from the streaming chat agent on this site (Claude Haiku 4.5 with retrieval-augmented generation) to AI-augmented development workflows.',
+  },
+  {
+    question: 'What AI systems run on Claude?',
+    answer:
+      'The AI chat on this site is powered by Claude Haiku 4.5 with retrieval-augmented generation, and the development workflows that built it use Claude Code. Claude is embedded in how Christian thinks about and delivers real-world AI systems that people use every day.',
+  },
+  {
+    question: 'What is applied AI engineering?',
+    answer:
+      'Applied AI engineering is the practice of building real systems that are reliable, observable, and secure, not proofs of concept. It means shipping software that people use every day with guardrails, rate limiting, cost monitoring, and observability built in.',
+  },
+  {
+    question: 'What Anthropic Academy certifications does Christian hold?',
+    answer:
+      'Christian holds multiple Anthropic Academy certifications including Claude with Amazon Bedrock, Claude with the Anthropic API, Introduction to Subagents, Claude Code in Action, Introduction to Model Context Protocol, Claude Code 101, Claude 101, Introduction to Claude Cowork, and the AI Fluency framework series. Each certification is verifiable via Skilljar.',
+  },
+];
+
+export const linksFAQs: FAQItem[] = [
+  {
+    question: 'Where can I find Christian Perez online?',
+    answer:
+      'Christian Perez (@thechrisgrey) is active across LinkedIn, X (Twitter), Substack, DEV Community, GitHub, Facebook, and Linktree. This links page collects every profile and project in one place, including the AWS Builder profile and Arizona State University faculty page.',
+  },
+  {
+    question: 'What is the AWS Builder profile?',
+    answer:
+      "The AWS Builder profile showcases Christian's cloud architecture projects, technical insights, and contributions to the AWS community as an AWS Community Builder in the AI Engineering track. Connect at builder.aws.com or scan the QR code on the links page.",
+  },
+  {
+    question: 'What websites and projects does Christian Perez run?',
+    answer:
+      'Christian runs Altivum Inc. (the parent company), Altivum Logic (multicloud infrastructure and web development services), and VetROI (an AI-powered veteran career transition tool). Each is linked from the Websites & Projects section of the links page.',
+  },
+  {
+    question: 'How can I contact Christian Perez?',
+    answer:
+      'You can email Christian at christian.perez@altivum.ai, call (615) 219-9425, or use the contact form at thechrisgrey.com/contact for speaking engagements, media inquiries, or consulting through Altivum Logic. The links page also surfaces the fastest paths to each inbox.',
+  },
+];
+
+// ============================================
+// New schema builders (VAL-SD-003, VAL-SD-004, VAL-SD-005, VAL-SD-006)
+// ============================================
+
+interface ArticleSchemaOptions {
+  headline: string;
+  description: string;
+  url: string;
+  datePublished: string;
+  dateModified?: string;
+  image: string;
+  articleSection?: string;
+  keywords?: string;
+  wordCount?: number;
+}
+
+/**
+ * Article schema for blog posts (VAL-SD-003).
+ *
+ * Replaces the prior `BlogPosting` node. Google's rich-result eligibility for
+ * articles is keyed on the `Article` type, and the required fields mirror what
+ * Google's documentation asks for: headline, datePublished, dateModified,
+ * author (referencing the canonical Person), image, publisher (referencing the
+ * canonical Organization), mainEntityOfPage matching the canonical URL, and
+ * articleSection.
+ */
+export const buildArticleSchema = (options: ArticleSchemaOptions) => ({
+  '@type': 'Article',
+  '@id': `${options.url}/#article`,
+  headline: options.headline,
+  description: options.description,
+  datePublished: options.datePublished,
+  ...(options.dateModified ? { dateModified: options.dateModified } : {}),
+  author: {
+    '@id': `${SITE_URL}/#person`,
+  },
+  publisher: {
+    '@id': `${ALTIVUM_URL}/#organization`,
+  },
+  image: options.image,
+  mainEntityOfPage: {
+    '@type': 'WebPage',
+    '@id': options.url,
+  },
+  ...(options.articleSection ? { articleSection: options.articleSection } : {}),
+  ...(options.keywords ? { keywords: options.keywords } : {}),
+  ...(options.wordCount ? { wordCount: options.wordCount } : {}),
+  inLanguage: 'en-US',
+});
+
+/**
+ * PodcastEpisode schema (VAL-SD-005).
+ *
+ * Each episode emits a PodcastEpisode node with name, datePublished, duration
+ * (ISO 8601 format), and partOfSeries referencing the canonical PodcastSeries.
+ */
+export const buildPodcastEpisodeSchema = (options: {
+  name: string;
+  description: string;
+  url: string;
+  datePublished: string;
+  duration: string; // "HH:MM:SS" or "MM:SS"
+  episodeNumber?: number;
+  seasonNumber?: number;
+  partOfSeriesId?: string;
+}) => ({
+  '@type': 'PodcastEpisode',
+  '@id': `${options.url}/#episode`,
+  name: options.name,
+  description: options.description,
+  url: options.url,
+  datePublished: options.datePublished,
+  // Google expects ISO 8601 duration (e.g. "PT40M21S"). Convert "MM:SS" or
+  // "HH:MM:SS" into that form so the value is schema-valid.
+  duration: iso8601Duration(options.duration),
+  ...(options.episodeNumber ? { episodeNumber: options.episodeNumber } : {}),
+  ...(options.seasonNumber ? { partOfSeason: { '@type': 'PodcastSeason', seasonNumber: options.seasonNumber } } : {}),
+  partOfSeries: {
+    '@id': options.partOfSeriesId ?? `${SITE_URL}/podcast#podcast`,
+  },
+});
+
+/**
+ * Convert a "HH:MM:SS" or "MM:SS" duration string into an ISO 8601 duration
+ * ("PT#H#M#S"). Used by buildPodcastEpisodeSchema so the emitted duration is
+ * schema-valid regardless of the source format.
+ */
+function iso8601Duration(input: string): string {
+  const parts = input.split(':').map((p) => parseInt(p, 10));
+  if (parts.some((n) => Number.isNaN(n))) return input;
+  let hours: number;
+  let minutes: number;
+  let seconds: number;
+  if (parts.length === 3) {
+    [hours, minutes, seconds] = parts as [number, number, number];
+  } else if (parts.length === 2) {
+    hours = 0;
+    [minutes, seconds] = parts as [number, number];
+  } else {
+    return input;
+  }
+  let out = 'PT';
+  if (hours > 0) out += `${hours}H`;
+  if (minutes > 0) out += `${minutes}M`;
+  if (seconds > 0 || out === 'PT') out += `${seconds}S`;
+  return out;
+}
+
+/**
+ * EducationalOccupationalCredential schema for page-specific credentials
+ * (VAL-SD-006).
+ *
+ * /aws and /claude each emit at least one of these nodes for the visible
+ * credentials on the page, outside the global `Person.hasCredential` array.
+ * `recognizedBy` references the issuing body (AWS or Anthropic).
+ */
+export const buildCredentialSchema = (options: {
+  name: string;
+  description: string;
+  url?: string;
+  credentialCategory: string;
+  recognizedBy: { name: string; url?: string };
+}) => ({
+  '@type': 'EducationalOccupationalCredential',
+  name: options.name,
+  description: options.description,
+  credentialCategory: options.credentialCategory,
+  recognizedBy: {
+    '@type': 'Organization',
+    name: options.recognizedBy.name,
+    ...(options.recognizedBy.url ? { url: options.recognizedBy.url } : {}),
+  },
+  ...(options.url ? { url: options.url } : {}),
+});
+
+/**
+ * CollectionPage schema for the /blog listing (VAL-SD-004).
+ *
+ * Describes the page as a collection of blog posts. When the post list is
+ * available (client-side after the Sanity fetch), pass it via `posts` so the
+ * schema references each post's Article URL via `hasPart`. The prerendered
+ * HTML emits the base CollectionPage without post references (posts are
+ * dynamic); the client-rendered page enriches it once posts load.
+ */
+export const buildBlogCollectionPageSchema = (options: {
+  url: string;
+  name: string;
+  description: string;
+  posts?: { title: string; url: string }[];
+  image?: string;
+}) => ({
+  '@type': 'CollectionPage',
+  '@id': `${options.url}/#collectionpage`,
+  url: options.url,
+  name: options.name,
+  description: options.description,
+  ...(options.image ? { image: options.image } : {}),
+  isPartOf: {
+    '@id': `${SITE_URL}/#website`,
+  },
+  about: {
+    '@id': `${SITE_URL}/#person`,
+  },
+  inLanguage: 'en-US',
+  ...(options.posts && options.posts.length > 0
+    ? {
+        hasPart: options.posts.map((p) => ({
+          '@type': 'Article',
+          '@id': `${p.url}/#article`,
+          headline: p.title,
+          url: p.url,
+        })),
+      }
+    : {}),
 });

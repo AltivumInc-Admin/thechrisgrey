@@ -6,7 +6,8 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterForm from '../components/NewsletterForm';
 import { typography } from '../utils/typography';
 import { formatDate } from '../utils/dateFormatter';
-import { blogFAQs, buildItemListSchema } from '../utils/schemas';
+import { blogFAQs, buildItemListSchema, buildBlogCollectionPageSchema } from '../utils/schemas';
+import { ogImageForUrl } from '../utils/ogCards';
 import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
 import FAQSection from '../components/aeo/FAQSection';
 import { AEO_SUMMARIES } from '../data/aeoSummaries';
@@ -180,24 +181,25 @@ const Blog = () => {
         keywords="Christian Perez blog, essays, leadership, technology, philosophy, history, veteran, long-form writing"
         url="https://thechrisgrey.com/blog"
         type="article"
+        imageAlt="Christian Perez's blog — essays on leadership, technology, and lessons from a life of service"
         faq={blogFAQs}
         breadcrumbs={breadcrumbs}
         structuredData={[
-          {
-            '@type': 'Blog',
-            '@id': 'https://thechrisgrey.com/blog/#blog',
-            name: 'Christian Perez Blog',
+          // CollectionPage describing the /blog listing as a collection of
+          // posts (VAL-SD-004). When posts are loaded client-side, hasPart
+          // references each post's Article URL; the prerendered HTML emits
+          // the base node without post references (posts are dynamic).
+          buildBlogCollectionPageSchema({
             url: 'https://thechrisgrey.com/blog',
+            name: 'Christian Perez Blog',
             description:
-              'Essays and long-form writing on leadership, technology, philosophy, history, and lessons from a life of service',
-            inLanguage: 'en-US',
-            author: {
-              '@id': 'https://thechrisgrey.com/#person',
-            },
-            publisher: {
-              '@id': 'https://altivum.ai/#organization',
-            },
-          },
+              'Essays and long-form writing on leadership, technology, philosophy, history, and lessons from a life of service.',
+            image: ogImageForUrl('https://thechrisgrey.com/blog'),
+            posts: posts.map((p) => ({
+              title: p.title,
+              url: `https://thechrisgrey.com/blog/${p.slug.current}`,
+            })),
+          }),
           ...(activeSeries && filteredPosts.length > 0 && filteredPosts[0]?.series
             ? [
                 buildItemListSchema({

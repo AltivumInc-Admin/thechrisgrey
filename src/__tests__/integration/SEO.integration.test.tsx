@@ -182,7 +182,10 @@ describe('SEO Integration Across Pages', () => {
       await waitFor(() => {
         const script = document.querySelector('script[type="application/ld+json"]');
         const content = script?.textContent || '';
-        expect(content).toContain('"@type":"Blog"');
+        // VAL-SD-004: the /blog listing emits a CollectionPage describing the
+        // post collection (replaced the prior bare `Blog` node).
+        expect(content).toContain('"@type":"CollectionPage"');
+        expect(content).toContain('"@id":"https://thechrisgrey.com/blog/#collectionpage"');
       });
     });
 

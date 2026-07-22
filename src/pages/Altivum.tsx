@@ -167,6 +167,7 @@ const Altivum = () => {
         description="Altivum Inc. is a veteran-founded public benefit corporation building intelligent, cloud-native architectures. Three divisions: Vanguard (veteran services), Logic (web & AI), Press (media)."
         keywords="Altivum Inc, Altivum Logic, Altivum Vanguard, Altivum Press, VetROI, Elo, Cloud Architecture, AI Integration, Christian Perez, veteran entrepreneur"
         url="https://thechrisgrey.com/altivum"
+        imageAlt="Altivum Inc. — veteran-founded public benefit corporation building cloud-native AI architectures"
         faq={altivumFAQs}
         breadcrumbs={breadcrumbs}
         structuredData={[...buildAltivumServicesSchemas()]}

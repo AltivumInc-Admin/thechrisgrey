@@ -82,6 +82,7 @@ const Foundation = () => {
         description="The Altivum Foundation is a 501(c)(3) nonprofit funding U.S. military veterans pursuing education in cloud computing, artificial intelligence, robotics, and cybersecurity — at no cost to the scholar."
         keywords="The Altivum Foundation, Altivum Foundation, veteran scholarships, 501c3, cloud computing education, AI education, robotics education, cybersecurity education, Christian Perez Founder"
         url="https://thechrisgrey.com/foundation"
+        imageAlt="The Altivum Foundation — 501(c)(3) nonprofit funding veteran education in cloud, AI, robotics, and cybersecurity"
         faq={foundationFAQs}
         breadcrumbs={breadcrumbs}
         structuredData={[buildFoundationOrganizationSchema()]}

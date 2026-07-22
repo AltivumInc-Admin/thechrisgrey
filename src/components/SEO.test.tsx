@@ -238,4 +238,34 @@ describe('SEO', () => {
 
     expect(new Set(memberIds).size).toBe(memberIds.length);
   });
+
+  it('emits og:image:alt and twitter:image:alt from an explicit imageAlt prop (VAL-SEO-007)', async () => {
+    renderSEO({ title: 'AWS', description: 'desc', url: 'https://thechrisgrey.com/aws', imageAlt: 'AWS hero' });
+    await waitFor(() => {
+      const og = document.querySelector('meta[property="og:image:alt"]');
+      expect(og).toHaveAttribute('content', 'AWS hero');
+      const tw = document.querySelector('meta[name="twitter:image:alt"]');
+      expect(tw).toHaveAttribute('content', 'AWS hero');
+    });
+  });
+
+  it('emits a non-empty default og:image:alt when imageAlt is not provided (VAL-SEO-007)', async () => {
+    renderSEO({ title: 'About', description: 'desc', url: 'https://thechrisgrey.com/about' });
+    await waitFor(() => {
+      const og = document.querySelector('meta[property="og:image:alt"]');
+      expect(og).toBeTruthy();
+      expect((og?.getAttribute('content') || '').length).toBeGreaterThan(0);
+      const tw = document.querySelector('meta[name="twitter:image:alt"]');
+      expect(tw).toBeTruthy();
+      expect((tw?.getAttribute('content') || '').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('falls back to the default imageAlt when an empty string is provided', async () => {
+    renderSEO({ title: 'About', description: 'desc', url: 'https://thechrisgrey.com/about', imageAlt: '   ' });
+    await waitFor(() => {
+      const og = document.querySelector('meta[property="og:image:alt"]');
+      expect((og?.getAttribute('content') || '').length).toBeGreaterThan(0);
+    });
+  });
 });

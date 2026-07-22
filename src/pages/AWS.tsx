@@ -5,10 +5,12 @@ import CrossLinkBand from '../components/CrossLinkBand';
 import awsHero from '../assets/aws-hero.png';
 import awsCommunityBuilder from '../assets/aws-community-builder.webp';
 import { typography } from '../utils/typography';
-import { buildWebPageSchema } from '../utils/schemas';
+import { buildWebPageSchema, buildCredentialSchema, awsFAQs } from '../utils/schemas';
+import { ogImageForUrl } from '../utils/ogCards';
 import { InfraTopology } from '../components/aws/InfraTopology';
 import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
 import QuestionHeading from '../components/aeo/QuestionHeading';
+import FAQSection from '../components/aeo/FAQSection';
 import { AEO_SUMMARIES } from '../data/aeoSummaries';
 
 const breadcrumbs = [
@@ -24,12 +26,29 @@ const AWS = () => {
         description="Christian Perez is an AWS Community Builder in AI Engineering, building intelligent cloud-native systems with Amazon Bedrock, Lambda, and serverless architectures."
         keywords="AWS Community Builder, AI Engineering, Amazon Bedrock, cloud architecture, serverless, Christian Perez AWS, Amazon Web Services"
         url="https://thechrisgrey.com/aws"
+        imageAlt="AWS Community Builder in AI Engineering — Christian Perez"
         breadcrumbs={breadcrumbs}
+        faq={awsFAQs}
         structuredData={[
           buildWebPageSchema({
             name: 'Amazon Web Services - Christian Perez',
             description: 'Christian Perez is an AWS Community Builder in AI Engineering.',
             url: 'https://thechrisgrey.com/aws',
+            image: ogImageForUrl('https://thechrisgrey.com/aws'),
+          }),
+          // Page-specific EducationalOccupationalCredential for the visible
+          // AWS Community Builder recognition (VAL-SD-006). Sits outside the
+          // global Person.hasCredential array so the page asserts the
+          // credential it documents.
+          buildCredentialSchema({
+            name: 'AWS Community Builder — AI Engineering',
+            description:
+              'Recognized builder in the AI Engineering track of the AWS Community Builders program, awarded by Amazon Web Services.',
+            credentialCategory: 'Community Program Membership',
+            recognizedBy: {
+              name: 'Amazon Web Services',
+              url: 'https://aws.amazon.com/developer/community/community-builders/',
+            },
           }),
         ]}
       />
@@ -131,6 +150,10 @@ const AWS = () => {
       {/* Infrastructure Topology */}
       <div className="h-px bg-linear-to-r from-transparent via-altivum-gold/15 to-transparent" />
       <InfraTopology />
+
+      {/* Visible FAQ — mirrors the FAQPage JSON-LD emitted by <SEO faq={awsFAQs}>
+          so the DOM text and structured data agree (VAL-AEO-004, VAL-SD-007). */}
+      <FAQSection faqs={awsFAQs} />
 
       <NewsletterCTA
         source="aws"

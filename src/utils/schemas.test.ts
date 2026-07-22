@@ -15,6 +15,10 @@ import {
   buildVideoObjectSchema,
   buildItemListSchema,
   buildFoundationOrganizationSchema,
+  buildArticleSchema,
+  buildPodcastEpisodeSchema,
+  buildCredentialSchema,
+  buildBlogCollectionPageSchema,
   homeFAQs,
   aboutFAQs,
   altivumFAQs,
@@ -22,7 +26,11 @@ import {
   bookFAQs,
   blogFAQs,
   contactFAQs,
+  awsFAQs,
+  claudeFAQs,
+  linksFAQs,
 } from './schemas';
+import { CREDENTIALS } from '../data/credentials';
 
 describe('schemas', () => {
   describe('buildPersonSchema', () => {
@@ -68,6 +76,19 @@ describe('schemas', () => {
       expect(schema.sameAs.length).toBeGreaterThan(0);
     });
 
+    it('derives the AWS Community Builder memberOf from CREDENTIALS (no drift)', () => {
+      const schema = buildPersonSchema();
+      const memberOfCredentials = CREDENTIALS.filter((c) => c.field === 'memberOf');
+      // 1st Special Forces Group (static) + one derived memberOf credential.
+      expect(schema.memberOf).toHaveLength(1 + memberOfCredentials.length);
+      const programNames = schema.memberOf
+        .filter((m) => m['@type'] === 'ProgramMembership')
+        .map((m) => (m as { programName: string }).programName);
+      for (const expected of memberOfCredentials) {
+        expect(programNames).toContain(expected.label);
+      }
+    });
+
     it('should include knowsAbout array', () => {
       const schema = buildPersonSchema();
       expect(schema.knowsAbout).toContain('Cloud Architecture');
@@ -98,7 +119,22 @@ describe('schemas', () => {
 
     it('should include award info', () => {
       const schema = buildOrganizationSchema();
-      expect(schema.award.name).toBe('Veteran Business of the Month');
+      // Organization.award is now an array derived from CREDENTIALS
+      // (field === 'organizationAward'); the Veteran Business of the Month
+      // entry is the single current member.
+      expect(Array.isArray(schema.award)).toBe(true);
+      expect(schema.award).toHaveLength(1);
+      expect(schema.award[0].name).toBe('Veteran Business of the Month');
+      expect(schema.award[0].url).toContain('clarksvilleonline.com');
+    });
+
+    it('derives Organization.award from the shared CREDENTIALS source (no drift)', () => {
+      const schema = buildOrganizationSchema();
+      const orgAwardsInCredentials = CREDENTIALS.filter((c) => c.field === 'organizationAward');
+      expect(schema.award).toHaveLength(orgAwardsInCredentials.length);
+      for (const expected of orgAwardsInCredentials) {
+        expect(schema.award.map((a: { name: string }) => a.name)).toContain(expected.label);
+      }
     });
 
     it('should use the live (no-hyphen) LinkedIn company URL from SOCIAL_LINKS', () => {
@@ -129,6 +165,14 @@ describe('schemas', () => {
     it('should reference the person as publisher', () => {
       const schema = buildWebSiteSchema();
       expect(schema.publisher['@id']).toBe('https://thechrisgrey.com/#person');
+    });
+
+    it('declares a SearchAction targeting the visible /blog search box (VAL-SD-009)', () => {
+      const schema = buildWebSiteSchema();
+      expect(schema.potentialAction['@type']).toBe('SearchAction');
+      expect(schema.potentialAction.target['@type']).toBe('EntryPoint');
+      expect(schema.potentialAction.target.urlTemplate).toBe('https://thechrisgrey.com/blog?q={search_term_string}');
+      expect(schema.potentialAction['query-input']).toBe('required name=search_term_string');
     });
   });
 
@@ -245,7 +289,8 @@ describe('schemas', () => {
       const schema = buildPodcastSeriesSchema();
       expect(schema['@type']).toBe('PodcastSeries');
       expect(schema.name).toBe('The Vector Podcast');
-      expect(schema.image).toBe('https://thechrisgrey.com/tvp.png');
+      // VAL-SD-010: the schema image matches the per-route og:image card.
+      expect(schema.image).toBe('https://thechrisgrey.com/og/podcast.png');
     });
   });
 
@@ -333,6 +378,9 @@ describe('schemas', () => {
       expect(bookFAQs.length).toBeGreaterThan(0);
       expect(blogFAQs.length).toBeGreaterThan(0);
       expect(contactFAQs.length).toBeGreaterThan(0);
+      expect(awsFAQs.length).toBeGreaterThan(0);
+      expect(claudeFAQs.length).toBeGreaterThan(0);
+      expect(linksFAQs.length).toBeGreaterThan(0);
     });
 
     it('should have question and answer fields for every FAQ item', () => {
@@ -344,11 +392,142 @@ describe('schemas', () => {
         ...bookFAQs,
         ...blogFAQs,
         ...contactFAQs,
+        ...awsFAQs,
+        ...claudeFAQs,
+        ...linksFAQs,
       ];
       allFaqs.forEach((faq) => {
         expect(faq.question).toBeTruthy();
         expect(faq.answer).toBeTruthy();
       });
+    });
+  });
+
+  describe('buildArticleSchema (VAL-SD-003)', () => {
+    it('emits an Article node (not BlogPosting) with the Google-required fields', () => {
+      const schema = buildArticleSchema({
+        headline: 'Test Headline',
+        description: 'desc',
+        url: 'https://thechrisgrey.com/blog/test',
+        datePublished: '2026-01-01',
+        dateModified: '2026-01-02',
+        image: 'https://thechrisgrey.com/og.png',
+        articleSection: 'AI',
+        keywords: 'ai, cloud',
+        wordCount: 100,
+      });
+      expect(schema['@type']).toBe('Article');
+      expect(schema['@type']).not.toBe('BlogPosting');
+      expect(schema.headline).toBe('Test Headline');
+      expect(schema.datePublished).toBe('2026-01-01');
+      expect(schema.dateModified).toBe('2026-01-02');
+      expect(schema.author['@id']).toBe('https://thechrisgrey.com/#person');
+      expect(schema.publisher['@id']).toBe('https://altivum.ai/#organization');
+      expect(schema.image).toBe('https://thechrisgrey.com/og.png');
+      expect(schema.mainEntityOfPage['@id']).toBe('https://thechrisgrey.com/blog/test');
+      expect(schema.articleSection).toBe('AI');
+    });
+
+    it('omits dateModified/articleSection/keywords/wordCount when not provided', () => {
+      const schema = buildArticleSchema({
+        headline: 'H',
+        description: 'd',
+        url: 'https://thechrisgrey.com/blog/x',
+        datePublished: '2026-01-01',
+        image: 'https://thechrisgrey.com/og.png',
+      });
+      expect(schema.dateModified).toBeUndefined();
+      expect(schema.articleSection).toBeUndefined();
+      expect((schema as Record<string, unknown>).keywords).toBeUndefined();
+      expect((schema as Record<string, unknown>).wordCount).toBeUndefined();
+    });
+  });
+
+  describe('buildPodcastEpisodeSchema (VAL-SD-005)', () => {
+    it('emits a PodcastEpisode with name, datePublished, ISO 8601 duration, and partOfSeries', () => {
+      const schema = buildPodcastEpisodeSchema({
+        name: 'Episode 1',
+        description: 'desc',
+        url: 'https://thechrisgrey.com/podcast',
+        datePublished: '2026-01-01',
+        duration: '40:21',
+        episodeNumber: 1,
+        seasonNumber: 1,
+      });
+      expect(schema['@type']).toBe('PodcastEpisode');
+      expect(schema.name).toBe('Episode 1');
+      expect(schema.datePublished).toBe('2026-01-01');
+      expect(schema.duration).toBe('PT40M21S');
+      expect(schema.partOfSeries['@id']).toBe('https://thechrisgrey.com/podcast#podcast');
+      expect(schema.episodeNumber).toBe(1);
+      expect(schema.partOfSeason?.seasonNumber).toBe(1);
+    });
+
+    it('converts HH:MM:SS durations to ISO 8601', () => {
+      const schema = buildPodcastEpisodeSchema({
+        name: 'e',
+        description: 'd',
+        url: 'https://x',
+        datePublished: '2026-01-01',
+        duration: '1:02:03',
+      });
+      expect(schema.duration).toBe('PT1H2M3S');
+    });
+  });
+
+  describe('buildCredentialSchema (VAL-SD-006)', () => {
+    it('emits an EducationalOccupationalCredential with recognizedBy and url', () => {
+      const schema = buildCredentialSchema({
+        name: 'AWS Community Builder',
+        description: 'AI Engineering track',
+        url: 'https://aws.amazon.com/developer/community/community-builders/',
+        credentialCategory: 'Community Program Membership',
+        recognizedBy: { name: 'Amazon Web Services', url: 'https://aws.amazon.com' },
+      });
+      expect(schema['@type']).toBe('EducationalOccupationalCredential');
+      expect(schema.name).toBe('AWS Community Builder');
+      expect(schema.credentialCategory).toBe('Community Program Membership');
+      expect(schema.recognizedBy['@type']).toBe('Organization');
+      expect(schema.recognizedBy.name).toBe('Amazon Web Services');
+      expect(schema.url).toContain('aws.amazon.com');
+    });
+  });
+
+  describe('buildBlogCollectionPageSchema (VAL-SD-004)', () => {
+    it('emits a CollectionPage describing the blog listing', () => {
+      const schema = buildBlogCollectionPageSchema({
+        url: 'https://thechrisgrey.com/blog',
+        name: 'Christian Perez Blog',
+        description: 'Essays and long-form writing.',
+      });
+      expect(schema['@type']).toBe('CollectionPage');
+      expect(schema.url).toBe('https://thechrisgrey.com/blog');
+      expect(schema.isPartOf['@id']).toBe('https://thechrisgrey.com/#website');
+    });
+
+    it('references each post via hasPart when posts are provided', () => {
+      const schema = buildBlogCollectionPageSchema({
+        url: 'https://thechrisgrey.com/blog',
+        name: 'Blog',
+        description: 'd',
+        posts: [
+          { title: 'Post A', url: 'https://thechrisgrey.com/blog/a' },
+          { title: 'Post B', url: 'https://thechrisgrey.com/blog/b' },
+        ],
+      });
+      expect(schema.hasPart).toHaveLength(2);
+      expect(schema.hasPart?.[0]['@type']).toBe('Article');
+      expect(schema.hasPart?.[0].headline).toBe('Post A');
+      expect(schema.hasPart?.[0]['@id']).toBe('https://thechrisgrey.com/blog/a/#article');
+    });
+
+    it('omits hasPart when no posts are provided (prerender base node)', () => {
+      const schema = buildBlogCollectionPageSchema({
+        url: 'https://thechrisgrey.com/blog',
+        name: 'Blog',
+        description: 'd',
+      });
+      expect((schema as Record<string, unknown>).hasPart).toBeUndefined();
     });
   });
 
@@ -372,6 +551,10 @@ describe('schemas', () => {
       NonprofitOrganization: ['@type', '@id', 'name', 'url'],
       Service: ['@type', 'name', 'provider'],
       ContactPage: ['@type', '@id', 'name', 'url'],
+      Article: ['@type', 'headline', 'datePublished', 'author', 'image', 'publisher', 'mainEntityOfPage'],
+      PodcastEpisode: ['@type', 'name', 'datePublished', 'duration', 'partOfSeries'],
+      EducationalOccupationalCredential: ['@type', 'name', 'credentialCategory', 'recognizedBy'],
+      CollectionPage: ['@type', '@id', 'url', 'name'],
     };
 
     const assertRequiredFields = (node: Record<string, unknown>) => {
@@ -399,6 +582,35 @@ describe('schemas', () => {
       assertRequiredFields(buildFAQSchema([{ question: 'q', answer: 'a' }]));
       assertRequiredFields(buildBreadcrumbSchema([{ name: 'Home', url: 'https://thechrisgrey.com' }]));
       assertRequiredFields(buildItemListSchema({ name: 'l', items: [{ name: 'a', url: 'https://x' }] }));
+      assertRequiredFields(
+        buildArticleSchema({
+          headline: 'h',
+          description: 'd',
+          url: 'https://thechrisgrey.com/blog/x',
+          datePublished: '2026-01-01',
+          image: 'https://thechrisgrey.com/og.png',
+        }),
+      );
+      assertRequiredFields(
+        buildPodcastEpisodeSchema({
+          name: 'e',
+          description: 'd',
+          url: 'https://x',
+          datePublished: '2026-01-01',
+          duration: '40:21',
+        }),
+      );
+      assertRequiredFields(
+        buildCredentialSchema({
+          name: 'c',
+          description: 'd',
+          credentialCategory: 'cat',
+          recognizedBy: { name: 'Org' },
+        }),
+      );
+      assertRequiredFields(
+        buildBlogCollectionPageSchema({ url: 'https://thechrisgrey.com/blog', name: 'n', description: 'd' }),
+      );
       buildAltivumServicesSchemas().forEach((s) => assertRequiredFields(s));
     });
   });

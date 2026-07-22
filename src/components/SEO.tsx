@@ -24,6 +24,13 @@ interface SEOProps {
   description: string;
   keywords?: string;
   image?: string;
+  /**
+   * Descriptive alt text for the og:image / twitter:image. Emitted as
+   * `og:image:alt` and `twitter:image:alt` (VAL-SEO-007). Every route must
+   * pass non-empty descriptive text; the default describes the site's branded
+   * OG card so routes that don't override still emit a non-empty value.
+   */
+  imageAlt?: string;
   url?: string;
   type?: 'website' | 'article' | 'profile' | 'book';
   breadcrumbs?: BreadcrumbItem[];
@@ -38,6 +45,7 @@ export const SEO = ({
   description,
   keywords,
   image,
+  imageAlt,
   url = 'https://thechrisgrey.com',
   type = 'website',
   breadcrumbs,
@@ -54,6 +62,10 @@ export const SEO = ({
   // passes the post's Sanity image); otherwise derive the per-route generated
   // OG card from the canonical url, falling back to the shared /og.png.
   const ogImage = image ?? ogImageForUrl(url);
+
+  // og:image:alt / twitter:image:alt (VAL-SEO-007). A non-empty descriptive
+  // default keeps every route compliant even when the page doesn't override.
+  const ogImageAlt = imageAlt?.trim() ? imageAlt.trim() : `${fullTitle} — Christian Perez (@thechrisgrey)`;
 
   // Build default structured data graph
   const defaultGraph: Record<string, unknown>[] = [
@@ -119,6 +131,7 @@ export const SEO = ({
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={ogImage} />
+      <meta property="og:image:alt" content={ogImageAlt} />
       {/* All OG images (generated route cards, /og.png, and the 1200x630
                 Sanity blog crops) are 1200x630. Emitted here, right after og:image,
                 so the dimensions associate with it per OG structured-property rules. */}
@@ -136,6 +149,7 @@ export const SEO = ({
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />
+      <meta name="twitter:image:alt" content={ogImageAlt} />
 
       {/* Structured Data for AI */}
       <script type="application/ld+json">{JSON.stringify(finalStructuredData)}</script>

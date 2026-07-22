@@ -29,7 +29,7 @@ import BlogPostArticleSkeleton from '../components/BlogPostArticleSkeleton';
 import Breadcrumbs from '../components/Breadcrumbs';
 import SanityResponsiveImage from '../components/SanityResponsiveImage';
 import { getYouTubeId } from '../utils/youtube';
-import { buildVideoObjectSchema } from '../utils/schemas';
+import { buildVideoObjectSchema, buildArticleSchema } from '../utils/schemas';
 import { createLogger } from '../utils/logger';
 import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
 import { slugify } from '../utils/slugify';
@@ -309,50 +309,38 @@ const BlogPost = () => {
     { name: post.title, url: shareUrl },
   ];
 
+  // Single canonical image URL for both the og:image meta tag and the Article
+  // JSON-LD image field (VAL-SD-010). Uses the 1200x630 crop when a Sanity
+  // image is available; otherwise the shared /og.png fallback.
+  const articleImageUrl = post.image?.asset
+    ? urlFor(post.image).width(1200).height(630).auto('format').quality(85).url()
+    : 'https://thechrisgrey.com/og.png';
+
   return (
     <div className="min-h-screen bg-altivum-dark">
       <ReadingProgressBar />
       <SEO
         title={post.seoTitle || post.title}
         description={post.seoDescription || post.excerpt}
-        image={
-          post.image?.asset ? urlFor(post.image).width(1200).height(630).auto('format').quality(85).url() : undefined
-        }
+        image={post.image?.asset ? articleImageUrl : undefined}
+        imageAlt={post.image?.alt ? post.image.alt : `Cover image for "${post.title}" by Christian Perez`}
         url={shareUrl}
         type="article"
         datePublished={post.publishedAt}
         dateModified={post._updatedAt || post.publishedAt}
         breadcrumbs={breadcrumbs}
         structuredData={[
-          {
-            '@type': 'BlogPosting',
-            '@id': `${shareUrl}/#article`,
+          buildArticleSchema({
             headline: post.title,
             description: post.excerpt,
+            url: shareUrl,
             datePublished: post.publishedAt,
             dateModified: post._updatedAt || post.publishedAt,
-            wordCount: post.body ? getWordCount(post.body) : undefined,
-            // Reference the canonical Person node (emitted in the default @graph by
-            // buildPersonSchema) rather than re-declaring a partial Person with a
-            // colliding @id, which would leak per-post tag titles onto the global
-            // Person identity.
-            author: {
-              '@id': 'https://thechrisgrey.com/#person',
-            },
-            publisher: {
-              '@id': 'https://altivum.ai/#organization',
-            },
-            image: post.image?.asset
-              ? urlFor(post.image).width(1200).auto('format').quality(85).url()
-              : 'https://thechrisgrey.com/og.png',
+            image: articleImageUrl,
             articleSection: post.category,
             keywords: post.tags?.map((t) => t.title).join(', ') || '',
-            mainEntityOfPage: {
-              '@type': 'WebPage',
-              '@id': shareUrl,
-            },
-            inLanguage: 'en-US',
-          },
+            wordCount: post.body ? getWordCount(post.body) : undefined,
+          }),
           ...extractYouTubeVideos(post.body).map((v) =>
             buildVideoObjectSchema({
               videoId: v.videoId,

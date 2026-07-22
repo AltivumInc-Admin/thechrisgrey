@@ -24,6 +24,7 @@ const About = () => {
         description="Biography of Christian Perez: From Special Forces Medic (18D) and Green Beret to Founder & CEO of Altivum Inc. Bronze Star recipient. A journey of service, leadership, and innovation."
         keywords="Christian Perez bio, Green Beret, 18D, Special Forces Medic, Altivum founder, veteran entrepreneur, Bronze Star, 1st Special Forces Group"
         url="https://thechrisgrey.com/about"
+        imageAlt="About Christian Perez — former Green Beret, Bronze Star recipient, and Founder of Altivum Inc."
         type="profile"
         faq={aboutFAQs}
         breadcrumbs={breadcrumbs}

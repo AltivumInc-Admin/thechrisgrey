@@ -51,6 +51,78 @@ const CONTENT_ROUTES = new Set([
   '/contact',
 ]);
 
+// Per-route expected JSON-LD @graph @type entries (VAL-SD-003..VAL-SD-007,
+// VAL-SD-009). The validator asserts each listed type is present in the
+// prerendered @graph for that route. Routes not listed here have no
+// page-specific schema requirement beyond the global Person/Organization/WebSite
+// nodes already checked by the JSON-LD block assertions.
+const EXPECTED_SCHEMA_TYPES_BY_ROUTE = {
+  '/blog': ['CollectionPage'],
+  '/podcast': ['PodcastSeries', 'PodcastEpisode'],
+  '/aws': ['EducationalOccupationalCredential', 'FAQPage'],
+  '/claude': ['EducationalOccupationalCredential', 'FAQPage'],
+  '/links': ['FAQPage'],
+};
+
+/**
+ * Parse the single JSON-LD block from a prerendered HTML string and return the
+ * @graph array (or [] when the block is missing/invalid). The caller already
+ * asserts the block is unique and valid JSON; this helper is for per-type
+ * schema assertions only and degrades to [] on any parse error.
+ */
+function graphFromHtml(html) {
+  const ldMatches = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+  if (ldMatches.length !== 1) return [];
+  try {
+    const graph = JSON.parse(ldMatches[0][1]);
+    return Array.isArray(graph['@graph']) ? graph['@graph'] : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Schema-specific violations for a single prerendered HTML string
+ * (VAL-SD-003..VAL-SD-007, VAL-SD-009). Exported so the test suite can
+ * exercise it against fixture HTML without reading dist/.
+ */
+export function schemaViolations(html, route) {
+  const violations = [];
+  const graph = graphFromHtml(html);
+  if (graph.length === 0) return violations;
+
+  const types = graph.map((n) => n['@type']);
+
+  // Per-route expected @types.
+  const expected = EXPECTED_SCHEMA_TYPES_BY_ROUTE[route];
+  if (expected) {
+    for (const t of expected) {
+      if (!types.includes(t)) {
+        violations.push(`expected JSON-LD @type "${t}" missing from @graph (VAL-SD)`);
+      }
+    }
+  }
+
+  // VAL-SD-009: WebSite node must declare a SearchAction targeting the visible
+  // /blog search box (or omit it). The site renders a search input on /blog, so
+  // the SearchAction must be present on every route that emits the WebSite node.
+  const website = graph.find((n) => n['@type'] === 'WebSite');
+  if (website) {
+    const action = website.potentialAction;
+    const isSearchAction =
+      action &&
+      action['@type'] === 'SearchAction' &&
+      action.target &&
+      typeof action.target.urlTemplate === 'string' &&
+      action.target.urlTemplate.includes('/blog?q=');
+    if (!isSearchAction) {
+      violations.push('WebSite node missing valid SearchAction targeting /blog?q= (VAL-SD-009)');
+    }
+  }
+
+  return violations;
+}
+
 // File form written by prerender.js (outPathsFor): '/' -> dist/index.html,
 // '/aws' -> dist/aws.html (the bare-URL artifact that returns 200, no redirect).
 function fileForRoute(route) {
@@ -236,8 +308,19 @@ function validateRoute(route) {
     }
   }
 
+  // --- og:image:alt (VAL-SEO-007) ---
+  const ogAlt = html.match(/<meta[^>]*property="og:image:alt"[^>]*content="([^"]+)"/);
+  if (!ogAlt) {
+    violations.push('missing og:image:alt (VAL-SEO-007)');
+  } else if (!ogAlt[1].trim()) {
+    violations.push('og:image:alt is empty (VAL-SEO-007)');
+  }
+
   // --- AEO assertions (VAL-AEO-001/002/004/005) ---
   violations.push(...aeoViolations(html, route));
+
+  // --- Schema assertions (VAL-SD-003..007, VAL-SD-009) ---
+  violations.push(...schemaViolations(html, route));
 
   return { route, degraded: false, violations };
 }

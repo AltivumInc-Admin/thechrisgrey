@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aeoViolations } from './validate-prerender-seo.mjs';
+import { aeoViolations, schemaViolations } from './validate-prerender-seo.mjs';
 
 // A minimal prerendered HTML fixture with a valid direct-answer summary,
 // question-based H2/H3 with slug ids, and a visible FAQ section matching the
@@ -97,5 +97,109 @@ describe('aeoViolations', () => {
     const html = fixture().replace(faqs[0].question, 'A different question entirely?');
     const v = aeoViolations(html, '/about');
     expect(v.some((x) => x.includes('not visible in DOM'))).toBe(true);
+  });
+});
+
+// Helper to build an HTML fixture with a given @graph array.
+function graphFixture(graph) {
+  const fullGraph = { '@context': 'https://schema.org', '@graph': graph };
+  return `<html><head><script type="application/ld+json">${JSON.stringify(fullGraph)}</script></head><body></body></html>`;
+}
+
+const websiteWithSearchAction = {
+  '@type': 'WebSite',
+  '@id': 'https://thechrisgrey.com/#website',
+  url: 'https://thechrisgrey.com',
+  name: 'Christian Perez - thechrisgrey',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: { '@type': 'EntryPoint', urlTemplate: 'https://thechrisgrey.com/blog?q={search_term_string}' },
+    'query-input': 'required name=search_term_string',
+  },
+};
+
+describe('schemaViolations', () => {
+  it('returns no violations when all expected per-route types are present', () => {
+    const html = graphFixture([
+      { '@type': 'Person', '@id': 'https://thechrisgrey.com/#person', name: 'Christian Perez' },
+      { '@type': 'Corporation', '@id': 'https://altivum.ai/#organization', name: 'Altivum Inc.' },
+      websiteWithSearchAction,
+      {
+        '@type': 'CollectionPage',
+        '@id': 'https://thechrisgrey.com/blog/#collectionpage',
+        url: 'https://thechrisgrey.com/blog',
+        name: 'Blog',
+      },
+    ]);
+    expect(schemaViolations(html, '/blog')).toEqual([]);
+  });
+
+  it('flags a missing CollectionPage on /blog (VAL-SD-004)', () => {
+    const html = graphFixture([websiteWithSearchAction]);
+    const v = schemaViolations(html, '/blog');
+    expect(v.some((x) => x.includes('"CollectionPage" missing'))).toBe(true);
+  });
+
+  it('flags a missing PodcastEpisode on /podcast (VAL-SD-005)', () => {
+    const html = graphFixture([
+      websiteWithSearchAction,
+      { '@type': 'PodcastSeries', name: 'The Vector Podcast', url: 'https://thechrisgrey.com/podcast' },
+    ]);
+    const v = schemaViolations(html, '/podcast');
+    expect(v.some((x) => x.includes('"PodcastEpisode" missing'))).toBe(true);
+  });
+
+  it('passes /podcast when both PodcastSeries and PodcastEpisode are present', () => {
+    const html = graphFixture([
+      websiteWithSearchAction,
+      { '@type': 'PodcastSeries', name: 'The Vector Podcast', url: 'https://thechrisgrey.com/podcast' },
+      { '@type': 'PodcastEpisode', name: 'Ep 1', datePublished: '2026-01-01', duration: 'PT40M', partOfSeries: {} },
+    ]);
+    expect(schemaViolations(html, '/podcast')).toEqual([]);
+  });
+
+  it('flags missing EducationalOccupationalCredential and FAQPage on /aws (VAL-SD-006, VAL-SD-007)', () => {
+    const html = graphFixture([websiteWithSearchAction]);
+    const v = schemaViolations(html, '/aws');
+    expect(v.some((x) => x.includes('"EducationalOccupationalCredential" missing'))).toBe(true);
+    expect(v.some((x) => x.includes('"FAQPage" missing'))).toBe(true);
+  });
+
+  it('flags a missing FAQPage on /links (VAL-SD-007)', () => {
+    const html = graphFixture([websiteWithSearchAction]);
+    const v = schemaViolations(html, '/links');
+    expect(v.some((x) => x.includes('"FAQPage" missing'))).toBe(true);
+  });
+
+  it('flags a WebSite node with no SearchAction (VAL-SD-009)', () => {
+    const websiteNoSearch = { ...websiteWithSearchAction };
+    delete websiteNoSearch.potentialAction;
+    const html = graphFixture([websiteNoSearch]);
+    const v = schemaViolations(html, '/');
+    expect(v.some((x) => x.includes('SearchAction'))).toBe(true);
+  });
+
+  it('flags a SearchAction whose target does not point at /blog?q= (VAL-SD-009)', () => {
+    const html = graphFixture([
+      {
+        ...websiteWithSearchAction,
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: { '@type': 'EntryPoint', urlTemplate: 'https://thechrisgrey.com/search?q={search_term_string}' },
+          'query-input': 'required name=search_term_string',
+        },
+      },
+    ]);
+    const v = schemaViolations(html, '/');
+    expect(v.some((x) => x.includes('SearchAction'))).toBe(true);
+  });
+
+  it('returns no violations for routes with no per-route schema requirements', () => {
+    const html = graphFixture([websiteWithSearchAction]);
+    expect(schemaViolations(html, '/about')).toEqual([]);
+  });
+
+  it('returns no violations when the JSON-LD block is missing (handled by the caller)', () => {
+    expect(schemaViolations('<html></html>', '/aws')).toEqual([]);
   });
 });

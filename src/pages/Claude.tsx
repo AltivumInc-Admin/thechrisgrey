@@ -3,13 +3,15 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterCTA from '../components/NewsletterCTA';
 import CrossLinkBand from '../components/CrossLinkBand';
 import { typography } from '../utils/typography';
-import { buildWebPageSchema } from '../utils/schemas';
+import { buildWebPageSchema, buildCredentialSchema, claudeFAQs } from '../utils/schemas';
+import { ogImageForUrl } from '../utils/ogCards';
 import claudeHero from '../assets/claude-hero.png';
 import claudeBedrockCert from '../assets/claude-bedrock-cert.png';
 import { ArchitectureXRay } from '../components/claude/ArchitectureXRay';
 import { McpInstallBadge } from '../components/McpInstallBadge';
 import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
 import QuestionHeading from '../components/aeo/QuestionHeading';
+import FAQSection from '../components/aeo/FAQSection';
 import { AEO_SUMMARIES } from '../data/aeoSummaries';
 import { slugify } from '../utils/slugify';
 
@@ -126,13 +128,39 @@ const Claude = () => {
         description="Christian Perez is an Applied AI Engineer building production systems with Claude, Anthropic's AI. From RAG pipelines to AI-augmented development, designing intelligent applications that solve real problems."
         keywords="Claude AI, Applied AI Engineer, Anthropic, Claude API, Claude Code, RAG systems, AI engineering, Christian Perez AI, Anthropic Academy, Claude certifications"
         url="https://thechrisgrey.com/claude"
+        imageAlt="Applied AI Engineer building production systems with Claude by Anthropic"
         breadcrumbs={breadcrumbs}
+        faq={claudeFAQs}
         structuredData={[
           buildWebPageSchema({
             name: 'Claude - Christian Perez',
             description: 'Christian Perez is an Applied AI Engineer building production systems with Claude.',
             url: 'https://thechrisgrey.com/claude',
+            image: ogImageForUrl('https://thechrisgrey.com/claude'),
           }),
+          // Page-specific EducationalOccupationalCredential nodes for the
+          // visible Anthropic Academy certifications (VAL-SD-006). Each
+          // certification rendered on the page gets a corresponding node
+          // outside the global Person.hasCredential array, with a verify URL
+          // where Skilljar publishes the credential.
+          buildCredentialSchema({
+            name: featuredCert.name,
+            description: `Anthropic Academy certification — ${featuredCert.name}, issued ${featuredCert.issued}.`,
+            url: featuredCert.verifyUrl,
+            credentialCategory: 'Professional Certification',
+            recognizedBy: { name: 'Anthropic', url: 'https://www.anthropic.com' },
+          }),
+          ...certGroups.flatMap((group) =>
+            group.certs.map((cert) =>
+              buildCredentialSchema({
+                name: cert.name,
+                description: `Anthropic Academy certification — ${cert.name} (${group.label}), issued ${cert.issued}.`,
+                url: cert.verifyUrl,
+                credentialCategory: 'Professional Certification',
+                recognizedBy: { name: 'Anthropic', url: 'https://www.anthropic.com' },
+              }),
+            ),
+          ),
         ]}
       />
 
@@ -401,6 +429,10 @@ const Claude = () => {
         heading="Build with Claude, in your inbox"
         blurb="Notes on shipping agentic systems with Claude, Bedrock, and the Model Context Protocol. Practical patterns, no hype."
       />
+
+      {/* Visible FAQ — mirrors the FAQPage JSON-LD emitted by <SEO faq={claudeFAQs}>
+          so the DOM text and structured data agree (VAL-AEO-004, VAL-SD-007). */}
+      <FAQSection faqs={claudeFAQs} />
 
       <CrossLinkBand
         heading="Explore more"
