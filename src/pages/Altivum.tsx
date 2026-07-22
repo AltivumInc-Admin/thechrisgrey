@@ -164,7 +164,7 @@ const Altivum = () => {
     <div className="min-h-screen bg-altivum-dark">
       <SEO
         title="Altivum Inc."
-        description="Altivum Inc. is a veteran-founded public benefit corporation building intelligent, cloud-native architectures. Three divisions: Vanguard (veteran services), Logic (web & AI), Press (media)."
+        description="Altivum Inc. is a veteran-founded public benefit corporation building intelligent, cloud-native architectures. Three divisions: Vanguard, Logic, and Press."
         keywords="Altivum Inc, Altivum Logic, Altivum Vanguard, Altivum Press, VetROI, Elo, Cloud Architecture, AI Integration, Christian Perez, veteran entrepreneur"
         url="https://thechrisgrey.com/altivum"
         imageAlt="Altivum Inc. — veteran-founded public benefit corporation building cloud-native AI architectures"

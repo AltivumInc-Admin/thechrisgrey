@@ -21,7 +21,7 @@ const About = () => {
     <div className="min-h-screen bg-altivum-dark">
       <SEO
         title="About Christian Perez"
-        description="Biography of Christian Perez: From Special Forces Medic (18D) and Green Beret to Founder & CEO of Altivum Inc. Bronze Star recipient. A journey of service, leadership, and innovation."
+        description="Biography of Christian Perez: From Special Forces Medic (18D) and Green Beret to Founder & CEO of Altivum Inc. A journey of service, leadership, and innovation."
         keywords="Christian Perez bio, Green Beret, 18D, Special Forces Medic, Altivum founder, veteran entrepreneur, Bronze Star, 1st Special Forces Group"
         url="https://thechrisgrey.com/about"
         imageAlt="About Christian Perez — former Green Beret, Bronze Star recipient, and Founder of Altivum Inc."
@@ -53,6 +53,7 @@ const About = () => {
               <img
                 src={mpbLogo}
                 alt=""
+                aria-hidden="true"
                 width={1500}
                 height={1500}
                 className="w-full max-w-3xl mx-auto opacity-90"

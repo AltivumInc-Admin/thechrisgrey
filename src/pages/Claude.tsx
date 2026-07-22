@@ -125,7 +125,7 @@ const Claude = () => {
     <div className="min-h-screen bg-altivum-dark">
       <SEO
         title="Claude"
-        description="Christian Perez is an Applied AI Engineer building production systems with Claude, Anthropic's AI. From RAG pipelines to AI-augmented development, designing intelligent applications that solve real problems."
+        description="Christian Perez is an Applied AI Engineer building production systems with Claude. From RAG pipelines to AI-augmented development workflows."
         keywords="Claude AI, Applied AI Engineer, Anthropic, Claude API, Claude Code, RAG systems, AI engineering, Christian Perez AI, Anthropic Academy, Claude certifications"
         url="https://thechrisgrey.com/claude"
         imageAlt="Applied AI Engineer building production systems with Claude by Anthropic"

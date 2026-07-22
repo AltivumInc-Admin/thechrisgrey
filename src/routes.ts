@@ -215,6 +215,7 @@ export const ROUTES: readonly RouteDefinition[] = [
     // /chat has its own ChatSuggestions starter chips inside the page; the
     // PAGE_SUGGESTIONS path isn't consulted there. No entry needed.
     noPrefetch: true,
+    noIndex: true, // App-shell page — never index (VAL-AEO-008, VAL-SEO-010).
   },
   {
     path: '/privacy',

@@ -5,11 +5,13 @@
  */
 
 import { createClient } from '@sanity/client';
-import { writeFileSync, realpathSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { writeFileSync, realpathSync, existsSync } from 'fs';
+import { resolve, dirname, join } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import { execSync } from 'child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolve(__dirname, '..');
 
 // Sanity client configuration
 const client = createClient({
@@ -26,20 +28,36 @@ const client = createClient({
 // scripts/prerender.js imports them so the prerender crawl set can never drift
 // from the sitemap. This file owns the per-route SEO metadata (priority,
 // changefreq); prerender only needs the paths.
+//
+// EXCLUDED from staticPages (and therefore from STATIC_ROUTES / the prerender
+// crawl / the sitemap):
+//   - /chat    — app-shell page, noIndex in routes.ts (VAL-AEO-008, VAL-SEO-010)
+//   - /admin   — Cognito-gated, noIndex in routes.ts
+//   - /blueprint — feature-flagged, noIndex in routes.ts (excluded when flag off)
+//
+// `contentFile` maps each route to the page component whose content determines
+// the sitemap <lastmod>. At build time we read the git commit date of that file
+// (stable across builds — unlike fs.mtime which resets on every checkout), so
+// two consecutive builds with no content change produce identical static-route
+// lastmod values (VAL-SEO-003).
 const staticPages = [
-  { url: '/', priority: '1.0', changefreq: 'weekly' },
-  { url: '/about', priority: '0.8', changefreq: 'monthly' },
-  { url: '/altivum', priority: '0.9', changefreq: 'weekly' },
-  { url: '/foundation', priority: '0.9', changefreq: 'weekly' },
-  { url: '/podcast', priority: '0.8', changefreq: 'weekly' },
-  { url: '/blog', priority: '0.8', changefreq: 'weekly' },
-  { url: '/contact', priority: '0.7', changefreq: 'monthly' },
-  { url: '/links', priority: '0.7', changefreq: 'monthly' },
-  { url: '/beyond-the-assessment', priority: '0.7', changefreq: 'monthly' },
-  { url: '/aws', priority: '0.8', changefreq: 'monthly' },
-  { url: '/claude', priority: '0.8', changefreq: 'monthly' },
-  { url: '/chat', priority: '0.7', changefreq: 'weekly' },
-  { url: '/privacy', priority: '0.3', changefreq: 'yearly' },
+  { url: '/', priority: '1.0', changefreq: 'weekly', contentFile: 'src/pages/Home.tsx' },
+  { url: '/about', priority: '0.8', changefreq: 'monthly', contentFile: 'src/pages/About.tsx' },
+  { url: '/altivum', priority: '0.9', changefreq: 'weekly', contentFile: 'src/pages/Altivum.tsx' },
+  { url: '/foundation', priority: '0.9', changefreq: 'weekly', contentFile: 'src/pages/Foundation.tsx' },
+  { url: '/podcast', priority: '0.8', changefreq: 'weekly', contentFile: 'src/pages/Podcast.tsx' },
+  { url: '/blog', priority: '0.8', changefreq: 'weekly', contentFile: 'src/pages/Blog.tsx' },
+  { url: '/contact', priority: '0.7', changefreq: 'monthly', contentFile: 'src/pages/Contact.tsx' },
+  { url: '/links', priority: '0.7', changefreq: 'monthly', contentFile: 'src/pages/Links.tsx' },
+  {
+    url: '/beyond-the-assessment',
+    priority: '0.7',
+    changefreq: 'monthly',
+    contentFile: 'src/pages/BeyondTheAssessment.tsx',
+  },
+  { url: '/aws', priority: '0.8', changefreq: 'monthly', contentFile: 'src/pages/AWS.tsx' },
+  { url: '/claude', priority: '0.8', changefreq: 'monthly', contentFile: 'src/pages/Claude.tsx' },
+  { url: '/privacy', priority: '0.3', changefreq: 'yearly', contentFile: 'src/pages/Privacy.tsx' },
 ];
 
 /**
@@ -84,6 +102,40 @@ function formatDate(dateString) {
 }
 
 /**
+ * Resolve the last content-change date for a static route's page component
+ * using git commit history (VAL-SEO-003). Unlike fs.mtime (which resets on
+ * every checkout), `git log` returns the date the file was last committed —
+ * stable across builds as long as the content hasn't changed. Falls back to
+ * today's date only if git is unavailable or the file is untracked.
+ */
+function staticRouteLastmod(contentFile) {
+  const absPath = join(REPO_ROOT, contentFile);
+  try {
+    // %cI = committer date in ISO 8601 format
+    const iso = execSync(`git log -1 --format=%cI -- "${contentFile}"`, {
+      cwd: REPO_ROOT,
+      encoding: 'utf-8',
+      timeout: 5000,
+    }).trim();
+    if (iso) return formatDate(iso);
+  } catch {
+    // git not available, file untracked, or timeout — fall back to file mtime
+    try {
+      if (existsSync(absPath)) {
+        const stat = execSync(`stat -f %Sm -t %Y-%m-%d "${absPath}"`, {
+          encoding: 'utf-8',
+          timeout: 5000,
+        }).trim();
+        if (stat) return stat;
+      }
+    } catch {
+      // stat also failed — fall through to today
+    }
+  }
+  return formatDate(new Date().toISOString());
+}
+
+/**
  * Generate XML for a single URL entry
  */
 function generateUrlEntry({ loc, lastmod, changefreq, priority }) {
@@ -101,13 +153,13 @@ function generateUrlEntry({ loc, lastmod, changefreq, priority }) {
 async function generateSitemap() {
   console.log('Generating sitemap...');
 
-  const today = formatDate(new Date().toISOString());
-
-  // Generate static page entries
+  // Generate static page entries. lastmod is derived from the page component's
+  // git commit date (VAL-SEO-003), NOT new Date() at build time, so two
+  // consecutive builds with no content change produce identical lastmod values.
   const staticEntries = staticPages.map((page) =>
     generateUrlEntry({
       loc: `${SITE_URL}${page.url}`,
-      lastmod: today,
+      lastmod: page.contentFile ? staticRouteLastmod(page.contentFile) : formatDate(new Date().toISOString()),
       changefreq: page.changefreq,
       priority: page.priority,
     }),

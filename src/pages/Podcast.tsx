@@ -89,7 +89,7 @@ const Podcast = () => {
     <div className="min-h-screen">
       <SEO
         title="The Vector Podcast"
-        description="The Vector Podcast explores veteran experience, emerging technology, and purposeful entrepreneurship. Hosted by Christian Perez, featuring leaders navigating the transition from service to innovation."
+        description="The Vector Podcast explores veteran experience, emerging technology, and purposeful entrepreneurship. Hosted by Christian Perez."
         keywords="The Vector Podcast, Christian Perez podcast, AI podcast, veteran entrepreneurship, technology podcast, Altivum Press"
         url="https://thechrisgrey.com/podcast"
         imageAlt="The Vector Podcast cover art — hosted by Christian Perez"

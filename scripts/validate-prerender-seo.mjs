@@ -51,6 +51,14 @@ const CONTENT_ROUTES = new Set([
   '/contact',
 ]);
 
+// Routes that must emit a robots noindex meta (VAL-SEO-010). These are routes
+// in the prerendered static set that should NOT be indexed. Currently empty
+// because all STATIC_ROUTES are indexable — /chat, /admin, and the 404
+// catch-all are noindex but are NOT in STATIC_ROUTES (not prerendered). If a
+// noindex route is ever added to STATIC_ROUTES, list it here so the validator
+// expects its robots meta instead of flagging it as a violation.
+const NOINDEX_ROUTES = new Set([]);
+
 // Per-route expected JSON-LD @graph @type entries (VAL-SD-003..VAL-SD-007,
 // VAL-SD-009). The validator asserts each listed type is present in the
 // prerendered @graph for that route. Routes not listed here have no
@@ -257,6 +265,216 @@ export function aeoViolations(html, route) {
   return violations;
 }
 
+/**
+ * Per-route SEO meta-tag violations (VAL-SEO-001, VAL-SEO-004, VAL-SEO-006,
+ * VAL-SEO-007, VAL-SEO-008, VAL-SEO-010, VAL-SEO-011). Exported so the test
+ * suite can exercise it against fixture HTML without reading dist/.
+ *
+ * Checks that are per-route (not cross-route):
+ *   - exactly one <title> ending with "| Christian Perez" and under 70 chars
+ *   - exactly one <meta name="description">, 70–160 chars
+ *   - exactly one <h1>
+ *   - OG tags: og:title, og:description, og:type, og:url, og:image, og:image:alt
+ *   - Twitter tags: twitter:card, twitter:title, twitter:description,
+ *     twitter:image, twitter:creator, twitter:site
+ *   - robots meta: present on NOINDEX_ROUTES, absent on indexable routes
+ *   - no hreflang tags (single-language site — VAL-SEO-004)
+ *   - RSS feed <link rel="alternate" type="application/rss+xml"> on indexable
+ *     pages (VAL-SEO-009)
+ *   - every content <img> has a non-empty alt or explicit decorative marker
+ *     (alt="" + role="presentation" or aria-hidden — VAL-SEO-011)
+ *
+ * Cross-route uniqueness (title/description) is handled by the caller in main().
+ */
+
+// --- VAL-SEO-006: exactly one per-page <title> (ignoring the static shell) ---
+// The prerendered HTML may carry the static shell's <title>Christian Perez
+// - thechrisgrey</title> alongside the per-page <title> emitted by
+// react-helmet-async. The shell title is invariant and appears on every
+// route; we filter it out before counting so the check targets the per-page
+// title that actually varies by route.
+const SHELL_TITLE = 'Christian Perez - thechrisgrey';
+
+function titleViolations(html) {
+  const violations = [];
+  const titleMatches = [...html.matchAll(/<title[^>]*>([\s\S]*?)<\/title>/g)];
+  const perPageTitles = titleMatches.map((m) => decodeEntities(m[1].trim())).filter((t) => t !== SHELL_TITLE);
+  if (perPageTitles.length !== 1) {
+    violations.push(`expected exactly 1 per-page <title>, found ${perPageTitles.length} (VAL-SEO-006)`);
+    return violations;
+  }
+  const title = perPageTitles[0];
+  if (!title) {
+    violations.push('<title> is empty (VAL-SEO-006)');
+    return violations;
+  }
+  if (!title.endsWith('| Christian Perez') && title !== 'Christian Perez | thechrisgrey') {
+    violations.push(`<title> "${title.slice(0, 50)}..." does not end with "| Christian Perez" (VAL-SEO-006)`);
+  }
+  if (title.length > 70) {
+    violations.push(`<title> is ${title.length} chars; expected <= 70 (VAL-SEO-006)`);
+  }
+  return violations;
+}
+
+// --- VAL-SEO-006: exactly one <meta name="description">, 70–160 chars ---
+function descriptionViolations(html) {
+  const violations = [];
+  const descMatches = [...html.matchAll(/<meta\s+name="description"\s+content="([^"]*)"/g)];
+  if (descMatches.length !== 1) {
+    violations.push(`expected exactly 1 <meta name="description">, found ${descMatches.length} (VAL-SEO-006)`);
+    return violations;
+  }
+  const desc = decodeEntities(descMatches[0][1].trim());
+  if (!desc) {
+    violations.push('<meta name="description"> is empty (VAL-SEO-006)');
+  } else if (desc.length < 70 || desc.length > 160) {
+    violations.push(`<meta name="description"> is ${desc.length} chars; expected 70-160 (VAL-SEO-006)`);
+  }
+  return violations;
+}
+
+// --- VAL-SEO-006: exactly one <h1> ---
+function h1Violations(html) {
+  const violations = [];
+  const h1Matches = [...html.matchAll(/<h1(\s[^>]*)?>([\s\S]*?)<\/h1>/g)];
+  if (h1Matches.length !== 1) {
+    violations.push(`expected exactly 1 <h1>, found ${h1Matches.length} (VAL-SEO-006)`);
+    return violations;
+  }
+  const h1Text = decodeEntities(h1Matches[0][2].replace(/<[^>]+>/g, '').trim());
+  if (!h1Text) {
+    violations.push('<h1> has empty text (VAL-SEO-006)');
+  }
+  return violations;
+}
+
+// --- VAL-SEO-007/008: check a list of meta tags for presence and non-empty content ---
+function metaTagViolations(html, tagList, attr, valRef) {
+  const violations = [];
+  for (const name of tagList) {
+    const m = html.match(new RegExp(`<meta[^>]*${attr}="${name}"[^>]*content="([^"]*)"`, 'i'));
+    if (!m) {
+      violations.push(`missing ${name} (${valRef})`);
+    } else if (!m[1].trim()) {
+      violations.push(`${name} is empty (${valRef})`);
+    }
+  }
+  return violations;
+}
+
+// --- VAL-SEO-008: twitter:card must be summary_large_image ---
+function twitterCardViolations(html) {
+  const violations = [];
+  const cardMatch = html.match(/<meta[^>]*name="twitter:card"[^>]*content="([^"]*)"/i);
+  if (cardMatch && cardMatch[1] !== 'summary_large_image') {
+    violations.push(`twitter:card is "${cardMatch[1]}"; expected "summary_large_image" (VAL-SEO-008)`);
+  }
+  return violations;
+}
+
+// --- VAL-SEO-010: robots meta ---
+function robotsMetaViolations(html, route) {
+  const violations = [];
+  const robotsMatch = html.match(/<meta\s+name="robots"\s+content="([^"]*)"/i);
+  if (NOINDEX_ROUTES.has(route)) {
+    if (!robotsMatch || !robotsMatch[1].includes('noindex')) {
+      violations.push(`${route} should have robots noindex meta but does not (VAL-SEO-010)`);
+    }
+  } else if (robotsMatch && robotsMatch[1].includes('noindex')) {
+    // Indexable routes must NOT carry noindex
+    violations.push(`${route} is indexable but carries robots noindex meta (VAL-SEO-010)`);
+  }
+  return violations;
+}
+
+// --- VAL-SEO-004: no hreflang, html lang, og:locale ---
+function hreflangAndLocaleViolations(html) {
+  const violations = [];
+  const hreflangMatches = [...html.matchAll(/<link[^>]*rel="alternate"[^>]*hreflang=/gi)];
+  if (hreflangMatches.length > 0) {
+    violations.push(
+      `found ${hreflangMatches.length} hreflang link tag(s); expected 0 on single-language site (VAL-SEO-004)`,
+    );
+  }
+  const htmlLangMatch = html.match(/<html\s+[^>]*lang="([^"]*)"/i);
+  if (!htmlLangMatch) {
+    violations.push('<html> tag missing lang attribute (VAL-SEO-004)');
+  } else if (htmlLangMatch[1] !== 'en' && htmlLangMatch[1] !== 'en-US') {
+    violations.push(`<html lang="${htmlLangMatch[1]}">; expected "en" or "en-US" (VAL-SEO-004)`);
+  }
+  const ogLocaleMatch = html.match(/<meta[^>]*property="og:locale"[^>]*content="([^"]*)"/i);
+  if (!ogLocaleMatch) {
+    violations.push('missing og:locale (VAL-SEO-004)');
+  } else if (ogLocaleMatch[1] !== 'en_US') {
+    violations.push(`og:locale is "${ogLocaleMatch[1]}"; expected "en_US" (VAL-SEO-004)`);
+  }
+  return violations;
+}
+
+// --- VAL-SEO-009: RSS feed link on indexable pages ---
+function rssLinkViolations(html, route) {
+  if (NOINDEX_ROUTES.has(route)) return [];
+  // The RSS <link> is in the static shell (index.html) with attributes in
+  // any order (rel, type, title, href). Match flexibly across newlines.
+  const rssMatch = html.match(/<link\s+[^>]*rel="alternate"[^>]*type="application\/rss\+xml"[^>]*>/i);
+  if (!rssMatch) {
+    return ['missing RSS <link rel="alternate" type="application/rss+xml"> (VAL-SEO-009)'];
+  }
+  return [];
+}
+
+// --- VAL-SEO-011: content images have descriptive alt or decorative marker ---
+function imageAltViolations(html) {
+  const violations = [];
+  // Skip images inside <script> blocks (JSON-LD can contain <img> in strings).
+  // We look at <img> tags in the body, excluding those inside JSON-LD scripts.
+  const bodyStart = html.search(/<body/i);
+  const bodyHtml = bodyStart !== -1 ? html.slice(bodyStart) : html;
+  const imgMatches = [...bodyHtml.matchAll(/<img\s+([^>]*)>/gi)];
+  for (const m of imgMatches) {
+    const attrs = m[1];
+    const altMatch = attrs.match(/alt="([^"]*)"/i);
+    const alt = altMatch ? altMatch[1] : null;
+    if (alt === null) {
+      violations.push('<img> missing alt attribute (VAL-SEO-011)');
+    } else if (alt === '') {
+      // Decorative image — must have role="presentation" or aria-hidden="true"
+      const hasPresentation = /role="presentation"/i.test(attrs);
+      const hasAriaHidden = /aria-hidden="true"/i.test(attrs);
+      if (!hasPresentation && !hasAriaHidden) {
+        violations.push('<img> with empty alt lacks role="presentation" or aria-hidden="true" (VAL-SEO-011)');
+      }
+    }
+  }
+  return violations;
+}
+
+export function seoMetaViolations(html, route) {
+  const OG_TAGS = ['og:title', 'og:description', 'og:type', 'og:url', 'og:image', 'og:image:alt'];
+  const TWITTER_TAGS = [
+    'twitter:card',
+    'twitter:title',
+    'twitter:description',
+    'twitter:image',
+    'twitter:creator',
+    'twitter:site',
+  ];
+
+  return [
+    ...titleViolations(html),
+    ...descriptionViolations(html),
+    ...h1Violations(html),
+    ...metaTagViolations(html, OG_TAGS, 'property', 'VAL-SEO-007'),
+    ...metaTagViolations(html, TWITTER_TAGS, 'name', 'VAL-SEO-008'),
+    ...twitterCardViolations(html),
+    ...robotsMetaViolations(html, route),
+    ...hreflangAndLocaleViolations(html),
+    ...rssLinkViolations(html, route),
+    ...imageAltViolations(html),
+  ];
+}
+
 function validateRoute(route) {
   const file = fileForRoute(route);
   if (!existsSync(file)) {
@@ -316,6 +534,9 @@ function validateRoute(route) {
     violations.push('og:image:alt is empty (VAL-SEO-007)');
   }
 
+  // --- Expanded SEO meta assertions (VAL-SEO-001/004/006/007/008/009/010/011) ---
+  violations.push(...seoMetaViolations(html, route));
+
   // --- AEO assertions (VAL-AEO-001/002/004/005) ---
   violations.push(...aeoViolations(html, route));
 
@@ -336,6 +557,82 @@ function main() {
   const withViolations = results.filter((r) => r.violations.length > 0);
   const totalViolations = withViolations.reduce((n, r) => n + r.violations.length, 0);
 
+  // --- Cross-route uniqueness: titles (VAL-SEO-006) ---
+  // Filter out the invariant shell title so we compare per-page titles only.
+  // SHELL_TITLE is the module-level constant shared with titleViolations().
+  const titleMap = new Map(); // title -> [routes]
+  for (const r of results) {
+    if (r.degraded) continue;
+    const file = fileForRoute(r.route);
+    const html = readFileSync(file, 'utf-8');
+    const tm = html.match(/<title[^>]*>([\s\S]*?)<\/title>/);
+    if (tm) {
+      const title = decodeEntities(tm[1].trim());
+      if (title === SHELL_TITLE) continue; // skip the invariant shell title
+      if (!titleMap.has(title)) titleMap.set(title, []);
+      titleMap.get(title).push(r.route);
+    }
+  }
+  const duplicateTitles = [];
+  for (const [title, routes] of titleMap) {
+    if (routes.length > 1) {
+      duplicateTitles.push({ title: title.slice(0, 60), routes });
+    }
+  }
+
+  // --- Cross-route uniqueness: descriptions (VAL-SEO-006) ---
+  const descMap = new Map(); // desc -> [routes]
+  for (const r of results) {
+    if (r.degraded) continue;
+    const file = fileForRoute(r.route);
+    const html = readFileSync(file, 'utf-8');
+    const dm = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+    if (dm) {
+      const desc = decodeEntities(dm[1].trim());
+      if (!descMap.has(desc)) descMap.set(desc, []);
+      descMap.get(desc).push(r.route);
+    }
+  }
+  const duplicateDescs = [];
+  for (const [desc, routes] of descMap) {
+    if (routes.length > 1) {
+      duplicateDescs.push({ desc: desc.slice(0, 60), routes });
+    }
+  }
+
+  // --- VAL-SEO-009 / VAL-CROSS-005: RSS items match sitemap blog set ---
+  let rssViolation = null;
+  const rssFile = join(DIST, 'rss.xml');
+  const sitemapFile = join(DIST, 'sitemap.xml');
+  if (existsSync(rssFile) && existsSync(sitemapFile)) {
+    try {
+      const rssXml = readFileSync(rssFile, 'utf-8');
+      const sitemapXml = readFileSync(sitemapFile, 'utf-8');
+      // Extract blog slugs from RSS items
+      const rssLinks = [...rssXml.matchAll(/<link>([^<]+)<\/link>/g)].map((m) => m[1].trim());
+      const rssBlogSlugs = new Set(
+        rssLinks
+          .filter((l) => l.includes('/blog/'))
+          .map((l) => l.replace(/^https?:\/\/[^/]+\/blog\//, '').replace(/\/$/, '')),
+      );
+      // Extract blog slugs from sitemap
+      const sitemapLocs = [...sitemapXml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim());
+      const sitemapBlogSlugs = new Set(
+        sitemapLocs
+          .filter((l) => l.includes('/blog/'))
+          .map((l) => l.replace(/^https?:\/\/[^/]+\/blog\//, '').replace(/\/$/, '')),
+      );
+      // Check set equality (RSS items should match the sitemap blog set)
+      const inRssNotSitemap = [...rssBlogSlugs].filter((s) => !sitemapBlogSlugs.has(s));
+      const inSitemapNotRss = [...sitemapBlogSlugs].filter((s) => !rssBlogSlugs.has(s));
+      if (inRssNotSitemap.length > 0 || inSitemapNotRss.length > 0) {
+        rssViolation = `RSS/sitemap blog set mismatch: in RSS not sitemap: [${inRssNotSitemap.join(', ')}]; in sitemap not RSS: [${inSitemapNotRss.join(', ')}]`;
+      }
+    } catch {
+      // Non-fatal — RSS/sitemap consistency check is best-effort
+    }
+  }
+
   console.log(
     `[seo-gate] ${STATIC_ROUTES.length} static routes checked; ` +
       `${totalViolations} violation(s); ${degraded.length} degraded to CSR` +
@@ -344,10 +641,22 @@ function main() {
   for (const r of withViolations) {
     for (const v of r.violations) console.error(`  [seo-gate] ${r.route}: ${v}`);
   }
+  for (const dup of duplicateTitles) {
+    console.error(`  [seo-gate] DUPLICATE TITLE "${dup.title}" on: ${dup.routes.join(', ')} (VAL-SEO-006)`);
+  }
+  for (const dup of duplicateDescs) {
+    console.error(`  [seo-gate] DUPLICATE DESCRIPTION "${dup.desc}" on: ${dup.routes.join(', ')} (VAL-SEO-006)`);
+  }
+  if (rssViolation) {
+    console.error(`  [seo-gate] ${rssViolation} (VAL-SEO-009)`);
+  }
 
+  const crossRouteViolations = duplicateTitles.length + duplicateDescs.length + (rssViolation ? 1 : 0);
   const strict = process.env.STRICT_PRERENDER === 'true' || process.env.STRICT_SEO_VALIDATION === 'true';
-  if (strict && totalViolations > 0) {
-    console.error(`[seo-gate] STRICT mode: exiting 1 due to ${totalViolations} SEO violation(s) in prerendered HTML.`);
+  if (strict && (totalViolations > 0 || crossRouteViolations > 0)) {
+    console.error(
+      `[seo-gate] STRICT mode: exiting 1 due to ${totalViolations + crossRouteViolations} SEO violation(s) in prerendered HTML.`,
+    );
     process.exit(1);
   }
   // Default: strictly non-fatal so a broken prerender/validation never blocks the deploy.

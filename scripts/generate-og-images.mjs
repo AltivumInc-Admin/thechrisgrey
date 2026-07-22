@@ -67,7 +67,6 @@ export const OG_CARDS = {
   '/blog': { eyebrow: 'BLOG', title: 'Field notes on AI, cloud, and leadership.' },
   '/links': { eyebrow: 'LINKS', title: 'Find me across the web.' },
   '/contact': { eyebrow: 'CONTACT & SPEAKING', title: 'Work with me — or book me to speak.' },
-  '/chat': { eyebrow: 'ASK ALTI', title: 'Chat with my AI. Ask me anything.' },
   '/privacy': { eyebrow: 'PRIVACY', title: 'How thechrisgrey.com handles your data.' },
 };
 

@@ -23,7 +23,7 @@ const BeyondTheAssessment = () => {
     <div className="min-h-screen bg-altivum-dark">
       <SEO
         title="Beyond the Assessment"
-        description="Beyond the Assessment: A book by Christian Perez exploring leadership, resilience, and the intangible qualities that define success in high-stakes environments. Available on Amazon."
+        description="Beyond the Assessment: A book by Christian Perez exploring leadership, resilience, and the intangible qualities that define success in high-stakes environments."
         keywords="Beyond the Assessment, Christian Perez book, leadership book, special operations leadership, resilience, Green Beret author, military leadership"
         url="https://thechrisgrey.com/beyond-the-assessment"
         imageAlt="Beyond the Assessment — a book by Christian Perez on leadership and resilience"

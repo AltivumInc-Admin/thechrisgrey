@@ -268,4 +268,25 @@ describe('SEO', () => {
       expect((og?.getAttribute('content') || '').length).toBeGreaterThan(0);
     });
   });
+
+  it('does not emit hreflang link tags (single-language site — VAL-SEO-004)', async () => {
+    renderSEO({ title: 'About', description: 'desc', url: 'https://thechrisgrey.com/about' });
+    await waitFor(() => {
+      expect(document.title).toBe('About | Christian Perez');
+    });
+    const hreflangLinks = document.querySelectorAll('link[rel="alternate"][hreflang]');
+    expect(hreflangLinks).toHaveLength(0);
+  });
+
+  it('emits exactly one canonical link and no hreflang alternates', async () => {
+    renderSEO({ title: 'Test', description: 'desc', url: 'https://thechrisgrey.com/test' });
+    await waitFor(() => {
+      const canonical = document.querySelectorAll('link[rel="canonical"]');
+      expect(canonical).toHaveLength(1);
+      expect(canonical[0]).toHaveAttribute('href', 'https://thechrisgrey.com/test');
+    });
+    const alternates = document.querySelectorAll('link[rel="alternate"]');
+    // No alternate links should be emitted by the SEO component (RSS is in the shell)
+    expect(alternates).toHaveLength(0);
+  });
 });

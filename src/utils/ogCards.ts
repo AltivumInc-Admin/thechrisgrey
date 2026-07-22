@@ -32,7 +32,6 @@ export const OG_CARD_PATHS: readonly string[] = [
   '/blog',
   '/links',
   '/contact',
-  '/chat',
   '/privacy',
 ];
 

@@ -122,8 +122,6 @@ export const SEO = ({
       {keywords && <meta name="keywords" content={keywords} />}
       {noindex && <meta name="robots" content="noindex, nofollow" />}
       <link rel="canonical" href={url} />
-      <link rel="alternate" hrefLang="en-US" href={url} />
-      <link rel="alternate" hrefLang="x-default" href={url} />
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={type} />

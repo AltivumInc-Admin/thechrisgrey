@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aeoViolations, schemaViolations } from './validate-prerender-seo.mjs';
+import { aeoViolations, schemaViolations, seoMetaViolations } from './validate-prerender-seo.mjs';
 
 // A minimal prerendered HTML fixture with a valid direct-answer summary,
 // question-based H2/H3 with slug ids, and a visible FAQ section matching the
@@ -201,5 +201,211 @@ describe('schemaViolations', () => {
 
   it('returns no violations when the JSON-LD block is missing (handled by the caller)', () => {
     expect(schemaViolations('<html></html>', '/aws')).toEqual([]);
+  });
+});
+
+// --- seoMetaViolations tests (VAL-SEO-001/004/006/007/008/009/010/011) ---
+
+// Helper: build a well-formed HTML fixture with all required SEO meta tags.
+// Each test mutates one piece to assert the validator catches it.
+function seoFixture({
+  title = 'About | Christian Perez',
+  description = 'A descriptive meta description that is long enough to pass the 70-160 character minimum threshold check.',
+  h1 = 'About Christian Perez',
+  skipH1 = false,
+  ogTags = true,
+  twitterTags = true,
+  hreflang = false,
+  robotsMeta = null, // null = no robots meta; 'noindex, nofollow' = noindex
+  rssLink = true,
+  htmlLang = 'en',
+  ogLocale = 'en_US',
+  images = [], // array of { alt, decorative }
+} = {}) {
+  const headParts = [`<title>${title}</title>`, `<meta name="description" content="${description}" />`];
+  if (robotsMeta) {
+    headParts.push(`<meta name="robots" content="${robotsMeta}" />`);
+  }
+  headParts.push(`<link rel="canonical" href="https://thechrisgrey.com/about" />`);
+  if (rssLink) {
+    headParts.push(
+      `<link rel="alternate" type="application/rss+xml" title="Christian Perez - Blog" href="https://thechrisgrey.com/rss.xml" />`,
+    );
+  }
+  if (hreflang) {
+    headParts.push(`<link rel="alternate" hreflang="en-US" href="https://thechrisgrey.com/about" />`);
+  }
+  if (ogTags) {
+    headParts.push(
+      `<meta property="og:title" content="${title}" />`,
+      `<meta property="og:description" content="${description}" />`,
+      `<meta property="og:type" content="website" />`,
+      `<meta property="og:url" content="https://thechrisgrey.com/about" />`,
+      `<meta property="og:image" content="https://thechrisgrey.com/og/about.png" />`,
+      `<meta property="og:image:alt" content="About page hero" />`,
+      `<meta property="og:locale" content="${ogLocale}" />`,
+    );
+  }
+  if (twitterTags) {
+    headParts.push(
+      `<meta name="twitter:card" content="summary_large_image" />`,
+      `<meta name="twitter:title" content="${title}" />`,
+      `<meta name="twitter:description" content="${description}" />`,
+      `<meta name="twitter:image" content="https://thechrisgrey.com/og/about.png" />`,
+      `<meta name="twitter:creator" content="@thechrisgrey" />`,
+      `<meta name="twitter:site" content="@thechrisgrey" />`,
+    );
+  }
+  const bodyParts = [];
+  if (!skipH1) {
+    bodyParts.push(`<h1>${h1}</h1>`);
+  }
+  for (const img of images) {
+    if (img.decorative) {
+      bodyParts.push(`<img src="/test.jpg" alt="" role="presentation" />`);
+    } else {
+      bodyParts.push(`<img src="/test.jpg" alt="${img.alt}" />`);
+    }
+  }
+  return `<html lang="${htmlLang}"><head>${headParts.join('')}</head><body>${bodyParts.join('')}</body></html>`;
+}
+
+describe('seoMetaViolations', () => {
+  it('returns no violations for a well-formed fixture', () => {
+    expect(seoMetaViolations(seoFixture(), '/about')).toEqual([]);
+  });
+
+  it('flags a missing <title> (VAL-SEO-006)', () => {
+    const html = seoFixture({ title: '' }).replace(/<title><\/title>/, '');
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('expected exactly 1 per-page <title>'))).toBe(true);
+  });
+
+  it('flags a <title> that does not end with "| Christian Perez" (VAL-SEO-006)', () => {
+    const html = seoFixture({ title: 'About Page' });
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('does not end with "| Christian Perez"'))).toBe(true);
+  });
+
+  it('flags a <title> over 70 chars (VAL-SEO-006)', () => {
+    const longTitle = 'A'.repeat(60) + ' | Christian Perez';
+    const html = seoFixture({ title: longTitle });
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('chars; expected <= 70'))).toBe(true);
+  });
+
+  it('flags a missing <meta name="description"> (VAL-SEO-006)', () => {
+    const html = seoFixture().replace(/<meta name="description"[^>]*>/, '');
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('expected exactly 1 <meta name="description">'))).toBe(true);
+  });
+
+  it('flags a description under 70 chars (VAL-SEO-006)', () => {
+    const html = seoFixture({ description: 'Short description.' });
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('chars; expected 70-160'))).toBe(true);
+  });
+
+  it('flags a description over 160 chars (VAL-SEO-006)', () => {
+    const longDesc = 'A'.repeat(161);
+    const html = seoFixture({ description: longDesc });
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('chars; expected 70-160'))).toBe(true);
+  });
+
+  it('flags a missing <h1> (VAL-SEO-006)', () => {
+    const html = seoFixture({ skipH1: true });
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('expected exactly 1 <h1>'))).toBe(true);
+  });
+
+  it('flags multiple <h1> tags (VAL-SEO-006)', () => {
+    const html = seoFixture().replace('<h1>About Christian Perez</h1>', '<h1>First</h1><h1>Second</h1>');
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('expected exactly 1 <h1>'))).toBe(true);
+  });
+
+  it('ignores the static shell title and validates only the per-page title (VAL-SEO-006)', () => {
+    const html = seoFixture() + '<title>Christian Perez - thechrisgrey</title>';
+    const v = seoMetaViolations(html, '/about');
+    expect(v.filter((x) => x.includes('<title>'))).toEqual([]);
+  });
+
+  it('flags missing og:title (VAL-SEO-007)', () => {
+    const html = seoFixture().replace(/<meta property="og:title"[^>]*>/, '');
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('missing og:title'))).toBe(true);
+  });
+
+  it('flags missing twitter:card (VAL-SEO-008)', () => {
+    const html = seoFixture().replace(/<meta name="twitter:card"[^>]*>/, '');
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('missing twitter:card'))).toBe(true);
+  });
+
+  it('flags missing twitter:site (VAL-SEO-008)', () => {
+    const html = seoFixture().replace(/<meta name="twitter:site"[^>]*>/, '');
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('missing twitter:site'))).toBe(true);
+  });
+
+  it('flags wrong twitter:card value (VAL-SEO-008)', () => {
+    const html = seoFixture().replace('content="summary_large_image"', 'content="summary"');
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('expected "summary_large_image"'))).toBe(true);
+  });
+
+  it('flags hreflang tags on a single-language site (VAL-SEO-004)', () => {
+    const html = seoFixture({ hreflang: true });
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('hreflang link tag'))).toBe(true);
+  });
+
+  it('flags missing <html lang> attribute (VAL-SEO-004)', () => {
+    const html = seoFixture({ htmlLang: null }).replace(/<html[^>]*>/, '<html>');
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('missing lang attribute'))).toBe(true);
+  });
+
+  it('flags missing og:locale (VAL-SEO-004)', () => {
+    const html = seoFixture().replace(/<meta property="og:locale"[^>]*>/, '');
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('missing og:locale'))).toBe(true);
+  });
+
+  it('flags a noindex robots meta on an indexable route (VAL-SEO-010)', () => {
+    const html = seoFixture({ robotsMeta: 'noindex, nofollow' });
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('indexable but carries robots noindex'))).toBe(true);
+  });
+
+  it('flags a missing RSS feed link on an indexable page (VAL-SEO-009)', () => {
+    const html = seoFixture({ rssLink: false });
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('missing RSS'))).toBe(true);
+  });
+
+  it('flags an <img> missing alt attribute (VAL-SEO-011)', () => {
+    const html = seoFixture({ images: [{ alt: null }] }).replace('alt="null"', '');
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('missing alt attribute'))).toBe(true);
+  });
+
+  it('flags an <img> with empty alt but no decorative marker (VAL-SEO-011)', () => {
+    const html = `<html lang="en"><head><title>About | Christian Perez</title><meta name="description" content="${'A'.repeat(80)}" /><link rel="canonical" href="https://thechrisgrey.com/about" /><link rel="alternate" type="application/rss+xml" title="X" href="https://thechrisgrey.com/rss.xml" /><meta property="og:title" content="X" /><meta property="og:description" content="X" /><meta property="og:type" content="website" /><meta property="og:url" content="X" /><meta property="og:image" content="X" /><meta property="og:image:alt" content="X" /><meta property="og:locale" content="en_US" /><meta name="twitter:card" content="summary_large_image" /><meta name="twitter:title" content="X" /><meta name="twitter:description" content="X" /><meta name="twitter:image" content="X" /><meta name="twitter:creator" content="@thechrisgrey" /><meta name="twitter:site" content="@thechrisgrey" /></head><body><h1>About</h1><img src="/test.jpg" alt="" /></body></html>`;
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('empty alt lacks'))).toBe(true);
+  });
+
+  it('does not flag an <img> with empty alt and role="presentation" (VAL-SEO-011)', () => {
+    const html = seoFixture({ images: [{ alt: '', decorative: true }] });
+    const v = seoMetaViolations(html, '/about');
+    expect(v.filter((x) => x.includes('VAL-SEO-011'))).toEqual([]);
+  });
+
+  it('does not flag an <img> with non-empty alt (VAL-SEO-011)', () => {
+    const html = seoFixture({ images: [{ alt: 'A descriptive alt' }] });
+    const v = seoMetaViolations(html, '/about');
+    expect(v.filter((x) => x.includes('VAL-SEO-011'))).toEqual([]);
   });
 });

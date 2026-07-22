@@ -58,6 +58,7 @@ const ChatContent = () => {
         keywords="Alti, AI agent, Christian Perez, conversation, Altivum, veteran entrepreneur"
         url="https://thechrisgrey.com/chat"
         breadcrumbs={breadcrumbs}
+        noindex={true}
       />
 
       {/* Header */}

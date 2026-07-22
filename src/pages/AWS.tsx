@@ -23,7 +23,7 @@ const AWS = () => {
     <div className="min-h-screen bg-altivum-dark">
       <SEO
         title="Amazon Web Services"
-        description="Christian Perez is an AWS Community Builder in AI Engineering, building intelligent cloud-native systems with Amazon Bedrock, Lambda, and serverless architectures."
+        description="Christian Perez is an AWS Community Builder in AI Engineering, building intelligent cloud-native systems with Amazon Bedrock and serverless architectures."
         keywords="AWS Community Builder, AI Engineering, Amazon Bedrock, cloud architecture, serverless, Christian Perez AWS, Amazon Web Services"
         url="https://thechrisgrey.com/aws"
         imageAlt="AWS Community Builder in AI Engineering — Christian Perez"

@@ -297,7 +297,7 @@ const Contact = () => {
     <div className="min-h-screen pt-20">
       <SEO
         title="Contact & Speaking"
-        description="Book Christian Perez for speaking engagements, podcast appearances, or media interviews. Topics include cloud & AI strategy, veteran entrepreneurship, and leadership. Contact Altivum Inc. for consulting inquiries."
+        description="Book Christian Perez for speaking engagements, podcasts, or media interviews. Topics include cloud & AI strategy, veteran entrepreneurship, and leadership."
         keywords="contact Christian Perez, speaking engagements, keynote speaker, veteran speaker, cloud consulting, AI integration services, podcast guest, media appearances"
         url="https://thechrisgrey.com/contact"
         imageAlt="Contact Christian Perez — speaking engagements, media inquiries, and Altivum Logic consulting"
