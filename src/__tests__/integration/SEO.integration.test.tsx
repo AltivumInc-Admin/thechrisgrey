@@ -29,7 +29,6 @@ vi.mock('gsap', () => ({
 vi.mock('gsap/ScrollTrigger', () => ({ ScrollTrigger: {} }));
 
 // Mock static image imports
-vi.mock('../../assets/hero-intro-poster.webp', () => ({ default: '/mock-hero-intro-poster.webp' }));
 vi.mock('../../assets/aws-hero.png', () => ({ default: '/mock-aws-hero.png' }));
 vi.mock('../../assets/aws-community-builder.webp', () => ({
   default: '/mock-aws-cb.webp',

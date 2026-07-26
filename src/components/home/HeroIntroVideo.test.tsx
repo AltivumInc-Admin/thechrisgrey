@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 
-// Bundled poster asset — Vite resolves this at build time.
-vi.mock('../../assets/hero-intro-poster.webp', () => ({ default: '/mock-hero-intro-poster.webp' }));
-
 // Control the motion gate (prefers-reduced-motion / prerender) per test.
 import { isMotionDisabled } from '../../utils/motion';
 vi.mock('../../utils/motion', () => ({ isMotionDisabled: vi.fn() }));
@@ -12,6 +9,7 @@ const mockedIsMotionDisabled = vi.mocked(isMotionDisabled);
 import HeroIntroVideo from './HeroIntroVideo';
 
 const CDN_SRC = 'https://d1x8296f4gso9u.cloudfront.net/thechrisgrey/hero-h264.mp4';
+const POSTER_SRC = '/hero-intro-poster.webp';
 
 beforeEach(() => {
   mockedIsMotionDisabled.mockReturnValue(false);
@@ -40,6 +38,10 @@ describe('HeroIntroVideo', () => {
     expect(video).toHaveAttribute('width', '1920');
     expect(video).toHaveAttribute('height', '1080');
     expect(video?.className).toContain('object-contain');
+    // LCP candidate: the hero video is prioritized so it starts ASAP.
+    expect(video).toHaveAttribute('fetchpriority', 'high');
+    // preload=auto so the browser buffers the clip eagerly.
+    expect(video).toHaveAttribute('preload', 'auto');
 
     // No poster <img> in the animated branch.
     expect(container.querySelector('img')).toBeNull();
@@ -72,8 +74,14 @@ describe('HeroIntroVideo', () => {
     expect(container.querySelector('video')).toBeNull();
     const img = container.querySelector('img');
     expect(img).toBeInTheDocument();
-    expect(img).toHaveAttribute('src', '/mock-hero-intro-poster.webp');
+    expect(img).toHaveAttribute('src', POSTER_SRC);
     expect(img).toHaveAttribute('aria-hidden', 'true');
     expect(img?.className).toContain('object-contain');
+    // Explicit dimensions reserve layout (no CLS) — required for the LCP image.
+    expect(img).toHaveAttribute('width', '1920');
+    expect(img).toHaveAttribute('height', '1080');
+    // LCP candidate: the prerendered poster is the home LCP element, so it is
+    // prioritized and matches the <link rel="preload"> in index.html.
+    expect(img).toHaveAttribute('fetchpriority', 'high');
   });
 });

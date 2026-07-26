@@ -4,10 +4,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Home from '../../pages/Home';
 
-// The hero renders an animated brand-intro <video> (HeroIntroVideo); its poster
-// is a bundled asset that Vite resolves at build time.
-vi.mock('../../assets/hero-intro-poster.webp', () => ({ default: '/mock-hero-intro-poster.webp' }));
-
 const renderHome = () => {
   return render(
     <HelmetProvider>
