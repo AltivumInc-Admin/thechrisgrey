@@ -47,8 +47,27 @@ describe('aeoViolations', () => {
     expect(aeoViolations(fixture(), '/about')).toEqual([]);
   });
 
-  it('returns no violations for non-content routes (e.g. /privacy)', () => {
-    expect(aeoViolations('<html></html>', '/privacy')).toEqual([]);
+  it('returns no violations for non-content routes (e.g. /admin)', () => {
+    expect(aeoViolations('<html></html>', '/admin')).toEqual([]);
+  });
+
+  it('does not require a direct-answer summary on /privacy (policy page)', () => {
+    // /privacy is in HEADING_ID_ROUTES but not CONTENT_ROUTES, so the
+    // VAL-AEO-001 summary check must not fire even with no summary present.
+    const html = '<html><body><h2 id="introduction">Introduction</h2></body></html>';
+    expect(aeoViolations(html, '/privacy')).toEqual([]);
+  });
+
+  it('flags an H2 without an id on /privacy (VAL-AEO-005)', () => {
+    const html = '<html><body><h2>Introduction</h2></body></html>';
+    const v = aeoViolations(html, '/privacy');
+    expect(v.some((x) => x.includes('<h2> without an id'))).toBe(true);
+  });
+
+  it('flags an H3 with a non-slug id on /privacy (VAL-AEO-005)', () => {
+    const html = '<html><body><h3 id="Information You Provide">Information You Provide</h3></body></html>';
+    const v = aeoViolations(html, '/privacy');
+    expect(v.some((x) => x.includes('not slug-form'))).toBe(true);
   });
 
   it('flags a missing [data-aio-summary] element (VAL-AEO-001)', () => {

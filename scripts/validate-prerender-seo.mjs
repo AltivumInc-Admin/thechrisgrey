@@ -51,6 +51,12 @@ const CONTENT_ROUTES = new Set([
   '/contact',
 ]);
 
+// Routes where every H2/H3 must carry a stable, slug-form id (VAL-AEO-005).
+// Superset of CONTENT_ROUTES: /privacy is a policy page (no direct-answer
+// summary) but its headings still need fragment-linkable ids so AI crawlers
+// and readers can deep-link to a section (e.g. /privacy#cookies-tracking).
+const HEADING_ID_ROUTES = new Set([...CONTENT_ROUTES, '/privacy']);
+
 // Routes that must emit a robots noindex meta (VAL-SEO-010). These are routes
 // in the prerendered static set that should NOT be indexed. Currently empty
 // because all STATIC_ROUTES are indexable — /chat, /admin, and the 404
@@ -218,46 +224,61 @@ function decodeEntities(text) {
  * AEO-specific violations for a single prerendered HTML string (VAL-AEO-001,
  * VAL-AEO-002, VAL-AEO-004, VAL-AEO-005). Exported so the test suite can
  * exercise it against fixture HTML without reading dist/.
+ *
+ * The direct-answer summary (VAL-AEO-001/002) and FAQ DOM cross-check
+ * (VAL-AEO-004) only apply to CONTENT_ROUTES. The heading-id check
+ * (VAL-AEO-005) applies to the broader HEADING_ID_ROUTES superset, which
+ * adds /privacy — a policy page without a direct-answer summary whose
+ * headings still need stable fragment-linkable ids.
  */
 export function aeoViolations(html, route) {
   const violations = [];
-  if (!CONTENT_ROUTES.has(route)) return violations;
+  const isContentRoute = CONTENT_ROUTES.has(route);
+  const isHeadingIdRoute = HEADING_ID_ROUTES.has(route);
+  if (!isContentRoute && !isHeadingIdRoute) return violations;
 
   // --- VAL-AEO-001 / VAL-AEO-002: direct-answer summary before the first H2 ---
-  const summaryMatch = html.match(/data-aio-summary="[^"]*"[^>]*>([\s\S]*?)<\//);
-  const firstH2Index = html.search(/<h2[\s>]/);
-  const summaryTagIndex = html.search(/data-aio-summary=/);
-  if (summaryTagIndex === -1) {
-    violations.push('missing [data-aio-summary] direct-answer element (VAL-AEO-001)');
-  } else {
-    const summaryText = decodeEntities((summaryMatch?.[1] || '').replace(/<[^>]+>/g, '').trim());
-    if (!summaryText) {
-      violations.push('[data-aio-summary] element has empty text (VAL-AEO-001)');
+  // Only content routes are required to carry a direct-answer summary.
+  if (isContentRoute) {
+    const summaryMatch = html.match(/data-aio-summary="[^"]*"[^>]*>([\s\S]*?)<\//);
+    const firstH2Index = html.search(/<h2[\s>]/);
+    const summaryTagIndex = html.search(/data-aio-summary=/);
+    if (summaryTagIndex === -1) {
+      violations.push('missing [data-aio-summary] direct-answer element (VAL-AEO-001)');
     } else {
-      const words = summaryText.split(/\s+/).filter(Boolean).length;
-      if (words < 40 || words > 80) {
-        violations.push(`[data-aio-summary] is ${words} words; expected 40-80 (VAL-AEO-001)`);
+      const summaryText = decodeEntities((summaryMatch?.[1] || '').replace(/<[^>]+>/g, '').trim());
+      if (!summaryText) {
+        violations.push('[data-aio-summary] element has empty text (VAL-AEO-001)');
+      } else {
+        const words = summaryText.split(/\s+/).filter(Boolean).length;
+        if (words < 40 || words > 80) {
+          violations.push(`[data-aio-summary] is ${words} words; expected 40-80 (VAL-AEO-001)`);
+        }
       }
-    }
-    if (firstH2Index !== -1 && summaryTagIndex > firstH2Index) {
-      violations.push('[data-aio-summary] appears AFTER the first <h2> in source order (VAL-AEO-002)');
+      if (firstH2Index !== -1 && summaryTagIndex > firstH2Index) {
+        violations.push('[data-aio-summary] appears AFTER the first <h2> in source order (VAL-AEO-002)');
+      }
     }
   }
 
   // --- VAL-AEO-005: every H2/H3 has a non-empty slug-form id ---
-  const headingMatches = [...html.matchAll(/<(h[23])(\s[^>]*)?>/g)];
-  for (const m of headingMatches) {
-    const tag = m[1];
-    const attrs = m[2] || '';
-    const idMatch = attrs.match(/id="([^"]*)"/);
-    if (!idMatch || !idMatch[1]) {
-      violations.push(`<${tag}> without an id attribute (VAL-AEO-005)`);
-    } else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(idMatch[1])) {
-      violations.push(`<${tag}> id "${idMatch[1]}" is not slug-form (VAL-AEO-005)`);
+  // Applies to HEADING_ID_ROUTES (CONTENT_ROUTES plus /privacy).
+  if (isHeadingIdRoute) {
+    const headingMatches = [...html.matchAll(/<(h[23])(\s[^>]*)?>/g)];
+    for (const m of headingMatches) {
+      const tag = m[1];
+      const attrs = m[2] || '';
+      const idMatch = attrs.match(/id="([^"]*)"/);
+      if (!idMatch || !idMatch[1]) {
+        violations.push(`<${tag}> without an id attribute (VAL-AEO-005)`);
+      } else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(idMatch[1])) {
+        violations.push(`<${tag}> id "${idMatch[1]}" is not slug-form (VAL-AEO-005)`);
+      }
     }
   }
 
   // --- VAL-AEO-004: FAQ content visible in DOM and matches JSON-LD ---
+  // Self-gates on faqFromJsonLd.length > 0, so it is safe to run on any route.
   const ldMatches = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
   let faqFromJsonLd = [];
   if (ldMatches.length === 1) {

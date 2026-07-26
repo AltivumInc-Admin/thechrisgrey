@@ -9,6 +9,7 @@ import { disablePostHog, isPostHogConfigured } from '../utils/posthog';
 import { revokeRumCookies } from '../utils/rum';
 import { disableSentry } from '../utils/sentry';
 import { isPrerender } from '../utils/prerender';
+import { slugify } from '../utils/slugify';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -80,7 +81,7 @@ const Privacy = () => {
           <div className="space-y-12">
             {/* Introduction */}
             <div>
-              <h2 className="text-white mb-4" style={typography.sectionHeader}>
+              <h2 id={slugify('Introduction')} className="text-white mb-4" style={typography.sectionHeader}>
                 Introduction
               </h2>
               <p className="text-altivum-silver" style={typography.bodyText}>
@@ -92,12 +93,16 @@ const Privacy = () => {
 
             {/* Information We Collect */}
             <div>
-              <h2 className="text-white mb-4" style={typography.sectionHeader}>
+              <h2 id={slugify('Information We Collect')} className="text-white mb-4" style={typography.sectionHeader}>
                 Information We Collect
               </h2>
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-white mb-2" style={typography.cardTitleSmall}>
+                  <h3
+                    id={slugify('Information You Provide')}
+                    className="text-white mb-2"
+                    style={typography.cardTitleSmall}
+                  >
                     Information You Provide
                   </h3>
                   <ul className="text-altivum-silver space-y-2" style={typography.bodyText}>
@@ -130,7 +135,11 @@ const Privacy = () => {
                   </ul>
                 </div>
                 <div>
-                  <h3 className="text-white mb-2" style={typography.cardTitleSmall}>
+                  <h3
+                    id={slugify('Information Collected Automatically')}
+                    className="text-white mb-2"
+                    style={typography.cardTitleSmall}
+                  >
                     Information Collected Automatically
                   </h3>
                   <p className="text-altivum-silver" style={typography.bodyText}>
@@ -144,7 +153,11 @@ const Privacy = () => {
 
             {/* How We Use Your Information */}
             <div>
-              <h2 className="text-white mb-4" style={typography.sectionHeader}>
+              <h2
+                id={slugify('How We Use Your Information')}
+                className="text-white mb-4"
+                style={typography.sectionHeader}
+              >
                 How We Use Your Information
               </h2>
               <ul className="text-altivum-silver space-y-2" style={typography.bodyText}>
@@ -183,7 +196,7 @@ const Privacy = () => {
 
             {/* Third-Party Services */}
             <div>
-              <h2 className="text-white mb-4" style={typography.sectionHeader}>
+              <h2 id={slugify('Third-Party Services')} className="text-white mb-4" style={typography.sectionHeader}>
                 Third-Party Services
               </h2>
               <p className="text-altivum-silver mb-4" style={typography.bodyText}>
@@ -233,7 +246,7 @@ const Privacy = () => {
 
             {/* Cookies & Tracking */}
             <div>
-              <h2 className="text-white mb-4" style={typography.sectionHeader}>
+              <h2 id={slugify('Cookies & Tracking')} className="text-white mb-4" style={typography.sectionHeader}>
                 Cookies & Tracking
               </h2>
               <p className="text-altivum-silver mb-4" style={typography.bodyText}>
@@ -270,7 +283,7 @@ const Privacy = () => {
 
             {/* Data Retention */}
             <div>
-              <h2 className="text-white mb-4" style={typography.sectionHeader}>
+              <h2 id={slugify('Data Retention')} className="text-white mb-4" style={typography.sectionHeader}>
                 Data Retention
               </h2>
               <ul className="text-altivum-silver space-y-2" style={typography.bodyText}>
@@ -313,7 +326,7 @@ const Privacy = () => {
 
             {/* Your Rights */}
             <div>
-              <h2 className="text-white mb-4" style={typography.sectionHeader}>
+              <h2 id={slugify('Your Rights')} className="text-white mb-4" style={typography.sectionHeader}>
                 Your Rights
               </h2>
               <p className="text-altivum-silver mb-4" style={typography.bodyText}>
@@ -362,7 +375,7 @@ const Privacy = () => {
 
             {/* Data Security */}
             <div>
-              <h2 className="text-white mb-4" style={typography.sectionHeader}>
+              <h2 id={slugify('Data Security')} className="text-white mb-4" style={typography.sectionHeader}>
                 Data Security
               </h2>
               <p className="text-altivum-silver" style={typography.bodyText}>
@@ -379,7 +392,7 @@ const Privacy = () => {
 
             {/* Children's Privacy */}
             <div>
-              <h2 className="text-white mb-4" style={typography.sectionHeader}>
+              <h2 id={slugify("Children's Privacy")} className="text-white mb-4" style={typography.sectionHeader}>
                 Children's Privacy
               </h2>
               <p className="text-altivum-silver" style={typography.bodyText}>
@@ -391,7 +404,7 @@ const Privacy = () => {
 
             {/* Changes to This Policy */}
             <div>
-              <h2 className="text-white mb-4" style={typography.sectionHeader}>
+              <h2 id={slugify('Changes to This Policy')} className="text-white mb-4" style={typography.sectionHeader}>
                 Changes to This Policy
               </h2>
               <p className="text-altivum-silver" style={typography.bodyText}>
@@ -402,7 +415,7 @@ const Privacy = () => {
 
             {/* Contact */}
             <div>
-              <h2 className="text-white mb-4" style={typography.sectionHeader}>
+              <h2 id={slugify('Contact Us')} className="text-white mb-4" style={typography.sectionHeader}>
                 Contact Us
               </h2>
               <p className="text-altivum-silver" style={typography.bodyText}>
