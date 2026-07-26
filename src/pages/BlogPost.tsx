@@ -533,8 +533,8 @@ const BlogPost = () => {
               className="w-20 h-20 rounded-full object-cover border-2 border-altivum-gold/30 shrink-0"
             />
             <div>
-              <h3 id={slugify('About the Author')} className="text-white font-semibold text-lg mb-1">
-                About the Author
+              <h3 id={slugify('Who is the Author?')} className="text-white font-semibold text-lg mb-1">
+                Who is the Author?
               </h3>
               <p className="text-altivum-gold text-sm mb-3">Christian Perez - Founder & CEO, Altivum Inc.</p>
               <p className="text-altivum-silver text-sm leading-relaxed mb-4">
@@ -557,8 +557,8 @@ const BlogPost = () => {
       {post.relatedPosts && post.relatedPosts.length > 0 && (
         <section className="py-16 border-t border-white/10">
           <div className="max-w-5xl mx-auto px-6 lg:px-8">
-            <h2 id={slugify('Related Articles')} className="text-white mb-8" style={typography.sectionHeader}>
-              Related Articles
+            <h2 id={slugify('What Should You Read Next?')} className="text-white mb-8" style={typography.sectionHeader}>
+              What Should You Read Next?
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {post.relatedPosts.map((relatedPost: SanityPostPreview) => (

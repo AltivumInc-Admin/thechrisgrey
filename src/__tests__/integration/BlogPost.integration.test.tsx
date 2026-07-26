@@ -215,7 +215,7 @@ describe('BlogPost Page Integration', () => {
       renderBlogPost();
 
       await waitFor(() => {
-        expect(screen.getByText('About the Author')).toBeInTheDocument();
+        expect(screen.getByText('Who is the Author?')).toBeInTheDocument();
         expect(screen.getByText(/Christian Perez - Founder & CEO, Altivum Inc./i)).toBeInTheDocument();
       });
     });
@@ -267,7 +267,7 @@ describe('BlogPost Page Integration', () => {
       renderBlogPost();
 
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /related articles/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /what should you read next\?/i })).toBeInTheDocument();
         expect(screen.getByText('Serverless Patterns')).toBeInTheDocument();
       });
     });

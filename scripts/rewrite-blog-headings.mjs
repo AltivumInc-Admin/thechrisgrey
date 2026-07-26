@@ -390,6 +390,25 @@ const REWRITES = [
     before: 'The Bottom Line',
     after: 'What Is the Bottom Line on Quantum Computing in 2026?',
   },
+
+  // the-incognito-button-should-be-more-prominent (4 h2, 2 questions -> rewrite 2 to reach >=50% full-page ratio
+  // after BlogPost.tsx chrome headings "About the Author" and "Related Articles" are counted)
+  {
+    docId: 'df3d07f3-04b4-4195-8e20-f405ebd11e0e',
+    slug: 'the-incognito-button-should-be-more-prominent',
+    title: 'The Incognito Button Should Be More Prominent',
+    blockKey: '9a93ba5ae1fe',
+    before: 'Every question is a write to your profile',
+    after: 'Why Is Every Question a Write to Your Profile?',
+  },
+  {
+    docId: 'df3d07f3-04b4-4195-8e20-f405ebd11e0e',
+    slug: 'the-incognito-button-should-be-more-prominent',
+    title: 'The Incognito Button Should Be More Prominent',
+    blockKey: '126e08c424cd',
+    before: 'The tools exist.',
+    after: 'What Tools Already Exist?',
+  },
 ];
 
 // -----------------------------------------------------------------------------
