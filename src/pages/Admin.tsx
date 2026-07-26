@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useKbAdmin, useSiteHealth } from '../hooks';
 import type { KbEntry } from '../hooks';
 import { AdminLogin, EntryForm, EntryList, SiteHealthPanel } from '../components/admin';
+import Icon from '../components/icons/Icon';
 
 // Main admin dashboard
 function AdminDashboard() {
@@ -137,7 +138,7 @@ function AdminDashboard() {
             onClick={() => setShowForm(true)}
             className="mb-8 inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-altivum-silver text-sm hover:border-altivum-gold hover:text-altivum-gold transition-colors"
           >
-            <span className="material-icons text-lg">add</span>
+            <Icon name="add" className="text-lg" />
             Add Entry
           </button>
         )}

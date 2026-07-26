@@ -1,3 +1,4 @@
+import Icon from '../icons/Icon';
 interface TraceResponseBubbleProps {
   content: string;
   isStreaming: boolean;
@@ -16,7 +17,7 @@ export function TraceResponseBubble({ content, isStreaming, isSystemMessage }: T
     >
       {isSystemMessage && (
         <span className="inline-flex items-center gap-1.5 text-amber-400 text-xs font-light mb-2">
-          <span className="material-icons text-sm">warning</span>
+          <Icon name="warning" className="text-sm" />
           Off-topic
         </span>
       )}

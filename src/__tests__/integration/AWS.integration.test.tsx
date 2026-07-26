@@ -4,10 +4,25 @@ import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import AWS from '../../pages/AWS';
 
-// Mock static image imports
-vi.mock('../../assets/aws-hero.png', () => ({ default: '/mock-aws-hero.png' }));
-vi.mock('../../assets/aws-community-builder.webp', () => ({
-  default: '/mock-aws-community-builder.webp',
+// Mock responsive image imports (`?responsive` Vite plugin runs at build/dev,
+// not under Vitest). Each mock returns the ResponsiveImageSource shape.
+vi.mock('../../assets/aws-hero.png?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-aws-hero.png', width: 1366, height: 768 },
+    avif: [{ src: '/mock-aws-hero.avif', width: 1366 }],
+    webp: [{ src: '/mock-aws-hero.webp', width: 1366 }],
+    width: 1366,
+    height: 768,
+  },
+}));
+vi.mock('../../assets/aws-community-builder.webp?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-aws-community-builder.webp', width: 1920, height: 1005 },
+    avif: [{ src: '/mock-aws-community-builder.avif', width: 1920 }],
+    webp: [{ src: '/mock-aws-community-builder.webp', width: 1920 }],
+    width: 1920,
+    height: 1005,
+  },
 }));
 
 // Mock WebGL check (jsdom has no WebGL) -- returns false so 2D fallback renders

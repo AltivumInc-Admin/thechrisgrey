@@ -5,6 +5,7 @@ import { ServiceList } from './ServiceList';
 import { MermaidDiagram } from './MermaidDiagram';
 import { CostCard } from './CostCard';
 import { ArtifactCard } from './ArtifactCard';
+import Icon from '../icons/Icon';
 
 interface BlueprintResultProps {
   output: BlueprintOutput;
@@ -25,9 +26,7 @@ function Divider() {
 function SectionHeading({ icon, title, caption }: { icon: string; title: string; caption?: string }) {
   return (
     <div className="flex items-start gap-3 mb-4">
-      <span className="material-icons text-altivum-gold mt-0.5" aria-hidden="true">
-        {icon}
-      </span>
+      <Icon name={icon} className="text-altivum-gold mt-0.5" aria-hidden="true" />
       <div>
         <h3 className="text-white" style={typography.cardTitleLarge}>
           {title}
@@ -75,9 +74,7 @@ function IacBlock({ output }: { output: BlueprintOutput }) {
           className="inline-flex items-center text-altivum-silver hover:text-altivum-gold transition-colors"
           style={typography.smallText}
         >
-          <span className="material-icons text-sm mr-1" aria-hidden="true">
-            {copied ? 'check' : 'content_copy'}
-          </span>
+          <Icon name={copied ? 'check' : 'content_copy'} className="text-sm mr-1" aria-hidden="true" />
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
@@ -135,9 +132,7 @@ export function BlueprintResult({ output, meta, onReset }: BlueprintResultProps)
             className="inline-flex items-center px-3 py-2 rounded-md border border-white/10 text-altivum-silver hover:border-altivum-gold/40 hover:text-white transition-colors"
             style={typography.smallText}
           >
-            <span className="material-icons text-sm mr-1" aria-hidden="true">
-              restart_alt
-            </span>
+            <Icon name="restart_alt" className="text-sm mr-1" aria-hidden="true" />
             Start a new blueprint
           </button>
         </div>
@@ -148,9 +143,7 @@ export function BlueprintResult({ output, meta, onReset }: BlueprintResultProps)
         {haikuWarnings.length > 0 && (
           <div className="mt-4 p-3 rounded-md bg-amber-300/5 border border-amber-300/20">
             <p className="text-amber-200 mb-1" style={typography.smallText}>
-              <span className="material-icons text-sm align-middle mr-1" aria-hidden="true">
-                info
-              </span>
+              <Icon name="info" className="text-sm align-middle mr-1" aria-hidden="true" />
               Haiku flagged some soft signals in this blueprint:
             </p>
             <ul className="list-disc pl-6 text-amber-100/80" style={typography.smallText}>
@@ -213,9 +206,7 @@ export function BlueprintResult({ output, meta, onReset }: BlueprintResultProps)
                   className="flex gap-3 p-3 rounded-md bg-altivum-navy/40 border border-white/5 text-altivum-silver"
                   style={typography.bodyText}
                 >
-                  <span className="material-icons text-altivum-gold text-sm shrink-0 mt-0.5" aria-hidden="true">
-                    shield
-                  </span>
+                  <Icon name="shield" className="text-altivum-gold text-sm shrink-0 mt-0.5" aria-hidden="true" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -300,9 +291,7 @@ export function BlueprintResult({ output, meta, onReset }: BlueprintResultProps)
                   className="flex gap-3 p-3 rounded-md bg-altivum-navy/40 border border-amber-300/10 text-altivum-silver/90"
                   style={typography.bodyText}
                 >
-                  <span className="material-icons text-amber-300/80 text-sm shrink-0 mt-0.5" aria-hidden="true">
-                    warning_amber
-                  </span>
+                  <Icon name="warning_amber" className="text-amber-300/80 text-sm shrink-0 mt-0.5" aria-hidden="true" />
                   <span>{caveat}</span>
                 </li>
               ))}

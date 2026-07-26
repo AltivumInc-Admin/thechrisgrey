@@ -1,4 +1,5 @@
 import type { HealthData } from '../../hooks';
+import Icon from '../icons/Icon';
 
 export interface SiteHealthPanelProps {
   expanded: boolean;
@@ -15,18 +16,15 @@ function SiteHealthPanel({ expanded, onToggle, data, isLoading }: SiteHealthPane
         className="w-full flex items-center justify-between p-4 bg-altivum-navy/30 hover:bg-altivum-navy/50 transition-colors text-left"
       >
         <div className="flex items-center gap-2">
-          <span className="material-icons text-altivum-gold text-lg" aria-hidden="true">
-            monitoring
-          </span>
+          <Icon name="monitoring" className="text-altivum-gold text-lg" aria-hidden="true" />
           <span className="text-sm font-medium text-white uppercase tracking-wider">Site Health</span>
           <span className="text-xs text-altivum-silver">(24h)</span>
         </div>
-        <span
-          className={`material-icons text-altivum-silver text-sm transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+        <Icon
+          name="expand_more"
+          className={`text-altivum-silver text-sm transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
           aria-hidden="true"
-        >
-          expand_more
-        </span>
+        />
       </button>
       {expanded && (
         <div className="p-4 bg-altivum-navy/10">

@@ -2,11 +2,12 @@ import { SEO } from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterCTA from '../components/NewsletterCTA';
 import CrossLinkBand from '../components/CrossLinkBand';
+import ResponsiveImage from '../components/ResponsiveImage';
 import { typography } from '../utils/typography';
 import { buildWebPageSchema, buildCredentialSchema, claudeFAQs } from '../utils/schemas';
 import { ogImageForUrl } from '../utils/ogCards';
-import claudeHero from '../assets/claude-hero.png';
-import claudeBedrockCert from '../assets/claude-bedrock-cert.png';
+import claudeHero from '../assets/claude-hero.png?responsive';
+import claudeBedrockCert from '../assets/claude-bedrock-cert.png?responsive';
 import { ArchitectureXRay } from '../components/claude/ArchitectureXRay';
 import { McpInstallBadge } from '../components/McpInstallBadge';
 import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
@@ -14,6 +15,7 @@ import QuestionHeading from '../components/aeo/QuestionHeading';
 import FAQSection from '../components/aeo/FAQSection';
 import { AEO_SUMMARIES } from '../data/aeoSummaries';
 import { slugify } from '../utils/slugify';
+import Icon from '../components/icons/Icon';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -176,11 +178,12 @@ const Claude = () => {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center">
             <div className="mb-6 sm:mb-8">
-              <img
+              <ResponsiveImage
                 src={claudeHero}
                 alt="Applied — Claude by Anthropic"
+                sizes="(min-width: 768px) 768px, 100vw"
                 className="w-full max-w-3xl mx-auto opacity-90"
-                fetchPriority="high"
+                priority
               />
               <h1 className="sr-only">Claude - Applied AI Engineer</h1>
             </div>
@@ -350,9 +353,10 @@ const Claude = () => {
           <div className="p-6 sm:p-8 rounded-lg border border-white/10 bg-white/5 mb-8">
             <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center">
               <div className="w-full md:w-1/2 rounded-lg overflow-hidden shadow-lg shrink-0">
-                <img
+                <ResponsiveImage
                   src={claudeBedrockCert}
                   alt="Certificate of Completion — Claude with Amazon Bedrock"
+                  sizes="(min-width: 768px) 384px, 100vw"
                   className="w-full h-auto block"
                 />
               </div>
@@ -374,7 +378,7 @@ const Claude = () => {
                   className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-altivum-gold/80 hover:text-altivum-gold border border-altivum-gold/20 hover:border-altivum-gold/40 rounded-sm transition-all duration-200"
                 >
                   Verify
-                  <span className="material-icons text-sm">open_in_new</span>
+                  <Icon name="open_in_new" className="text-sm" />
                 </a>
               </div>
             </div>
@@ -410,9 +414,7 @@ const Claude = () => {
                         </div>
                         <span className="text-altivum-gold/50 group-hover:text-altivum-gold transition-colors duration-200 inline-flex items-center gap-1 text-xs shrink-0">
                           Verify
-                          <span className="material-icons" style={{ fontSize: '12px' }}>
-                            open_in_new
-                          </span>
+                          <Icon name="open_in_new" style={{ fontSize: '12px' }} />
                         </span>
                       </a>
                     </li>

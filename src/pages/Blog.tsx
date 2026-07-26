@@ -44,6 +44,7 @@ import BlogPostSkeleton from '../components/BlogPostSkeleton';
 import SanityResponsiveImage from '../components/SanityResponsiveImage';
 import { prefetchBlogPostChunk } from '../utils/routeManifest';
 import { createLogger } from '../utils/logger';
+import Icon from '../components/icons/Icon';
 
 const log = createLogger('Blog');
 
@@ -275,12 +276,11 @@ const Blog = () => {
                 }}
                 className="w-full px-4 py-2 pl-10 bg-white/5 border border-white/10 rounded-full text-white placeholder-white/70 focus:outline-hidden focus:border-altivum-gold transition-colors"
               />
-              <span
-                className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-altivum-silver/50 text-lg"
+              <Icon
+                name="search"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-altivum-silver/50 text-lg"
                 aria-hidden="true"
-              >
-                search
-              </span>
+              />
               {searchQuery && (
                 <button
                   type="button"
@@ -292,9 +292,7 @@ const Blog = () => {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-altivum-silver/50 hover:text-white transition-colors"
                   aria-label="Clear search"
                 >
-                  <span className="material-icons text-lg" aria-hidden="true">
-                    close
-                  </span>
+                  <Icon name="close" className="text-lg" aria-hidden="true" />
                 </button>
               )}
             </form>
@@ -334,7 +332,7 @@ const Blog = () => {
                   className="flex items-center gap-1 px-3 py-1 bg-altivum-gold/20 text-altivum-gold rounded-full text-sm hover:bg-altivum-gold/30 transition-colors"
                 >
                   {activeCategory}
-                  <span className="material-icons text-xs">close</span>
+                  <Icon name="close" className="text-xs" />
                 </button>
               )}
 
@@ -348,7 +346,7 @@ const Blog = () => {
                   className="flex items-center gap-1 px-3 py-1 bg-altivum-gold/20 text-altivum-gold rounded-full text-sm hover:bg-altivum-gold/30 transition-colors"
                 >
                   #{activeTag}
-                  <span className="material-icons text-xs">close</span>
+                  <Icon name="close" className="text-xs" />
                 </button>
               )}
 
@@ -361,9 +359,9 @@ const Blog = () => {
                   }}
                   className="flex items-center gap-1 px-3 py-1 bg-altivum-gold/20 text-altivum-gold rounded-full text-sm hover:bg-altivum-gold/30 transition-colors"
                 >
-                  <span className="material-icons text-xs">library_books</span>
+                  <Icon name="library_books" className="text-xs" />
                   Series: {activeSeries}
-                  <span className="material-icons text-xs">close</span>
+                  <Icon name="close" className="text-xs" />
                 </button>
               )}
 
@@ -376,7 +374,7 @@ const Blog = () => {
                   }}
                   className="flex items-center gap-1 px-3 py-1 bg-altivum-gold/20 text-altivum-gold rounded-full text-sm hover:bg-altivum-gold/30 transition-colors"
                 >
-                  "{searchQuery}"<span className="material-icons text-xs">close</span>
+                  "{searchQuery}"<Icon name="close" className="text-xs" />
                 </button>
               )}
 
@@ -389,7 +387,7 @@ const Blog = () => {
           {activeSeries && filteredPosts.length > 0 && filteredPosts[0]?.series && (
             <div className="mb-10 p-6 bg-altivum-navy/30 rounded-lg border border-white/5">
               <div className="flex items-center gap-3 mb-2">
-                <span className="material-icons text-altivum-gold">library_books</span>
+                <Icon name="library_books" className="text-altivum-gold" />
                 <h2 id={slugify(filteredPosts[0].series.title)} className="text-white font-semibold text-lg">
                   {filteredPosts[0].series.title}
                 </h2>
@@ -411,7 +409,7 @@ const Blog = () => {
             </div>
           ) : fetchError ? (
             <div className="text-center py-20">
-              <span className="material-icons text-5xl text-altivum-silver mb-4 block">cloud_off</span>
+              <Icon name="cloud_off" className="text-5xl text-altivum-silver mb-4 block" />
               <p className="text-white mb-2" style={typography.cardTitleSmall}>
                 Unable to load posts
               </p>
@@ -422,7 +420,7 @@ const Blog = () => {
                 onClick={fetchBlogData}
                 className="inline-flex items-center px-6 py-3 bg-altivum-gold text-altivum-dark font-medium uppercase tracking-wider text-sm hover:bg-white transition-colors duration-300"
               >
-                <span className="material-icons mr-2 text-sm">refresh</span>
+                <Icon name="refresh" className="mr-2 text-sm" />
                 Try Again
               </button>
             </div>
@@ -432,7 +430,7 @@ const Blog = () => {
             </div>
           ) : filteredPosts.length === 0 ? (
             <div className="text-center py-20">
-              <span className="material-icons text-5xl text-altivum-silver mb-4 block">search_off</span>
+              <Icon name="search_off" className="text-5xl text-altivum-silver mb-4 block" />
               <p className="text-altivum-silver mb-4">No posts match your filters.</p>
               <button onClick={clearFilters} className="text-altivum-gold hover:underline">
                 Clear filters
@@ -460,7 +458,7 @@ const Blog = () => {
                         />
                       ) : (
                         <div className="w-full h-full bg-altivum-navy flex items-center justify-center">
-                          <span className="material-icons text-4xl text-altivum-silver">article</span>
+                          <Icon name="article" className="text-4xl text-altivum-silver" />
                         </div>
                       )}
                       {post.isFeatured && (
@@ -512,9 +510,10 @@ const Blog = () => {
                     className="inline-flex items-center text-altivum-gold text-sm font-medium mt-3 group-hover:translate-x-2 transition-transform"
                   >
                     Read Article{' '}
-                    <span className="material-icons text-sm ml-1 group-hover:translate-x-1 transition-transform">
-                      arrow_forward
-                    </span>
+                    <Icon
+                      name="arrow_forward"
+                      className="text-sm ml-1 group-hover:translate-x-1 transition-transform"
+                    />
                   </ViewTransitionLink>
                 </article>
               ))}

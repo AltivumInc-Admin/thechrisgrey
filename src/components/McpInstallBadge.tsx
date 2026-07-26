@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { typography } from '../utils/typography';
+import Icon from './icons/Icon';
 
 const MCP_ENDPOINT = 'https://mcp.thechrisgrey.com';
 
@@ -58,9 +59,7 @@ function CopyButton({ value, label }: CopyButtonProps) {
       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm min-h-[36px] text-altivum-gold border border-altivum-gold/40 bg-altivum-gold/5 hover:bg-altivum-gold/15 transition-all active:scale-[0.98] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-altivum-gold focus-visible:outline-offset-2"
       aria-label={buttonLabel}
     >
-      <span className="material-icons text-base leading-none" aria-hidden="true">
-        {icon}
-      </span>
+      <Icon name={icon} className="text-base leading-none" aria-hidden="true" />
       <span>{buttonLabel}</span>
     </button>
   );

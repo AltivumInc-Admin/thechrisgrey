@@ -2,8 +2,9 @@ import { SEO } from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterCTA from '../components/NewsletterCTA';
 import CrossLinkBand from '../components/CrossLinkBand';
-import btaLogo from '../assets/bta.png';
-import readingImage from '../assets/reading.jpeg';
+import ResponsiveImage from '../components/ResponsiveImage';
+import btaLogo from '../assets/bta.png?responsive';
+import readingImage from '../assets/reading.jpeg?responsive';
 import { typography } from '../utils/typography';
 import { bookFAQs, buildBookSchema } from '../utils/schemas';
 import { trackEvent } from '../utils/analytics';
@@ -45,13 +46,12 @@ const BeyondTheAssessment = () => {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center">
             <div className="mb-6 sm:mb-8">
-              <img
+              <ResponsiveImage
                 src={btaLogo}
                 alt="Beyond the Assessment"
-                width={1500}
-                height={1500}
+                sizes="(min-width: 768px) 768px, 100vw"
                 className="w-full max-w-3xl mx-auto opacity-90"
-                fetchPriority="high"
+                priority
               />
               <h1 className="sr-only">Beyond the Assessment - A Book by Christian Perez</h1>
             </div>
@@ -69,13 +69,10 @@ const BeyondTheAssessment = () => {
             <div className="relative opacity-0 animate-fade-in" style={{ animationDelay: '0.2s' }}>
               <div className="relative rounded-lg overflow-hidden shadow-2xl border border-altivum-silver/10 group">
                 <div className="absolute inset-0 bg-altivum-blue/10 group-hover:bg-transparent transition-colors duration-500"></div>
-                <img
+                <ResponsiveImage
                   src={readingImage}
                   alt="Christian Perez reading Beyond the Assessment"
-                  width={1131}
-                  height={1600}
-                  loading="lazy"
-                  decoding="async"
+                  sizes="(min-width: 1024px) 512px, 100vw"
                   className="w-full h-auto object-cover transform scale-100 group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
               </div>

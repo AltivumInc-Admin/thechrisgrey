@@ -4,12 +4,35 @@ import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Altivum from '../../pages/Altivum';
 
-// Mock static image imports
-vi.mock('../../assets/altivum.jpg', () => ({ default: '/mock-altivum.jpg' }));
-vi.mock('../../assets/aws-partner-dark.png', () => ({
-  default: '/mock-aws-partner-dark.png',
+// Mock responsive image imports (`?responsive` Vite plugin runs at build/dev,
+// not under Vitest). Each mock returns the ResponsiveImageSource shape.
+vi.mock('../../assets/altivum.jpg?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-altivum.jpg', width: 1600, height: 900 },
+    avif: [{ src: '/mock-altivum.avif', width: 1600 }],
+    webp: [{ src: '/mock-altivum.webp', width: 1600 }],
+    width: 1600,
+    height: 900,
+  },
 }));
-vi.mock('../../assets/altivum.png', () => ({ default: '/mock-altivum.png' }));
+vi.mock('../../assets/aws-partner-dark.png?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-aws-partner-dark.png', width: 200, height: 200 },
+    avif: [{ src: '/mock-aws-partner-dark.avif', width: 200 }],
+    webp: [{ src: '/mock-aws-partner-dark.webp', width: 200 }],
+    width: 200,
+    height: 200,
+  },
+}));
+vi.mock('../../assets/altivum.png?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-altivum.png', width: 1500, height: 1500 },
+    avif: [{ src: '/mock-altivum-logo.avif', width: 1500 }],
+    webp: [{ src: '/mock-altivum-logo.webp', width: 1500 }],
+    width: 1500,
+    height: 1500,
+  },
+}));
 
 // Mock prefetchRoute (consumed by ViewTransitionLink) so the test does not
 // touch the real route manifest.

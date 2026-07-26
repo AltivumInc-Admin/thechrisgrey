@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { typography } from '../../utils/typography';
 import type { DraftAction } from '../../utils/chatEvents';
 import NewsletterForm from '../NewsletterForm';
+import Icon from '../icons/Icon';
 
 interface ToolDraftCardProps {
   action: DraftAction;
@@ -36,7 +37,7 @@ function IconButton({
       disabled={disabled}
       className={`${base} ${styles} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
-      <span className="material-icons text-base leading-none">{icon}</span>
+      <Icon name={icon} className="text-base leading-none" />
       <span>{label}</span>
     </button>
   );
@@ -66,7 +67,7 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
         aria-label="Navigation suggestion"
       >
         <p className="text-altivum-silver flex items-start gap-2 mb-1" style={typography.smallText}>
-          <span className="material-icons text-altivum-gold/70 text-lg mt-0.5 shrink-0">open_in_new</span>
+          <Icon name="open_in_new" className="text-altivum-gold/70 text-lg mt-0.5 shrink-0" />
           <span>Suggested navigation</span>
         </p>
         <p className="text-altivum-gold mb-1" style={typography.bodyText}>
@@ -115,7 +116,7 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
         aria-label="Message draft"
       >
         <p className="text-altivum-silver flex items-start gap-2 mb-2" style={typography.smallText}>
-          <span className="material-icons text-altivum-gold/70 text-lg mt-0.5 shrink-0">draft</span>
+          <Icon name="draft" className="text-altivum-gold/70 text-lg mt-0.5 shrink-0" />
           <span>{intentLabel[action.intent] || 'Draft message'}</span>
         </p>
         <p className="text-altivum-gold mb-1" style={typography.bodyText}>
@@ -146,7 +147,7 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
         aria-label="Newsletter suggestion"
       >
         <p className="text-altivum-silver flex items-start gap-2 mb-1" style={typography.smallText}>
-          <span className="material-icons text-altivum-gold/70 text-lg mt-0.5 shrink-0">mail</span>
+          <Icon name="mail" className="text-altivum-gold/70 text-lg mt-0.5 shrink-0" />
           <span>Subscribe to Christian's updates</span>
         </p>
         <p className="text-altivum-silver/80 mb-4" style={typography.smallText}>
@@ -172,7 +173,7 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
         aria-label="Blog citation"
       >
         <p className="text-altivum-silver flex items-start gap-2 mb-1" style={typography.smallText}>
-          <span className="material-icons text-altivum-gold/70 text-lg mt-0.5 shrink-0">article</span>
+          <Icon name="article" className="text-altivum-gold/70 text-lg mt-0.5 shrink-0" />
           <span>From the blog</span>
         </p>
         <p className="text-altivum-gold mb-1" style={typography.bodyText}>
@@ -203,7 +204,7 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
         aria-label="Podcast citation"
       >
         <p className="text-altivum-silver flex items-start gap-2 mb-1" style={typography.smallText}>
-          <span className="material-icons text-altivum-gold/70 text-lg mt-0.5 shrink-0">podcasts</span>
+          <Icon name="podcasts" className="text-altivum-gold/70 text-lg mt-0.5 shrink-0" />
           <span>From The Vector Podcast</span>
         </p>
         <p className="text-altivum-gold mb-2" style={typography.bodyText}>
@@ -220,7 +221,7 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
             onClick={playAtTimestamp}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm min-h-[36px] transition-all active:scale-[0.98] bg-altivum-gold/10 text-altivum-gold border border-altivum-gold/40 hover:bg-altivum-gold/20 hover:shadow-[0_0_20px_rgba(197,165,114,0.3)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-altivum-gold focus-visible:outline-offset-2"
           >
-            <span className="material-icons text-base leading-none">play_circle</span>
+            <Icon name="play_circle" className="text-base leading-none" />
             <span>Play at {action.timestampLabel}</span>
           </button>
           <IconButton icon="close" label="Dismiss" variant="ghost" onClick={dismiss} />
@@ -242,7 +243,7 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
         aria-label="Blog search results"
       >
         <p className="text-altivum-silver flex items-start gap-2 mb-2" style={typography.smallText}>
-          <span className="material-icons text-altivum-gold/70 text-lg mt-0.5 shrink-0">menu_book</span>
+          <Icon name="menu_book" className="text-altivum-gold/70 text-lg mt-0.5 shrink-0" />
           <span>
             Posts matching <span className="text-altivum-gold">"{action.query}"</span>
           </span>
@@ -263,7 +264,7 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
                 onClick={() => openPost(result.slug)}
                 className="inline-flex items-center gap-1 text-sm text-altivum-gold hover:underline focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-altivum-gold focus-visible:outline-offset-2 rounded-sm"
               >
-                <span className="material-icons text-base leading-none">open_in_new</span>
+                <Icon name="open_in_new" className="text-base leading-none" />
                 <span>Read this post</span>
               </button>
             </li>

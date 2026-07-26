@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { typography } from '../utils/typography';
 import { SEO } from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
-import tvpLogo from '../assets/tvp.png';
-// Profile image served from public/ at full quality (no Vite optimization)
-const profileImage = '/profile1.jpeg';
+import ResponsiveImage from '../components/ResponsiveImage';
+import tvpLogo from '../assets/tvp.png?responsive';
+// Profile image: AVIF/WebP responsive variants via the `?responsive` Vite plugin
+// (VAL-PERF-004). Shared with Home and BlogPost.
+import profileImage from '../assets/profile1.jpeg?responsive';
 import {
   podcastFAQs,
   buildPodcastSeriesSchema,
@@ -136,11 +138,12 @@ const Podcast = () => {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center">
             <div className="mb-6 sm:mb-8">
-              <img
+              <ResponsiveImage
                 src={tvpLogo}
                 alt="The Vector Podcast"
+                sizes="(min-width: 768px) 768px, 100vw"
                 className="w-full max-w-3xl mx-auto opacity-90"
-                fetchPriority="high"
+                priority
               />
               <h1 className="sr-only">The Vector Podcast - Hosted by Christian Perez</h1>
             </div>
@@ -368,7 +371,12 @@ const Podcast = () => {
         <div className="max-w-4xl mx-auto px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center gap-10">
             <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-altivum-gold/30 shrink-0">
-              <img src={profileImage} alt="Christian Perez" className="w-full h-full object-cover" />
+              <ResponsiveImage
+                src={profileImage}
+                alt="Christian Perez"
+                sizes="192px"
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="text-center md:text-left">
               <QuestionHeading as="h3" className="mb-2">

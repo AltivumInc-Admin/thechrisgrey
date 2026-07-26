@@ -13,6 +13,7 @@ import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
 import FAQSection from '../components/aeo/FAQSection';
 import { AEO_SUMMARIES } from '../data/aeoSummaries';
 import { slugify } from '../utils/slugify';
+import Icon from '../components/icons/Icon';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -56,9 +57,10 @@ const SocialCard = ({ social, idPrefix }: { social: SocialLink; idPrefix: string
         </h3>
         <p className="text-altivum-silver/60 text-xs truncate">{social.handle}</p>
       </div>
-      <span className="material-icons text-altivum-silver/30 group-hover:text-altivum-gold group-hover:translate-x-1 transition-all shrink-0 text-sm">
-        arrow_forward
-      </span>
+      <Icon
+        name="arrow_forward"
+        className="text-altivum-silver/30 group-hover:text-altivum-gold group-hover:translate-x-1 transition-all shrink-0 text-sm"
+      />
     </div>
   </a>
 );
@@ -233,7 +235,7 @@ const Links = () => {
                   className="inline-flex items-center px-8 py-4 bg-white text-altivum-dark font-medium hover:bg-altivum-gold transition-all duration-200"
                 >
                   View Profile
-                  <span className="material-icons ml-2 text-sm">open_in_new</span>
+                  <Icon name="open_in_new" className="ml-2 text-sm" />
                 </a>
               </div>
               <div className="flex justify-center">
@@ -295,9 +297,10 @@ const Links = () => {
                     <p className="text-altivum-silver text-sm mb-2">{site.description}</p>
                     <p className="text-altivum-gold/70 text-xs font-mono">{site.url}</p>
                   </div>
-                  <span className="material-icons text-altivum-silver/30 group-hover:text-altivum-gold group-hover:translate-x-1 transition-all shrink-0 ml-4">
-                    open_in_new
-                  </span>
+                  <Icon
+                    name="open_in_new"
+                    className="text-altivum-silver/30 group-hover:text-altivum-gold group-hover:translate-x-1 transition-all shrink-0 ml-4"
+                  />
                 </div>
               </a>
             ))}

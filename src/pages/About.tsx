@@ -1,4 +1,5 @@
-import mpbLogo from '../assets/mpb.png';
+import mpbLogo from '../assets/mpb.png?responsive';
+import ResponsiveImage from '../components/ResponsiveImage';
 import ViewTransitionLink from '../components/ViewTransitionLink';
 import { SEO } from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
@@ -50,14 +51,12 @@ const About = () => {
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="sr-only">About Christian Perez - Personal Biography</h1>
             <div className="mb-6 sm:mb-8">
-              <img
+              <ResponsiveImage
                 src={mpbLogo}
                 alt=""
-                aria-hidden="true"
-                width={1500}
-                height={1500}
+                sizes="(min-width: 768px) 768px, 100vw"
                 className="w-full max-w-3xl mx-auto opacity-90"
-                fetchPriority="high"
+                priority
               />
             </div>
             {/* Direct-answer summary — first viewport, before the first H2 (VAL-AEO-001, VAL-AEO-002). */}

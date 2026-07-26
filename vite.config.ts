@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import { ViteImageOptimizer } from 'vite-plugin-image-optimizer';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { execSync } from 'child_process';
+import { responsiveImagesPlugin } from './vite-plugins/responsive-images';
 
 // Git commit hash for RUM release ID (source map resolution in CloudWatch).
 // Amplify sets AWS_COMMIT_ID during builds; fall back to local git, then 'dev'.
@@ -25,6 +26,16 @@ export default defineConfig({
   cacheDir: 'node_modules/.vite',
   plugins: [
     react(),
+    // Responsive <picture> source generation: `import img from './x.jpeg?responsive'`
+    // emits AVIF + WebP + JPEG fallback variants at multiple widths
+    // (VAL-PERF-004/005). Runs before the asset plugin so the custom query is
+    // handled here instead of being treated as a plain asset URL.
+    responsiveImagesPlugin({
+      widths: [480, 800, 1200, 1920],
+      avifQuality: 55,
+      webpQuality: 70,
+      jpegQuality: 78,
+    }),
     ViteImageOptimizer({
       include: ['**/*.{jpg,jpeg,png,webp}'],
       exclude: [/^[^/]+\.(jpg|jpeg|png|webp)$/],

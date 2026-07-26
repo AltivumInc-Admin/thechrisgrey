@@ -3,7 +3,8 @@ import ViewTransitionLink from '../components/ViewTransitionLink';
 import SplitReveal from '../components/SplitReveal';
 import FadeReveal from '../components/FadeReveal';
 import { SEO } from '../components/SEO';
-const profileImage = '/profile1.jpeg';
+import ResponsiveImage from '../components/ResponsiveImage';
+import profileImage from '../assets/profile1.jpeg?responsive';
 import HeroIntroVideo from '../components/home/HeroIntroVideo';
 import { typography } from '../utils/typography';
 import { homeFAQs, buildWebPageSchema } from '../utils/schemas';
@@ -15,6 +16,7 @@ import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
 import FAQSection from '../components/aeo/FAQSection';
 import { AEO_SUMMARIES } from '../data/aeoSummaries';
 import { slugify } from '../utils/slugify';
+import Icon from '../components/icons/Icon';
 
 const keyPoints = [
   { title: 'Personal Biography', subtitle: 'Christian Perez', link: '/about' },
@@ -122,13 +124,12 @@ const Home = () => {
       <section ref={sectionRef} className="relative h-[675vh] md:h-[840vh]">
         <div className="sticky top-0 h-screen overflow-hidden" style={{ transform: 'translate3d(0,0,0)' }}>
           <div className="absolute inset-0">
-            <img
+            <ResponsiveImage
               src={profileImage}
               alt="Christian Perez"
+              sizes="100vw"
               className="w-full h-full object-cover object-[left_30%] md:object-[center_30%]"
               style={{ transform: 'translate3d(0,0,0)', filter: 'brightness(1.05) contrast(1.1) saturate(1.1)' }}
-              loading="lazy"
-              decoding="async"
             />
             <div className="absolute inset-0 bg-linear-to-t from-altivum-dark/80 via-altivum-dark/40 to-transparent"></div>
           </div>
@@ -180,18 +181,14 @@ const Home = () => {
               to="/podcast"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 bg-altivum-gold text-altivum-dark font-semibold rounded-md hover:shadow-[0_0_20px_rgba(197,165,114,0.3)] active:scale-[0.98] transition-all duration-300 touch-manipulation min-h-[48px]"
             >
-              <span className="material-icons text-xl" aria-hidden="true">
-                podcasts
-              </span>
+              <Icon name="podcasts" className="text-xl" aria-hidden="true" />
               Listen to the Podcast
             </ViewTransitionLink>
             <ViewTransitionLink
               to="/beyond-the-assessment"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 bg-transparent border-2 border-altivum-gold text-altivum-gold font-semibold rounded-md hover:bg-altivum-gold/10 active:scale-[0.98] transition-all duration-300 touch-manipulation min-h-[48px]"
             >
-              <span className="material-icons text-xl" aria-hidden="true">
-                menu_book
-              </span>
+              <Icon name="menu_book" className="text-xl" aria-hidden="true" />
               Get the Book
             </ViewTransitionLink>
           </div>

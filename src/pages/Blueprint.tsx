@@ -10,6 +10,7 @@ import { BlueprintResult } from '../components/blueprint/BlueprintResult';
 import { LoadingSkeleton } from '../components/blueprint/LoadingSkeleton';
 import { Waitlist } from '../components/blueprint/Waitlist';
 import { RateLimitedCard } from '../components/blueprint/RateLimitedCard';
+import Icon from '../components/icons/Icon';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -38,9 +39,7 @@ function BlueprintHero() {
   return (
     <section className="text-center space-y-5">
       <div className="inline-flex items-center gap-2 px-3 py-1 bg-altivum-gold/10 border border-altivum-gold/30 rounded-full">
-        <span className="material-icons text-altivum-gold text-sm" aria-hidden="true">
-          architecture
-        </span>
+        <Icon name="architecture" className="text-altivum-gold text-sm" aria-hidden="true" />
         <span className="text-altivum-gold uppercase tracking-wider" style={typography.smallText}>
           thechrisgrey Blueprint
         </span>
@@ -65,9 +64,7 @@ function HighlightsGrid() {
           className="p-5 rounded-lg bg-altivum-navy/40 border border-white/5 hover:border-altivum-gold/20 transition-colors"
         >
           <div className="flex items-center gap-2 mb-2">
-            <span className="material-icons text-altivum-gold" aria-hidden="true">
-              {item.icon}
-            </span>
+            <Icon name={item.icon} className="text-altivum-gold" aria-hidden="true" />
             <h3 className="text-white" style={typography.cardTitleSmall}>
               {item.title}
             </h3>
@@ -199,9 +196,7 @@ export default function Blueprint() {
             role="alert"
           >
             <div className="flex items-start gap-3">
-              <span className="material-icons text-rose-300 shrink-0" aria-hidden="true">
-                error_outline
-              </span>
+              <Icon name="error_outline" className="text-rose-300 shrink-0" aria-hidden="true" />
               <div className="min-w-0">
                 <h2 id="error-heading" className="text-white mb-1" style={typography.cardTitleSmall}>
                   {error.kind === 'timeout'
@@ -224,9 +219,7 @@ export default function Blueprint() {
                     className="inline-flex items-center px-3 py-2 rounded-md border border-white/10 text-altivum-silver hover:border-altivum-gold/40 hover:text-white transition-colors"
                     style={typography.smallText}
                   >
-                    <span className="material-icons text-sm mr-1" aria-hidden="true">
-                      refresh
-                    </span>
+                    <Icon name="refresh" className="text-sm mr-1" aria-hidden="true" />
                     Try again
                   </button>
                 </div>

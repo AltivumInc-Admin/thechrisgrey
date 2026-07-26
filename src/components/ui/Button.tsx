@@ -1,4 +1,5 @@
 import ViewTransitionLink from '../ViewTransitionLink';
+import Icon from '../icons/Icon';
 
 interface ButtonProps {
   children: React.ReactNode;
@@ -49,9 +50,7 @@ export const Button = ({
   const combinedClasses = `${baseClasses} ${variantClasses} ${sizeClasses} ${className}`;
 
   const iconElement = icon && (
-    <span className={`material-icons text-sm ${iconPosition === 'left' ? 'mr-2' : 'ml-2'}`} aria-hidden="true">
-      {icon}
-    </span>
+    <Icon name={icon} className={`text-sm ${iconPosition === 'left' ? 'mr-2' : 'ml-2'}`} aria-hidden="true" />
   );
 
   const content = (

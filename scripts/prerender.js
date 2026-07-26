@@ -58,6 +58,7 @@ const MIME = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
+  '.avif': 'image/avif',
   '.glb': 'model/gltf-binary',
   '.woff2': 'font/woff2',
   '.ico': 'image/x-icon',

@@ -4,6 +4,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { typography } from '../../utils/typography';
 import { slugify } from '../../utils/slugify';
 import type { ClusterData } from '../../data/infrastructureTopology';
+import Icon from '../icons/Icon';
 
 interface FallbackDetailProps {
   cluster: ClusterData | null;
@@ -75,9 +76,7 @@ export function FallbackDetail({ cluster, allClusters, onClose }: FallbackDetail
           className="text-altivum-silver hover:text-white transition-colors p-1"
           aria-label="Close detail panel"
         >
-          <span className="material-icons" style={{ fontSize: 20 }}>
-            close
-          </span>
+          <Icon name="close" style={{ fontSize: 20 }} />
         </button>
       </div>
 

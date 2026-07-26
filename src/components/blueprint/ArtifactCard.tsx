@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { typography } from '../../utils/typography';
 import { ARTIFACT_LABELS, type ClaudeArtifact } from '../../types/blueprint';
+import Icon from '../icons/Icon';
 
 interface ArtifactCardProps {
   artifact: ClaudeArtifact;
@@ -50,9 +51,11 @@ export function ArtifactCard({ artifact }: ArtifactCardProps) {
     <article className="p-5 rounded-lg bg-altivum-navy/60 border border-white/5 hover:border-altivum-gold/20 transition-colors">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-start gap-3 min-w-0">
-          <span className="material-icons text-altivum-gold shrink-0 mt-0.5" aria-hidden="true">
-            {kindIcon[artifact.kind] ?? 'auto_awesome'}
-          </span>
+          <Icon
+            name={kindIcon[artifact.kind] ?? 'auto_awesome'}
+            className="text-altivum-gold shrink-0 mt-0.5"
+            aria-hidden="true"
+          />
           <div className="min-w-0">
             <div className="flex flex-wrap items-baseline gap-2 mb-1">
               <h4 className="text-white truncate" style={typography.cardTitleSmall}>
@@ -76,9 +79,7 @@ export function ArtifactCard({ artifact }: ArtifactCardProps) {
           className="inline-flex items-center px-3 py-1.5 rounded-md bg-altivum-gold/10 border border-altivum-gold/30 text-altivum-gold hover:bg-altivum-gold/20 transition-colors"
           style={typography.smallText}
         >
-          <span className="material-icons text-sm mr-1.5" aria-hidden="true">
-            {copied ? 'check' : 'content_copy'}
-          </span>
+          <Icon name={copied ? 'check' : 'content_copy'} className="text-sm mr-1.5" aria-hidden="true" />
           {copied ? 'Copied' : 'Copy body'}
         </button>
         <button
@@ -87,9 +88,7 @@ export function ArtifactCard({ artifact }: ArtifactCardProps) {
           className="inline-flex items-center px-3 py-1.5 rounded-md border border-white/10 text-altivum-silver hover:border-altivum-gold/40 hover:text-white transition-colors"
           style={typography.smallText}
         >
-          <span className="material-icons text-sm mr-1.5" aria-hidden="true">
-            download
-          </span>
+          <Icon name="download" className="text-sm mr-1.5" aria-hidden="true" />
           Download
         </button>
         <button
@@ -99,9 +98,7 @@ export function ArtifactCard({ artifact }: ArtifactCardProps) {
           style={typography.smallText}
           aria-expanded={expanded}
         >
-          <span className="material-icons text-sm mr-1.5" aria-hidden="true">
-            {expanded ? 'expand_less' : 'expand_more'}
-          </span>
+          <Icon name={expanded ? 'expand_less' : 'expand_more'} className="text-sm mr-1.5" aria-hidden="true" />
           {expanded ? 'Collapse' : 'Preview'}
         </button>
       </div>

@@ -1,5 +1,6 @@
 import { memo, useState } from 'react';
 import { typography } from '../../utils/typography';
+import Icon from '../icons/Icon';
 
 /**
  * CapabilityIntro — a collapsible "What Alti can do" rail rendered between the
@@ -81,9 +82,7 @@ const CapabilityIntro = memo(function CapabilityIntro({
           className="w-full flex items-center justify-between py-3 -mx-2 px-2 rounded-md hover:bg-white/2 transition-colors duration-200 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-altivum-gold focus-visible:outline-offset-2"
         >
           <span className="flex items-center gap-2.5">
-            <span className="material-icons text-altivum-gold/70 text-base leading-none" aria-hidden="true">
-              auto_awesome
-            </span>
+            <Icon name="auto_awesome" className="text-altivum-gold/70 text-base leading-none" aria-hidden="true" />
             <span className="text-white" style={typography.bodyText}>
               What Alti can do
             </span>
@@ -91,14 +90,13 @@ const CapabilityIntro = memo(function CapabilityIntro({
               &middot; search, draft, navigate, remember
             </span>
           </span>
-          <span
-            className={`material-icons text-altivum-silver/70 leading-none transition-transform duration-300 ease-out ${
+          <Icon
+            name="expand_more"
+            className={`text-altivum-silver/70 leading-none transition-transform duration-300 ease-out ${
               expanded ? 'rotate-180' : ''
             }`}
             aria-hidden="true"
-          >
-            expand_more
-          </span>
+          />
         </button>
 
         <div
@@ -124,12 +122,11 @@ const CapabilityIntro = memo(function CapabilityIntro({
                     className="group text-left px-4 py-3.5 rounded-xl border border-white/8 hover:border-altivum-gold/40 hover:bg-white/3 transition-all duration-200 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-altivum-gold focus-visible:outline-offset-2 active:scale-[0.99]"
                   >
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span
-                        className="material-icons text-altivum-gold/70 group-hover:text-altivum-gold text-base leading-none transition-colors duration-200"
+                      <Icon
+                        name={cap.icon}
+                        className="text-altivum-gold/70 group-hover:text-altivum-gold text-base leading-none transition-colors duration-200"
                         aria-hidden="true"
-                      >
-                        {cap.icon}
-                      </span>
+                      />
                       <span className="text-white" style={typography.bodyText}>
                         {cap.title}
                       </span>
@@ -141,9 +138,7 @@ const CapabilityIntro = memo(function CapabilityIntro({
                       className="text-altivum-gold/75 italic group-hover:text-altivum-gold flex items-start gap-1.5 transition-colors duration-200"
                       style={typography.smallText}
                     >
-                      <span className="material-icons text-xs leading-tight mt-0.5 shrink-0" aria-hidden="true">
-                        north_east
-                      </span>
+                      <Icon name="north_east" className="text-xs leading-tight mt-0.5 shrink-0" aria-hidden="true" />
                       <span>&ldquo;{cap.example}&rdquo;</span>
                     </p>
                   </button>

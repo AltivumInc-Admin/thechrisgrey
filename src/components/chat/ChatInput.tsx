@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useImperativeHandle, KeyboardEvent, FormEvent, Ref } from 'react';
+import Icon from '../icons/Icon';
 
 export interface ChatInputHandle {
   /** Fill the input with the given text, focus it, and place the caret at the end. Does not send. */
@@ -95,7 +96,7 @@ const ChatInput = ({ onSend, disabled = false, ref }: ChatInputProps) => {
             }`}
             aria-label="Send message"
           >
-            <span className="material-icons text-xl">send</span>
+            <Icon name="send" className="text-xl" />
           </button>
         </div>
         {value.length > 0 && (

@@ -89,7 +89,7 @@ describe('Button', () => {
       renderWithRouter(<Button icon="arrow_forward">Next</Button>);
       const button = screen.getByRole('button');
       expect(button.textContent).toContain('Next');
-      expect(button.textContent).toContain('arrow_forward');
+      expect(button.querySelector('[data-material-icon]')).toHaveAttribute('data-material-icon', 'arrow_forward');
     });
 
     it('should render icon on the left when specified', () => {
@@ -99,15 +99,17 @@ describe('Button', () => {
         </Button>,
       );
       const button = screen.getByRole('button');
-      // The icon span should appear before the text
-      const spans = button.querySelectorAll('span');
-      expect(spans[0]).toHaveTextContent('arrow_back');
+      // The icon should appear before the text content in source order.
+      const iconEl = button.querySelector('[data-material-icon]');
+      expect(iconEl).toHaveAttribute('data-material-icon', 'arrow_back');
+      // The icon SVG is the first child (before the "Back" text node).
+      expect(button.firstChild).toBe(iconEl);
     });
 
     it('should not render icon element when no icon provided', () => {
       renderWithRouter(<Button>No Icon</Button>);
       const button = screen.getByRole('button');
-      expect(button.querySelectorAll('.material-icons')).toHaveLength(0);
+      expect(button.querySelector('[data-material-icon]')).toBeNull();
     });
   });
 

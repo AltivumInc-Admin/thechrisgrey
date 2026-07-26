@@ -12,7 +12,7 @@ describe('IconButton', () => {
   it('should render the material icon', () => {
     render(<IconButton icon="delete" label="Delete" />);
     const button = screen.getByRole('button');
-    expect(button.querySelector('.material-icons')).toHaveTextContent('delete');
+    expect(button.querySelector('[data-material-icon]')).toHaveAttribute('data-material-icon', 'delete');
   });
 
   it('should handle click events', async () => {
@@ -40,7 +40,7 @@ describe('IconButton', () => {
 
   it('should hide icon from screen readers with aria-hidden', () => {
     render(<IconButton icon="settings" label="Settings" />);
-    const iconSpan = screen.getByRole('button').querySelector('.material-icons');
-    expect(iconSpan).toHaveAttribute('aria-hidden', 'true');
+    const iconEl = screen.getByRole('button').querySelector('[data-material-icon]');
+    expect(iconEl).toHaveAttribute('aria-hidden', 'true');
   });
 });

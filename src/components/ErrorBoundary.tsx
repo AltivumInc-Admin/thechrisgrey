@@ -4,6 +4,7 @@ import { typography } from '../utils/typography';
 import { captureError, isRumInitialized, addBreadcrumb } from '../utils/rum';
 import { captureSentryError, isSentryInitialized } from '../utils/sentry';
 import { createLogger } from '../utils/logger';
+import Icon from './icons/Icon';
 
 const log = createLogger('ErrorBoundary');
 
@@ -75,7 +76,7 @@ class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen bg-altivum-dark flex items-center justify-center px-6">
           <div className="max-w-md w-full text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-altivum-gold/10 border-2 border-altivum-gold mb-8">
-              <span className="material-icons text-altivum-gold text-4xl">error_outline</span>
+              <Icon name="error_outline" className="text-altivum-gold text-4xl" />
             </div>
 
             <h1 className="text-white mb-4" style={typography.sectionHeader}>

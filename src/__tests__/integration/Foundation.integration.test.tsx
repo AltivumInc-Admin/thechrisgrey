@@ -4,8 +4,17 @@ import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Foundation from '../../pages/Foundation';
 
-// Mock static image import
-vi.mock('../../assets/foundation.webp', () => ({ default: '/mock-foundation.webp' }));
+// Mock responsive image import (`?responsive` Vite plugin runs at build/dev,
+// not under Vitest). Returns the ResponsiveImageSource shape.
+vi.mock('../../assets/foundation.webp?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-foundation.webp', width: 1920, height: 1080 },
+    avif: [{ src: '/mock-foundation.avif', width: 1920 }],
+    webp: [{ src: '/mock-foundation.webp', width: 1920 }],
+    width: 1920,
+    height: 1080,
+  },
+}));
 
 // Mock prefetchRoute (consumed by ViewTransitionLink in the cross-link band).
 vi.mock('../../utils/routeManifest', () => ({

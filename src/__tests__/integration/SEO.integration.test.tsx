@@ -28,10 +28,34 @@ vi.mock('gsap', () => ({
 }));
 vi.mock('gsap/ScrollTrigger', () => ({ ScrollTrigger: {} }));
 
-// Mock static image imports
-vi.mock('../../assets/aws-hero.png', () => ({ default: '/mock-aws-hero.png' }));
-vi.mock('../../assets/aws-community-builder.webp', () => ({
-  default: '/mock-aws-cb.webp',
+// Mock responsive image imports (`?responsive` Vite plugin runs at build/dev,
+// not under Vitest). Each mock returns the ResponsiveImageSource shape.
+vi.mock('../../assets/profile1.jpeg?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-profile1.jpeg', width: 1200, height: 1500 },
+    avif: [{ src: '/mock-profile1.avif', width: 1200 }],
+    webp: [{ src: '/mock-profile1.webp', width: 1200 }],
+    width: 1200,
+    height: 1500,
+  },
+}));
+vi.mock('../../assets/aws-hero.png?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-aws-hero.png', width: 1366, height: 768 },
+    avif: [{ src: '/mock-aws-hero.avif', width: 1366 }],
+    webp: [{ src: '/mock-aws-hero.webp', width: 1366 }],
+    width: 1366,
+    height: 768,
+  },
+}));
+vi.mock('../../assets/aws-community-builder.webp?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-aws-cb.webp', width: 1920, height: 1005 },
+    avif: [{ src: '/mock-aws-cb.avif', width: 1920 }],
+    webp: [{ src: '/mock-aws-cb.webp', width: 1920 }],
+    width: 1920,
+    height: 1005,
+  },
 }));
 
 // Mock Sanity client for Blog page

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { typography } from '../../utils/typography';
 import { isValidEmail } from '../../utils/validators';
+import Icon from '../icons/Icon';
 
 interface WaitlistProps {
   heading?: string;
@@ -106,9 +107,7 @@ export function Waitlist({
 
       {status.kind === 'success' ? (
         <div className="flex items-start gap-2 text-emerald-300" style={typography.bodyText} role="status">
-          <span className="material-icons text-sm mt-0.5" aria-hidden="true">
-            mark_email_read
-          </span>
+          <Icon name="mark_email_read" className="text-sm mt-0.5" aria-hidden="true" />
           <span>You're on the list. Watch your inbox for early Pro access.</span>
         </div>
       ) : (

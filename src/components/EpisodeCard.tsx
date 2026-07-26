@@ -4,6 +4,7 @@ import { typography } from '../utils/typography';
 import { formatDate } from '../utils/dateFormatter';
 import { SpotifyIcon, ApplePodcastIcon, YouTubeIcon } from './PodcastPlatformIcons';
 import { slugify } from '../utils/slugify';
+import Icon from './icons/Icon';
 
 interface EpisodeCardProps {
   episode: PodcastEpisode;
@@ -58,11 +59,10 @@ const EpisodeCard = ({ episode, variant = 'standard' }: EpisodeCardProps) => {
                 <span className="text-altivum-silver text-xs hidden md:block">{formatDate(episode.publishedAt)}</span>
 
                 {/* Expand icon */}
-                <span
-                  className={`material-icons text-altivum-silver text-xl transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                >
-                  expand_more
-                </span>
+                <Icon
+                  name="expand_more"
+                  className={`text-altivum-silver text-xl transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                />
               </div>
             </div>
           </div>
@@ -143,7 +143,7 @@ const EpisodeCard = ({ episode, variant = 'standard' }: EpisodeCardProps) => {
               <img src={episode.thumbnail} alt={episode.title} className="w-full h-full object-cover" loading="lazy" />
             ) : (
               <div className="text-center p-6">
-                <span className="material-icons text-6xl text-altivum-gold/50 mb-2">podcasts</span>
+                <Icon name="podcasts" className="text-6xl text-altivum-gold/50 mb-2" />
                 <div className="text-altivum-gold font-medium">
                   S{episode.seasonNumber} E{episode.episodeNumber}
                 </div>

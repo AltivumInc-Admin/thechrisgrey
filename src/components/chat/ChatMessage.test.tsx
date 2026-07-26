@@ -4,6 +4,11 @@ import { MemoryRouter } from 'react-router-dom';
 import ChatMessage from './ChatMessage';
 import type { UiBlock } from '../../utils/uiBlocks';
 
+// Icons render as inline SVG via <Icon>, which exposes the glyph name on a
+// `data-material-icon` attribute (no text node). This helper queries by that
+// attribute so tests can assert which icon is shown.
+const iconByName = (name: string): Element | null => document.querySelector(`[data-material-icon="${name}"]`);
+
 describe('ChatMessage', () => {
   describe('user messages', () => {
     it('should render user message content', () => {
@@ -197,7 +202,7 @@ describe('ChatMessage', () => {
       // The button's accessible name stays static — feedback comes from the icon
       // swap (visual) and the aria-live status region (screen readers).
       fireEvent.click(screen.getByRole('button', { name: /copy message/i }));
-      expect(await screen.findByText('check')).toBeInTheDocument();
+      await waitFor(() => expect(iconByName('check')).toBeInTheDocument());
       expect(screen.getByText('Message copied to clipboard')).toBeInTheDocument();
       // While showing the result, the button stays visible even without hover.
       expect(screen.getByRole('button', { name: /copy message/i }).className).toContain('opacity-100');
@@ -207,14 +212,14 @@ describe('ChatMessage', () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       render(<ChatMessage role="assistant" content="Copied content." />);
       fireEvent.click(screen.getByRole('button', { name: /copy message/i }));
-      await waitFor(() => expect(screen.getByText('check')).toBeInTheDocument());
+      await waitFor(() => expect(iconByName('check')).toBeInTheDocument());
 
       act(() => {
         vi.advanceTimersByTime(1800);
       });
 
-      await waitFor(() => expect(screen.getByText('content_copy')).toBeInTheDocument());
-      expect(screen.queryByText('check')).not.toBeInTheDocument();
+      await waitFor(() => expect(iconByName('content_copy')).toBeInTheDocument());
+      expect(iconByName('check')).not.toBeInTheDocument();
       // Live region cleared so it won't re-announce stale status.
       expect(screen.queryByText('Message copied to clipboard')).not.toBeInTheDocument();
     });
@@ -252,7 +257,7 @@ describe('ChatMessage', () => {
       (navigator.clipboard.writeText as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('denied'));
       render(<ChatMessage role="assistant" content="Will fail to copy." />);
       fireEvent.click(screen.getByRole('button', { name: /copy message/i }));
-      await waitFor(() => expect(screen.getByText('error_outline')).toBeInTheDocument());
+      await waitFor(() => expect(iconByName('error_outline')).toBeInTheDocument());
       expect(screen.getByText('Copy failed')).toBeInTheDocument();
     });
 
@@ -261,14 +266,14 @@ describe('ChatMessage', () => {
       (navigator.clipboard.writeText as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('denied'));
       render(<ChatMessage role="assistant" content="Will fail to copy." />);
       fireEvent.click(screen.getByRole('button', { name: /copy message/i }));
-      await waitFor(() => expect(screen.getByText('error_outline')).toBeInTheDocument());
+      await waitFor(() => expect(iconByName('error_outline')).toBeInTheDocument());
 
       act(() => {
         vi.advanceTimersByTime(1800);
       });
 
-      await waitFor(() => expect(screen.getByText('content_copy')).toBeInTheDocument());
-      expect(screen.queryByText('error_outline')).not.toBeInTheDocument();
+      await waitFor(() => expect(iconByName('content_copy')).toBeInTheDocument());
+      expect(iconByName('error_outline')).not.toBeInTheDocument();
     });
   });
 

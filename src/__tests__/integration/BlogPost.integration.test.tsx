@@ -54,6 +54,18 @@ vi.mock('@portabletext/react', () => ({
   ),
 }));
 
+// Mock the responsive profile image import (the `?responsive` Vite plugin only
+// runs during build/dev, not under Vitest).
+vi.mock('../../assets/profile1.jpeg?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-profile1.jpeg', width: 1200, height: 1500 },
+    avif: [{ src: '/mock-profile1.avif', width: 1200 }],
+    webp: [{ src: '/mock-profile1.webp', width: 1200 }],
+    width: 1200,
+    height: 1500,
+  },
+}));
+
 import BlogPost from '../../pages/BlogPost';
 
 const mockPost = {

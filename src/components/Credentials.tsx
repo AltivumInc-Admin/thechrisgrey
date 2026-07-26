@@ -1,6 +1,7 @@
 import { CREDENTIALS, type Credential } from '../data/credentials';
 import { typography } from '../utils/typography';
 import { slugify } from '../utils/slugify';
+import Icon from './icons/Icon';
 
 interface CredentialsProps {
   /** Override the global list (e.g. for testing or curated subsets). */
@@ -56,9 +57,11 @@ const Credentials = ({
                     isLink ? 'group cursor-pointer' : ''
                   }`}
                 >
-                  <span className="material-icons text-altivum-gold shrink-0 text-2xl" aria-hidden="true">
-                    {credential.icon ?? 'military_tech'}
-                  </span>
+                  <Icon
+                    name={credential.icon ?? 'military_tech'}
+                    className="text-altivum-gold shrink-0 text-2xl"
+                    aria-hidden="true"
+                  />
                   <div className="min-w-0">
                     <p className="text-altivum-gold/80 text-[11px] uppercase tracking-[0.2em] mb-1">
                       {credential.category}
@@ -76,9 +79,7 @@ const Credentials = ({
                         {credential.url ? (
                           <span className="inline-flex items-center gap-1 text-altivum-gold/70 group-hover:text-altivum-gold transition-colors">
                             {credential.issuedBy}
-                            <span className="material-icons" style={{ fontSize: '12px' }} aria-hidden="true">
-                              open_in_new
-                            </span>
+                            <Icon name="open_in_new" style={{ fontSize: '12px' }} aria-hidden="true" />
                           </span>
                         ) : (
                           credential.issuedBy

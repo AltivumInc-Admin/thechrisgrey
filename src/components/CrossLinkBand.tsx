@@ -1,6 +1,7 @@
 import ViewTransitionLink from './ViewTransitionLink';
 import { typography } from '../utils/typography';
 import { slugify } from '../utils/slugify';
+import Icon from './icons/Icon';
 
 interface CrossLink {
   /** Internal site path (must match a route in src/routes.ts). */
@@ -63,12 +64,11 @@ const CrossLinkBand = ({ heading = 'Explore more', eyebrow = 'Keep exploring', l
                 >
                   {link.label}
                 </h3>
-                <span
-                  className="material-icons text-altivum-silver/40 group-hover:text-altivum-gold group-hover:translate-x-1 transition-all shrink-0"
+                <Icon
+                  name="arrow_forward"
+                  className="text-altivum-silver/40 group-hover:text-altivum-gold group-hover:translate-x-1 transition-all shrink-0"
                   aria-hidden="true"
-                >
-                  arrow_forward
-                </span>
+                />
               </div>
               <p className="text-altivum-silver/70 mt-3" style={typography.smallText}>
                 {link.description}

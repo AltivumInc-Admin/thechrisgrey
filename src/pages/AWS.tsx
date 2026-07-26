@@ -2,8 +2,9 @@ import { SEO } from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterCTA from '../components/NewsletterCTA';
 import CrossLinkBand from '../components/CrossLinkBand';
-import awsHero from '../assets/aws-hero.png';
-import awsCommunityBuilder from '../assets/aws-community-builder.webp';
+import ResponsiveImage from '../components/ResponsiveImage';
+import awsHero from '../assets/aws-hero.png?responsive';
+import awsCommunityBuilder from '../assets/aws-community-builder.webp?responsive';
 import { typography } from '../utils/typography';
 import { buildWebPageSchema, buildCredentialSchema, awsFAQs } from '../utils/schemas';
 import { ogImageForUrl } from '../utils/ogCards';
@@ -69,13 +70,12 @@ const AWS = () => {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center">
             <div className="mb-6 sm:mb-8">
-              <img
+              <ResponsiveImage
                 src={awsHero}
                 alt="AWS - AI Engineering"
-                width={1366}
-                height={768}
+                sizes="(min-width: 1024px) 1024px, 100vw"
                 className="w-full max-w-6xl mx-auto opacity-90"
-                fetchPriority="high"
+                priority
               />
               <h1 className="sr-only">Amazon Web Services - AWS Community Builder in AI Engineering</h1>
             </div>
@@ -88,13 +88,10 @@ const AWS = () => {
       {/* Community Builder Banner */}
       <section className="relative overflow-hidden">
         <div className="relative">
-          <img
+          <ResponsiveImage
             src={awsCommunityBuilder}
             alt="Christian Perez - AWS Community Builder"
-            width={1920}
-            height={1005}
-            loading="lazy"
-            decoding="async"
+            sizes="100vw"
             className="w-full h-auto block"
           />
           <div className="absolute inset-0 bg-linear-to-t from-altivum-dark via-transparent to-transparent" />

@@ -10,6 +10,7 @@ import TypingIndicator from '../components/chat/TypingIndicator';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { ChatErrorFallback } from '../components/ErrorFallbacks';
 import { useChatEngine, usePageContext, CHAT_STORAGE_KEY } from '../hooks';
+import Icon from '../components/icons/Icon';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -83,7 +84,7 @@ const ChatContent = () => {
                 className="flex items-center gap-2 px-4 py-2 text-altivum-silver hover:text-white border border-white/20 hover:border-white/40 rounded-sm transition-colors duration-200 text-sm"
                 aria-label="Clear conversation"
               >
-                <span className="material-icons text-base">refresh</span>
+                <Icon name="refresh" className="text-base" />
                 <span className="hidden sm:inline">Clear</span>
               </button>
             )}
@@ -92,7 +93,7 @@ const ChatContent = () => {
               className="flex items-center gap-2 px-4 py-2 text-altivum-silver hover:text-white border border-white/20 hover:border-white/40 rounded-sm transition-colors duration-200 text-sm"
               aria-label="Forget what I told Alti"
             >
-              <span className="material-icons text-base">delete_sweep</span>
+              <Icon name="delete_sweep" className="text-base" />
               <span className="hidden sm:inline">Forget me</span>
             </button>
           </div>

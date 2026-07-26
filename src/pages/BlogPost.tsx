@@ -8,8 +8,11 @@ import { typography } from '../utils/typography';
 import { formatDate } from '../utils/dateFormatter';
 import { SOCIAL_LINKS } from '../constants/links';
 import SocialIcon from '../components/SocialIcon';
-// Profile image served from public/ at full quality (no Vite optimization)
-const profileImage = '/profile1.jpeg';
+import ResponsiveImage from '../components/ResponsiveImage';
+// Profile image: AVIF/WebP responsive variants via the `?responsive` Vite plugin
+// (VAL-PERF-004). The author bio portrait is shared across Home, BlogPost, and
+// Podcast.
+import profileImage from '../assets/profile1.jpeg?responsive';
 import {
   client,
   urlFor,
@@ -33,6 +36,7 @@ import { buildVideoObjectSchema, buildArticleSchema } from '../utils/schemas';
 import { createLogger } from '../utils/logger';
 import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
 import { slugify } from '../utils/slugify';
+import Icon from '../components/icons/Icon';
 
 const log = createLogger('BlogPost');
 
@@ -93,9 +97,7 @@ function SeriesNavigation({ seriesPosts, currentId }: { seriesPosts: SanitySerie
           to={`/blog/${prevPost.slug.current}`}
           className="group flex items-center gap-2 text-altivum-silver hover:text-altivum-gold transition-colors text-sm min-w-0"
         >
-          <span className="material-icons text-sm shrink-0 group-hover:-translate-x-1 transition-transform">
-            arrow_back
-          </span>
+          <Icon name="arrow_back" className="text-sm shrink-0 group-hover:-translate-x-1 transition-transform" />
           <div className="min-w-0">
             <div className="text-xs text-altivum-silver uppercase tracking-wider mb-0.5">
               {prevPost.seriesOrder != null ? `Part ${prevPost.seriesOrder}` : 'Previous'}
@@ -117,9 +119,7 @@ function SeriesNavigation({ seriesPosts, currentId }: { seriesPosts: SanitySerie
             </div>
             <div className="truncate">{nextPost.title}</div>
           </div>
-          <span className="material-icons text-sm shrink-0 group-hover:translate-x-1 transition-transform">
-            arrow_forward
-          </span>
+          <Icon name="arrow_forward" className="text-sm shrink-0 group-hover:translate-x-1 transition-transform" />
         </ViewTransitionLink>
       ) : (
         <div />
@@ -242,7 +242,7 @@ const BlogPost = () => {
         <SEO title="Error Loading Article" description="An error occurred while loading this article." noindex={true} />
         <div className="pt-32 pb-24">
           <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
-            <span className="material-icons text-6xl text-altivum-silver mb-6">cloud_off</span>
+            <Icon name="cloud_off" className="text-6xl text-altivum-silver mb-6" />
             <h1 className="text-white mb-4" style={typography.sectionHeader}>
               Unable to Load Article
             </h1>
@@ -254,14 +254,14 @@ const BlogPost = () => {
                 onClick={fetchPost}
                 className="inline-flex items-center px-6 py-3 bg-altivum-gold text-altivum-dark font-medium uppercase tracking-wider text-sm hover:bg-white transition-colors duration-300"
               >
-                <span className="material-icons mr-2 text-sm">refresh</span>
+                <Icon name="refresh" className="mr-2 text-sm" />
                 Try Again
               </button>
               <ViewTransitionLink
                 to="/blog"
                 className="inline-flex items-center px-6 py-3 border border-altivum-gold text-altivum-gold font-medium uppercase tracking-wider text-sm hover:bg-altivum-gold hover:text-altivum-dark transition-colors duration-300"
               >
-                <span className="material-icons mr-2 text-sm">arrow_back</span>
+                <Icon name="arrow_back" className="mr-2 text-sm" />
                 Back to Blog
               </ViewTransitionLink>
             </div>
@@ -283,7 +283,7 @@ const BlogPost = () => {
         />
         <div className="pt-32 pb-24">
           <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
-            <span className="material-icons text-6xl text-altivum-silver mb-6">article</span>
+            <Icon name="article" className="text-6xl text-altivum-silver mb-6" />
             <h1 className="text-white mb-4" style={typography.sectionHeader}>
               Article Not Found
             </h1>
@@ -294,7 +294,7 @@ const BlogPost = () => {
               to="/blog"
               className="inline-flex items-center px-6 py-3 bg-altivum-gold text-altivum-dark font-semibold hover:bg-white transition-colors"
             >
-              <span className="material-icons mr-2 text-sm">arrow_back</span>
+              <Icon name="arrow_back" className="mr-2 text-sm" />
               Back to Blog
             </ViewTransitionLink>
           </div>
@@ -381,7 +381,7 @@ const BlogPost = () => {
             to="/blog"
             className="inline-flex items-center text-altivum-silver hover:text-altivum-gold transition-colors mb-8"
           >
-            <span className="material-icons mr-2 text-sm">arrow_back</span>
+            <Icon name="arrow_back" className="mr-2 text-sm" />
             Back to Blog
           </ViewTransitionLink>
 
@@ -432,7 +432,7 @@ const BlogPost = () => {
               className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-sm hover:border-altivum-gold hover:text-altivum-gold transition-colors text-altivum-silver text-sm"
               title="Copy link"
             >
-              <span className="material-icons text-sm">{copied ? 'check' : 'link'}</span>
+              <Icon name={copied ? 'check' : 'link'} className="text-sm" />
               {copied ? 'Copied!' : 'Copy link'}
             </button>
             <button
@@ -472,7 +472,7 @@ const BlogPost = () => {
               <div className="bg-white/5 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 border border-white/5 hover:border-altivum-gold/30 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-altivum-gold/10 rounded-lg flex items-center justify-center text-altivum-gold">
-                    <span className="material-icons text-3xl">picture_as_pdf</span>
+                    <Icon name="picture_as_pdf" className="text-3xl" />
                   </div>
                   <div>
                     <h4 className="text-white font-medium text-lg">Download Article PDF</h4>
@@ -487,7 +487,7 @@ const BlogPost = () => {
                   className="px-6 py-3 bg-altivum-gold text-altivum-dark font-semibold rounded-lg hover:bg-white transition-colors flex items-center gap-2 whitespace-nowrap"
                 >
                   Download PDF
-                  <span className="material-icons text-sm">download</span>
+                  <Icon name="download" className="text-sm" />
                 </a>
               </div>
             </div>
@@ -501,7 +501,7 @@ const BlogPost = () => {
           <div className="max-w-3xl mx-auto px-6 lg:px-8">
             <div className="bg-altivum-navy/30 rounded-xl p-6 border border-white/5">
               <div className="flex items-center gap-3 mb-4">
-                <span className="material-icons text-altivum-gold">library_books</span>
+                <Icon name="library_books" className="text-altivum-gold" />
                 <div>
                   <p className="text-altivum-silver text-sm">Part of series</p>
                   <h3 id={slugify(post.series.title)} className="text-white font-medium">
@@ -515,7 +515,7 @@ const BlogPost = () => {
                 className="inline-flex items-center mt-4 text-altivum-gold text-sm hover:underline"
               >
                 View all posts in this series
-                <span className="material-icons text-sm ml-1">arrow_forward</span>
+                <Icon name="arrow_forward" className="text-sm ml-1" />
               </ViewTransitionLink>
               {post.seriesPosts && <SeriesNavigation seriesPosts={post.seriesPosts} currentId={post._id} />}
             </div>
@@ -527,9 +527,10 @@ const BlogPost = () => {
       <section className="py-12 border-t border-white/10">
         <div className="max-w-3xl mx-auto px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-start gap-6 p-6 bg-altivum-navy/30 rounded-lg border border-white/5">
-            <img
+            <ResponsiveImage
               src={profileImage}
               alt="Christian Perez"
+              sizes="80px"
               className="w-20 h-20 rounded-full object-cover border-2 border-altivum-gold/30 shrink-0"
             />
             <div>
@@ -546,7 +547,7 @@ const BlogPost = () => {
                 className="text-altivum-gold text-sm hover:text-white transition-colors inline-flex items-center gap-1"
               >
                 Learn more about Christian
-                <span className="material-icons text-sm">arrow_forward</span>
+                <Icon name="arrow_forward" className="text-sm" />
               </ViewTransitionLink>
             </div>
           </div>
@@ -577,7 +578,7 @@ const BlogPost = () => {
                       />
                     ) : (
                       <div className="w-full h-full bg-altivum-navy flex items-center justify-center">
-                        <span className="material-icons text-3xl text-altivum-silver">article</span>
+                        <Icon name="article" className="text-3xl text-altivum-silver" />
                       </div>
                     )}
                   </div>
@@ -615,7 +616,7 @@ const BlogPost = () => {
               to="/blog"
               className="inline-flex items-center justify-center px-6 py-3 bg-white/5 border border-white/10 text-white font-medium hover:border-altivum-gold hover:text-altivum-gold transition-colors"
             >
-              <span className="material-icons mr-2 text-sm">arrow_back</span>
+              <Icon name="arrow_back" className="mr-2 text-sm" />
               More Articles
             </ViewTransitionLink>
             <a
@@ -625,7 +626,7 @@ const BlogPost = () => {
               className="inline-flex items-center justify-center px-6 py-3 bg-white/5 border border-white/10 text-white font-medium hover:border-altivum-gold hover:text-altivum-gold transition-colors"
             >
               Connect on LinkedIn
-              <span className="material-icons ml-2 text-sm">open_in_new</span>
+              <Icon name="open_in_new" className="ml-2 text-sm" />
             </a>
           </div>
         </div>

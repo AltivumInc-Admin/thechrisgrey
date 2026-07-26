@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { typography } from '../utils/typography';
+import Icon from './icons/Icon';
 
 interface ErrorFallbackProps {
   onRetry?: () => void;
@@ -14,7 +15,7 @@ export function BlogErrorFallback({ onRetry }: ErrorFallbackProps) {
     <div className="min-h-screen bg-altivum-dark flex items-center justify-center px-6">
       <div className="max-w-md w-full text-center">
         <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-altivum-gold/10 border-2 border-altivum-gold mb-8">
-          <span className="material-icons text-altivum-gold text-4xl">article</span>
+          <Icon name="article" className="text-altivum-gold text-4xl" />
         </div>
 
         <h1 className="text-white mb-4" style={typography.sectionHeader}>
@@ -54,7 +55,7 @@ export function ChatErrorFallback({ onRetry }: ErrorFallbackProps) {
       <div className="flex-1 flex items-center justify-center px-6">
         <div className="max-w-md w-full text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-altivum-gold/10 border-2 border-altivum-gold mb-8">
-            <span className="material-icons text-altivum-gold text-4xl">chat</span>
+            <Icon name="chat" className="text-altivum-gold text-4xl" />
           </div>
 
           <h1 className="text-white mb-4" style={typography.sectionHeader}>
@@ -92,7 +93,7 @@ export function GenericPageErrorFallback({
     <div className="min-h-screen bg-altivum-dark flex items-center justify-center px-6">
       <div className="max-w-md w-full text-center">
         <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-altivum-gold/10 border-2 border-altivum-gold mb-8">
-          <span className="material-icons text-altivum-gold text-4xl">error_outline</span>
+          <Icon name="error_outline" className="text-altivum-gold text-4xl" />
         </div>
 
         <h1 className="text-white mb-4" style={typography.sectionHeader}>

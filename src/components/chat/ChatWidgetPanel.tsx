@@ -6,6 +6,7 @@ import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import ChatSuggestions from './ChatSuggestions';
 import TypingIndicator from './TypingIndicator';
+import Icon from '../icons/Icon';
 
 interface ChatWidgetPanelProps {
   onClose: () => void;
@@ -69,7 +70,7 @@ const ChatWidgetPanel = ({ onClose }: ChatWidgetPanelProps) => {
                 className="p-1.5 text-altivum-silver hover:text-white rounded-sm transition-colors duration-200"
                 aria-label="Clear conversation"
               >
-                <span className="material-icons text-lg">refresh</span>
+                <Icon name="refresh" className="text-lg" />
               </button>
             )}
             <button
@@ -77,14 +78,14 @@ const ChatWidgetPanel = ({ onClose }: ChatWidgetPanelProps) => {
               className="p-1.5 text-altivum-silver hover:text-white rounded-sm transition-colors duration-200"
               aria-label="Open full chat"
             >
-              <span className="material-icons text-lg">open_in_full</span>
+              <Icon name="open_in_full" className="text-lg" />
             </button>
             <button
               onClick={onClose}
               className="p-1.5 text-altivum-silver hover:text-white rounded-sm transition-colors duration-200"
               aria-label="Close chat"
             >
-              <span className="material-icons text-lg">close</span>
+              <Icon name="close" className="text-lg" />
             </button>
           </div>
         </div>

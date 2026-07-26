@@ -1,6 +1,7 @@
 import { podcastUrlFor } from '../sanity';
 import { typography } from '../utils/typography';
 import type { PodcastGuest } from '../sanity';
+import Icon from './icons/Icon';
 
 const BRANCH_LABELS: Record<string, string> = {
   army: 'U.S. Army',
@@ -28,7 +29,7 @@ const GuestCard = ({ guest }: GuestCardProps) => {
         />
       ) : (
         <div className="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4">
-          <span className="material-icons text-altivum-silver text-3xl">person</span>
+          <Icon name="person" className="text-altivum-silver text-3xl" />
         </div>
       )}
 
@@ -51,7 +52,7 @@ const GuestCard = ({ guest }: GuestCardProps) => {
             aria-label={`Watch ${guest.name}'s episode`}
             className="text-altivum-silver hover:text-altivum-gold transition-colors"
           >
-            <span className="material-icons text-xl">play_circle</span>
+            <Icon name="play_circle" className="text-xl" />
           </a>
         )}
         {guest.linkedinUrl && (
@@ -88,7 +89,7 @@ const GuestCard = ({ guest }: GuestCardProps) => {
             aria-label={guest.websiteLabel || `${guest.name}'s website`}
             className="text-altivum-silver hover:text-altivum-gold transition-colors"
           >
-            <span className="material-icons text-xl">language</span>
+            <Icon name="language" className="text-xl" />
           </a>
         )}
       </div>

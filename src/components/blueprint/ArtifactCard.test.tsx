@@ -50,7 +50,9 @@ describe('ArtifactCard', () => {
 
     it('should render the kind icon for a skill', () => {
       const { container } = render(<ArtifactCard artifact={baseArtifact} />);
-      const icons = Array.from(container.querySelectorAll('.material-icons')).map((n) => n.textContent);
+      const icons = Array.from(container.querySelectorAll('[data-material-icon]')).map((n) =>
+        n.getAttribute('data-material-icon'),
+      );
       expect(icons).toContain('stars');
     });
 
@@ -61,7 +63,9 @@ describe('ArtifactCard', () => {
       };
       const { container } = render(<ArtifactCard artifact={artifact} />);
       expect(screen.getByText('Slash Command')).toBeInTheDocument();
-      const icons = Array.from(container.querySelectorAll('.material-icons')).map((n) => n.textContent);
+      const icons = Array.from(container.querySelectorAll('[data-material-icon]')).map((n) =>
+        n.getAttribute('data-material-icon'),
+      );
       expect(icons).toContain('terminal');
     });
 
@@ -69,7 +73,9 @@ describe('ArtifactCard', () => {
       const artifact: ClaudeArtifact = { ...baseArtifact, kind: 'subagent' };
       const { container } = render(<ArtifactCard artifact={artifact} />);
       expect(screen.getByText('Subagent')).toBeInTheDocument();
-      const icons = Array.from(container.querySelectorAll('.material-icons')).map((n) => n.textContent);
+      const icons = Array.from(container.querySelectorAll('[data-material-icon]')).map((n) =>
+        n.getAttribute('data-material-icon'),
+      );
       expect(icons).toContain('hub');
     });
 
@@ -77,7 +83,9 @@ describe('ArtifactCard', () => {
       const artifact: ClaudeArtifact = { ...baseArtifact, kind: 'mcp_tool' };
       const { container } = render(<ArtifactCard artifact={artifact} />);
       expect(screen.getByText('MCP Tool')).toBeInTheDocument();
-      const icons = Array.from(container.querySelectorAll('.material-icons')).map((n) => n.textContent);
+      const icons = Array.from(container.querySelectorAll('[data-material-icon]')).map((n) =>
+        n.getAttribute('data-material-icon'),
+      );
       expect(icons).toContain('extension');
     });
 
@@ -87,7 +95,9 @@ describe('ArtifactCard', () => {
         kind: 'mystery',
       } as unknown as ClaudeArtifact;
       const { container } = render(<ArtifactCard artifact={artifact} />);
-      const icons = Array.from(container.querySelectorAll('.material-icons')).map((n) => n.textContent);
+      const icons = Array.from(container.querySelectorAll('[data-material-icon]')).map((n) =>
+        n.getAttribute('data-material-icon'),
+      );
       expect(icons).toContain('auto_awesome');
     });
   });

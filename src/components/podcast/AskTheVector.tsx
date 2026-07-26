@@ -4,6 +4,7 @@ import { useChatEngine, usePageContext } from '../../hooks';
 import type { DraftActionPodcastCitation } from '../../utils/chatEvents';
 import ToolDraftCard from '../chat/ToolDraftCard';
 import { slugify } from '../../utils/slugify';
+import Icon from '../icons/Icon';
 
 const PODCAST_ASK_STORAGE_KEY = 'podcast-ask-messages';
 
@@ -60,9 +61,7 @@ const AskTheVector = () => {
         <div className="rounded-2xl border border-altivum-gold/20 bg-linear-to-b from-white/4 to-transparent p-6 sm:p-8">
           {/* Heading */}
           <div className="flex items-center gap-2 mb-2">
-            <span className="material-icons text-altivum-gold/80 text-xl" aria-hidden="true">
-              graphic_eq
-            </span>
+            <Icon name="graphic_eq" className="text-altivum-gold/80 text-xl" aria-hidden="true" />
             <h2 id={slugify('Ask The Vector')} className="text-white" style={typography.cardTitleSmall}>
               Ask The Vector
             </h2>
@@ -93,7 +92,7 @@ const AskTheVector = () => {
               aria-label="Search the podcast"
               className="min-h-[48px] px-5 inline-flex items-center justify-center gap-2 rounded-lg bg-altivum-gold/10 text-altivum-gold border border-altivum-gold/40 hover:bg-altivum-gold/20 hover:shadow-[0_0_20px_rgba(197,165,114,0.3)] active:scale-[0.98] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none touch-manipulation"
             >
-              <span className="material-icons text-xl leading-none">{busy ? 'hourglass_empty' : 'search'}</span>
+              <Icon name={busy ? 'hourglass_empty' : 'search'} className="text-xl leading-none" />
               <span className="hidden sm:inline text-sm">Ask</span>
             </button>
           </form>
@@ -125,18 +124,18 @@ const AskTheVector = () => {
             <div className="mt-6 pt-6 border-t border-white/10 space-y-4" aria-live="polite">
               {lastUser && (
                 <p className="text-altivum-silver/70 flex items-start gap-2" style={typography.smallText}>
-                  <span className="material-icons text-altivum-silver text-base mt-0.5 shrink-0" aria-hidden="true">
-                    help_outline
-                  </span>
+                  <Icon
+                    name="help_outline"
+                    className="text-altivum-silver text-base mt-0.5 shrink-0"
+                    aria-hidden="true"
+                  />
                   <span>{lastUser.content}</span>
                 </p>
               )}
 
               {isTyping && !lastAssistant?.content && (
                 <p className="text-altivum-silver flex items-center gap-2" style={typography.smallText}>
-                  <span className="material-icons text-altivum-gold/70 text-base animate-pulse" aria-hidden="true">
-                    graphic_eq
-                  </span>
+                  <Icon name="graphic_eq" className="text-altivum-gold/70 text-base animate-pulse" aria-hidden="true" />
                   <span>Searching the episodes…</span>
                 </p>
               )}
@@ -163,9 +162,7 @@ const AskTheVector = () => {
 
               {lastSystem && (
                 <p className="text-altivum-silver/80 flex items-start gap-2" style={typography.smallText}>
-                  <span className="material-icons text-altivum-silver/60 text-base mt-0.5 shrink-0" aria-hidden="true">
-                    info
-                  </span>
+                  <Icon name="info" className="text-altivum-silver/60 text-base mt-0.5 shrink-0" aria-hidden="true" />
                   <span>{lastSystem.content}</span>
                 </p>
               )}

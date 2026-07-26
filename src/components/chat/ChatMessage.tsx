@@ -4,6 +4,7 @@ import type { DraftAction } from '../../utils/chatEvents';
 import type { UiBlock } from '../../utils/uiBlocks';
 import ToolDraftCard from './ToolDraftCard';
 import GenerativeBlocks from './GenerativeBlocks';
+import Icon from '../icons/Icon';
 
 interface MemoryEventRecord {
   action: 'remembered' | 'forgotten';
@@ -90,9 +91,7 @@ function CopyMessageButton({ text }: { text: string }) {
             : 'opacity-100 text-altivum-gold'
         }`}
       >
-        <span className="material-icons text-base leading-none" aria-hidden="true">
-          {icon}
-        </span>
+        <Icon name={icon} className="text-base leading-none" aria-hidden="true" />
       </button>
       <span className="sr-only" role="status" aria-live="polite">
         {state === 'copied' ? 'Message copied to clipboard' : state === 'error' ? 'Copy failed' : ''}
@@ -198,7 +197,7 @@ const ChatMessage = memo(
         <div className="flex justify-center animate-fade-in">
           <div className="max-w-[90%] md:max-w-[80%] px-5 py-4 bg-white/5 border border-white/10 rounded-xl">
             <p className="text-altivum-silver flex items-start gap-2" style={typography.bodyText}>
-              <span className="material-icons text-altivum-silver/60 text-lg mt-0.5 shrink-0">info</span>
+              <Icon name="info" className="text-altivum-silver/60 text-lg mt-0.5 shrink-0" />
               <span>{content}</span>
             </p>
           </div>
@@ -218,7 +217,7 @@ const ChatMessage = memo(
               aria-live="polite"
             >
               <p className="text-altivum-silver flex items-center gap-2" style={typography.smallText}>
-                <span className="material-icons text-altivum-gold/70 text-sm animate-pulse">hourglass_empty</span>
+                <Icon name="hourglass_empty" className="text-altivum-gold/70 text-sm animate-pulse" />
                 <span>Alti is {toolLabel(activeTool.tool)}…</span>
               </p>
             </div>
@@ -258,7 +257,7 @@ const ChatMessage = memo(
                   role="status"
                 >
                   <p className="text-altivum-silver flex items-center gap-2" style={typography.smallText}>
-                    <span className="material-icons text-altivum-gold/70 text-sm">bookmark_added</span>
+                    <Icon name="bookmark_added" className="text-altivum-gold/70 text-sm" />
                     <span>
                       {evt.action === 'remembered' ? 'Saved that for next time.' : 'Cleared what I had saved.'}
                     </span>

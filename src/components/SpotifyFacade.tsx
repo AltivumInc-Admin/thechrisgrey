@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Icon from './icons/Icon';
 
 interface SpotifyFacadeProps {
   embedUrl: string;
@@ -46,7 +47,7 @@ const SpotifyFacade = ({ embedUrl, title }: SpotifyFacadeProps) => {
         </div>
         {/* Play button overlay */}
         <span className="w-14 h-14 flex items-center justify-center rounded-full bg-altivum-gold/90 group-hover:bg-altivum-gold transition-colors duration-200 shadow-lg">
-          <span className="material-icons text-altivum-dark text-2xl ml-0.5">play_arrow</span>
+          <Icon name="play_arrow" className="text-altivum-dark text-2xl ml-0.5" />
         </span>
       </div>
     </button>

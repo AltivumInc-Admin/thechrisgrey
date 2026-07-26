@@ -10,6 +10,7 @@ import { revokeRumCookies } from '../utils/rum';
 import { disableSentry } from '../utils/sentry';
 import { isPrerender } from '../utils/prerender';
 import { slugify } from '../utils/slugify';
+import Icon from '../components/icons/Icon';
 
 const breadcrumbs = [
   { name: 'Home', url: 'https://thechrisgrey.com' },
@@ -273,9 +274,7 @@ const Privacy = () => {
                   onClick={resetAnalyticsPreference}
                   className="mt-4 inline-flex items-center gap-2 px-4 py-2 border border-altivum-gold/40 text-altivum-gold text-sm rounded-md hover:bg-altivum-gold/10 active:scale-[0.98] transition-all duration-200 touch-manipulation focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-altivum-gold focus-visible:outline-offset-2"
                 >
-                  <span className="material-icons text-base" aria-hidden="true">
-                    tune
-                  </span>
+                  <Icon name="tune" className="text-base" aria-hidden="true" />
                   Reset analytics preference
                 </button>
               )}

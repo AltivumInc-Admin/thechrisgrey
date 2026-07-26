@@ -4,10 +4,25 @@ import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Claude from '../../pages/Claude';
 
-// Mock static image imports
-vi.mock('../../assets/claude-hero.png', () => ({ default: '/mock-claude-hero.png' }));
-vi.mock('../../assets/claude-bedrock-cert.png', () => ({
-  default: '/mock-claude-bedrock-cert.png',
+// Mock responsive image imports (`?responsive` Vite plugin runs at build/dev,
+// not under Vitest). Each mock returns the ResponsiveImageSource shape.
+vi.mock('../../assets/claude-hero.png?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-claude-hero.png', width: 1200, height: 630 },
+    avif: [{ src: '/mock-claude-hero.avif', width: 1200 }],
+    webp: [{ src: '/mock-claude-hero.webp', width: 1200 }],
+    width: 1200,
+    height: 630,
+  },
+}));
+vi.mock('../../assets/claude-bedrock-cert.png?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-claude-bedrock-cert.png', width: 1000, height: 750 },
+    avif: [{ src: '/mock-claude-bedrock-cert.avif', width: 1000 }],
+    webp: [{ src: '/mock-claude-bedrock-cert.webp', width: 1000 }],
+    width: 1000,
+    height: 750,
+  },
 }));
 
 // Mock GSAP (ArchitectureXRay timeline animations)

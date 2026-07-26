@@ -2,6 +2,7 @@ import { lazy } from 'react';
 import SafeCanvas from '../SafeCanvas';
 import { checkWebGLSupport } from '../../utils/checkWebGL';
 import { isPrerender } from '../../utils/prerender';
+import Icon from '../icons/Icon';
 
 const AltiMascot = lazy(() => import('./AltiMascot'));
 
@@ -20,7 +21,7 @@ const MascotFallback = () => (
       background: 'radial-gradient(circle at center, rgba(197,165,114,0.18) 0%, transparent 70%)',
     }}
   >
-    <span className="material-icons text-altivum-gold text-3xl">support_agent</span>
+    <Icon name="support_agent" className="text-altivum-gold text-3xl" />
   </div>
 );
 

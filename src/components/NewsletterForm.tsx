@@ -6,6 +6,7 @@ import { trackEvent } from '../utils/analytics';
 import { createLogger } from '../utils/logger';
 import { withTraceId } from '../utils/traceId';
 import { slugify } from '../utils/slugify';
+import Icon from './icons/Icon';
 
 const log = createLogger('NewsletterForm');
 
@@ -247,12 +248,12 @@ const NewsletterForm = ({ variant = 'full', source }: NewsletterFormProps) => {
               className="absolute top-4 right-4 text-altivum-silver hover:text-white transition-colors"
               aria-label="Close"
             >
-              <span className="material-icons text-2xl">close</span>
+              <Icon name="close" className="text-2xl" />
             </button>
 
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-altivum-gold/10 border-2 border-altivum-gold mb-6">
-                <span className="material-icons text-altivum-gold text-4xl">mark_email_read</span>
+                <Icon name="mark_email_read" className="text-altivum-gold text-4xl" />
               </div>
 
               <h3 id="newsletter-modal-title" className="text-white mb-4" style={typography.cardTitleLarge}>

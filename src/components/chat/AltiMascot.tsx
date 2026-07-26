@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import Icon from '../icons/Icon';
 
 function AltiModel({ onHoverChange, animate }: { onHoverChange: (h: boolean) => void; animate: boolean }) {
   const { scene } = useGLTF('/alti.glb');
@@ -110,7 +111,7 @@ const AltiMascot = ({ isOpen }: AltiMascotProps) => {
           transition: 'background 0.3s ease, box-shadow 0.3s ease',
         }}
       >
-        {isOpen && <span className="material-icons text-altivum-silver text-[10px] leading-none">close</span>}
+        {isOpen && <Icon name="close" className="text-altivum-silver text-[10px] leading-none" />}
       </div>
     </div>
   );

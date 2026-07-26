@@ -1,6 +1,7 @@
 import { KB_CATEGORIES } from '../../hooks';
 import type { KbEntry } from '../../hooks';
 import EntryForm from './EntryForm';
+import Icon from '../icons/Icon';
 
 export interface EntryListProps {
   entries: KbEntry[];
@@ -102,16 +103,14 @@ function EntryList({
                           aria-label={entry.isActive ? 'Deactivate' : 'Activate'}
                           title={entry.isActive ? 'Deactivate' : 'Activate'}
                         >
-                          <span className="material-icons text-lg">
-                            {entry.isActive ? 'visibility' : 'visibility_off'}
-                          </span>
+                          <Icon name={entry.isActive ? 'visibility' : 'visibility_off'} className="text-lg" />
                         </button>
                         <button
                           onClick={() => onEdit(entry)}
                           className="p-1.5 text-altivum-silver hover:text-white transition-colors"
                           aria-label="Edit"
                         >
-                          <span className="material-icons text-lg">edit</span>
+                          <Icon name="edit" className="text-lg" />
                         </button>
                         {deleteConfirm === entry._id ? (
                           <div className="flex items-center gap-1">
@@ -120,14 +119,14 @@ function EntryList({
                               className="p-1.5 text-red-400 hover:text-red-300 transition-colors"
                               aria-label="Confirm delete"
                             >
-                              <span className="material-icons text-lg">check</span>
+                              <Icon name="check" className="text-lg" />
                             </button>
                             <button
                               onClick={onCancelDelete}
                               className="p-1.5 text-altivum-silver hover:text-white transition-colors"
                               aria-label="Cancel delete"
                             >
-                              <span className="material-icons text-lg">close</span>
+                              <Icon name="close" className="text-lg" />
                             </button>
                           </div>
                         ) : (
@@ -136,7 +135,7 @@ function EntryList({
                             className="p-1.5 text-altivum-silver hover:text-red-400 transition-colors"
                             aria-label="Delete"
                           >
-                            <span className="material-icons text-lg">delete</span>
+                            <Icon name="delete" className="text-lg" />
                           </button>
                         )}
                       </div>
@@ -152,7 +151,7 @@ function EntryList({
       {/* Empty state */}
       {!isLoading && entries.length === 0 && (
         <div className="text-center py-20">
-          <span className="material-icons text-5xl text-altivum-silver mb-4 block">library_books</span>
+          <Icon name="library_books" className="text-5xl text-altivum-silver mb-4 block" />
           <p className="text-altivum-silver mb-2">No entries yet</p>
           <p className="text-altivum-silver text-sm">Add your first Knowledge Base entry to get started.</p>
         </div>

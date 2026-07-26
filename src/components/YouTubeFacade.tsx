@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Icon from './icons/Icon';
 
 interface YouTubeFacadeProps {
   videoId: string;
@@ -58,7 +59,7 @@ const YouTubeFacade = ({ videoId, title, embedParams = '', startSeconds }: YouTu
       />
       <span className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
         <span className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-full bg-altivum-gold/90 group-hover:bg-altivum-gold transition-colors duration-200 shadow-lg">
-          <span className="material-icons text-altivum-dark text-3xl sm:text-4xl ml-1">play_arrow</span>
+          <Icon name="play_arrow" className="text-altivum-dark text-3xl sm:text-4xl ml-1" />
         </span>
       </span>
     </button>

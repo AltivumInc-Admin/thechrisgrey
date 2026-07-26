@@ -7,6 +7,7 @@ import SanityResponsiveImage from '../components/SanityResponsiveImage';
 import ViewTransitionLink from '../components/ViewTransitionLink';
 import { getYouTubeId } from '../utils/youtube';
 import { slugify, textFromChildren } from '../utils/slugify';
+import Icon from '../components/icons/Icon';
 
 const SITE_ORIGIN = 'https://thechrisgrey.com';
 
@@ -103,7 +104,7 @@ export const portableTextComponents: PortableTextComponents = {
       return (
         <div className={`my-6 p-4 ${style.bg} border-l-4 ${style.border} rounded-r-lg`}>
           <div className="flex items-start gap-3">
-            <span className="material-icons text-xl mt-0.5">{style.icon}</span>
+            <Icon name={style.icon} className="text-xl mt-0.5" />
             <div>
               <div className="font-semibold text-white mb-1">{style.label}</div>
               <p className="text-altivum-silver text-sm leading-relaxed">{value.text}</p>

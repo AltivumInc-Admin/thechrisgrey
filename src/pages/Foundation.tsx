@@ -3,7 +3,8 @@ import { SEO } from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterCTA from '../components/NewsletterCTA';
 import CrossLinkBand from '../components/CrossLinkBand';
-import foundationImage from '../assets/foundation.webp';
+import ResponsiveImage from '../components/ResponsiveImage';
+import foundationImage from '../assets/foundation.webp?responsive';
 import { typography } from '../utils/typography';
 import { foundationFAQs, buildFoundationOrganizationSchema } from '../utils/schemas';
 import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
@@ -98,11 +99,12 @@ const Foundation = () => {
       {/* Hero */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden opacity-0 animate-fade-in">
         <div className="absolute inset-0">
-          <img
+          <ResponsiveImage
             src={foundationImage}
             alt="Veterans pursuing education in technology"
+            sizes="100vw"
             className="w-full h-full object-cover opacity-40"
-            fetchPriority="high"
+            priority
           />
           <div className="absolute inset-0 bg-linear-to-t from-altivum-dark via-altivum-dark/80 to-altivum-dark/40" />
         </div>

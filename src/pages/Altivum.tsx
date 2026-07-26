@@ -3,9 +3,10 @@ import { SEO } from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterCTA from '../components/NewsletterCTA';
 import CrossLinkBand from '../components/CrossLinkBand';
-import altivumImage from '../assets/altivum.jpg';
-import awsPartnerLogo from '../assets/aws-partner-dark.png';
-import altivumLogo from '../assets/altivum.png';
+import ResponsiveImage from '../components/ResponsiveImage';
+import altivumImage from '../assets/altivum.jpg?responsive';
+import awsPartnerLogo from '../assets/aws-partner-dark.png?responsive';
+import altivumLogo from '../assets/altivum.png?responsive';
 import { typography } from '../utils/typography';
 import { altivumFAQs, buildAltivumServicesSchemas } from '../utils/schemas';
 import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
@@ -184,13 +185,12 @@ const Altivum = () => {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center">
             <div className="mb-6 sm:mb-8">
-              <img
+              <ResponsiveImage
                 src={altivumLogo}
                 alt="Altivum Inc."
-                width={1500}
-                height={1500}
+                sizes="(min-width: 768px) 768px, 100vw"
                 className="w-full max-w-3xl mx-auto opacity-90"
-                fetchPriority="high"
+                priority
               />
               <h1 className="sr-only">Altivum Inc. - Veteran-Founded AI Technology Company</h1>
             </div>
@@ -201,9 +201,10 @@ const Altivum = () => {
 
         {/* AWS Partner Logo - Bottom Right */}
         <div className="absolute bottom-8 right-8 z-20">
-          <img
+          <ResponsiveImage
             src={awsPartnerLogo}
             alt="AWS Partner"
+            sizes="80px"
             className="w-20 h-20 object-contain opacity-80 hover:opacity-100 transition-opacity"
           />
         </div>
@@ -377,9 +378,10 @@ const Altivum = () => {
 
       {/* Full Screen Image */}
       <section className="relative h-[60vh] overflow-hidden block">
-        <img
+        <ResponsiveImage
           src={altivumImage}
           alt="Altivum Inc. workspace"
+          sizes="100vw"
           className="w-full h-full object-cover block opacity-60"
           style={{ objectPosition: 'center 90%' }}
         />

@@ -2,6 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
+
+// Mock the responsive profile image import (the `?responsive` Vite plugin only
+// runs during build/dev, not under Vitest).
+vi.mock('../../assets/profile1.jpeg?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-profile1.jpeg', width: 1200, height: 1500 },
+    avif: [{ src: '/mock-profile1.avif', width: 1200 }],
+    webp: [{ src: '/mock-profile1.webp', width: 1200 }],
+    width: 1200,
+    height: 1500,
+  },
+}));
+
 import Home from '../../pages/Home';
 
 const renderHome = () => {
@@ -83,11 +96,15 @@ describe('Home Page Integration', () => {
       expect(findLink('/aws')).toBeDefined();
     });
 
-    it('renders the profile image', () => {
+    it('renders the profile image inside a responsive <picture>', () => {
       renderHome();
       const profileImage = screen.getByAltText('Christian Perez');
       expect(profileImage).toBeInTheDocument();
-      expect(profileImage).toHaveAttribute('src', '/profile1.jpeg');
+      // The <img> fallback lives inside a <picture> with AVIF + WebP sources.
+      const picture = profileImage.closest('picture');
+      expect(picture).not.toBeNull();
+      expect(picture?.querySelector('source[type="image/avif"]')).not.toBeNull();
+      expect(picture?.querySelector('source[type="image/webp"]')).not.toBeNull();
     });
   });
 

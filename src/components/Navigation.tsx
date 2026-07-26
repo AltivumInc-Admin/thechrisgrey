@@ -4,6 +4,7 @@ import logo from '../assets/logo.png';
 import { typography } from '../utils/typography';
 import ViewTransitionLink from './ViewTransitionLink';
 import { NAVIGATION_CONFIG } from '../routes';
+import Icon from './icons/Icon';
 
 // Header nav + About dropdown are derived from the canonical ROUTES table
 // (NAVIGATION_CONFIG in src/routes.ts). A drift test in routes.test.ts keeps the
@@ -242,9 +243,7 @@ const Navigation = () => {
             aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={isMobileMenuOpen}
           >
-            <span className="material-icons" aria-hidden="true">
-              {isMobileMenuOpen ? 'close' : 'menu'}
-            </span>
+            <Icon name={isMobileMenuOpen ? 'close' : 'menu'} aria-hidden="true" />
           </button>
         </div>
 

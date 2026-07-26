@@ -11,6 +11,7 @@ import type {
   ExplainerBlock,
   LinkGridBlock,
 } from '../../utils/uiBlocks';
+import Icon from '../icons/Icon';
 
 /**
  * GenerativeBlocks renders Alti's generative answer surfaces from a constrained,
@@ -141,12 +142,11 @@ function ProfileMini({ block }: { block: ProfileMiniBlock }) {
           style={typography.smallText}
         >
           <span>Learn more</span>
-          <span
-            className="material-icons text-base leading-none transition-transform group-hover:translate-x-1"
+          <Icon
+            name="arrow_forward"
+            className="text-base leading-none transition-transform group-hover:translate-x-1"
             aria-hidden="true"
-          >
-            arrow_forward
-          </span>
+          />
         </ViewTransitionLink>
       ) : null}
     </div>
@@ -195,12 +195,11 @@ function LinkGrid({ block }: { block: LinkGridBlock }) {
           >
             <span className="text-altivum-gold flex items-center gap-1" style={typography.bodyText}>
               {link.label}
-              <span
-                className="material-icons text-base leading-none transition-transform group-hover:translate-x-1"
+              <Icon
+                name="arrow_forward"
+                className="text-base leading-none transition-transform group-hover:translate-x-1"
                 aria-hidden="true"
-              >
-                arrow_forward
-              </span>
+              />
             </span>
             <span className="text-altivum-silver/80 block" style={typography.smallText}>
               {link.blurb}

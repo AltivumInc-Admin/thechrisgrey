@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { typography } from '../../utils/typography';
+import Icon from '../icons/Icon';
 
 interface MermaidDiagramProps {
   source: string;
@@ -84,9 +85,7 @@ export function MermaidDiagram({ source }: MermaidDiagramProps) {
           style={typography.smallText}
           aria-expanded={showSource}
         >
-          <span className="material-icons text-sm mr-1" aria-hidden="true">
-            {showSource ? 'image' : 'code'}
-          </span>
+          <Icon name={showSource ? 'image' : 'code'} className="text-sm mr-1" aria-hidden="true" />
           {showSource ? 'View diagram' : 'View source'}
         </button>
       </div>

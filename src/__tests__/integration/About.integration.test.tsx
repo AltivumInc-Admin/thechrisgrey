@@ -4,8 +4,17 @@ import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import About from '../../pages/About';
 
-// Mock static image import
-vi.mock('../../assets/mpb.png', () => ({ default: '/mock-mpb.png' }));
+// Mock responsive image import (`?responsive` Vite plugin runs at build/dev,
+// not under Vitest). Returns the ResponsiveImageSource shape.
+vi.mock('../../assets/mpb.png?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-mpb.png', width: 1500, height: 1500 },
+    avif: [{ src: '/mock-mpb.avif', width: 1500 }],
+    webp: [{ src: '/mock-mpb.webp', width: 1500 }],
+    width: 1500,
+    height: 1500,
+  },
+}));
 
 const renderAbout = () =>
   render(

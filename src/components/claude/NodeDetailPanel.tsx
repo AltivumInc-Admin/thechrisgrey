@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import gsap from 'gsap';
 import type { PipelineNodeData } from '../../data/architectureNodes';
+import Icon from '../icons/Icon';
 
 interface NodeDetailPanelProps {
   node: PipelineNodeData | null;
@@ -69,7 +70,7 @@ export function NodeDetailPanel({ node, onClose }: NodeDetailPanelProps) {
           className="text-altivum-silver hover:text-white transition-colors ml-4 shrink-0"
           aria-label="Close detail panel"
         >
-          <span className="material-icons text-xl">close</span>
+          <Icon name="close" className="text-xl" />
         </button>
       </div>
 

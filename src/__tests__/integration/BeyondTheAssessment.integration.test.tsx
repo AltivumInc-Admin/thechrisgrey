@@ -4,9 +4,26 @@ import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import BeyondTheAssessment from '../../pages/BeyondTheAssessment';
 
-// Mock static image imports
-vi.mock('../../assets/bta.png', () => ({ default: '/mock-bta.png' }));
-vi.mock('../../assets/reading.jpeg', () => ({ default: '/mock-reading.jpeg' }));
+// Mock responsive image imports (`?responsive` Vite plugin runs at build/dev,
+// not under Vitest). Each mock returns the ResponsiveImageSource shape.
+vi.mock('../../assets/bta.png?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-bta.png', width: 1500, height: 1500 },
+    avif: [{ src: '/mock-bta.avif', width: 1500 }],
+    webp: [{ src: '/mock-bta.webp', width: 1500 }],
+    width: 1500,
+    height: 1500,
+  },
+}));
+vi.mock('../../assets/reading.jpeg?responsive', () => ({
+  default: {
+    fallback: { src: '/mock-reading.jpeg', width: 1131, height: 1600 },
+    avif: [{ src: '/mock-reading.avif', width: 1131 }],
+    webp: [{ src: '/mock-reading.webp', width: 1131 }],
+    width: 1131,
+    height: 1600,
+  },
+}));
 
 // Mock the analytics tracker so click events do not touch PostHog in jsdom.
 vi.mock('../../utils/analytics', () => ({ trackEvent: vi.fn() }));

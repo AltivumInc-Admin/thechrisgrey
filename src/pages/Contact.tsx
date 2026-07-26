@@ -16,6 +16,7 @@ import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
 import FAQSection from '../components/aeo/FAQSection';
 import { AEO_SUMMARIES } from '../data/aeoSummaries';
 import { slugify } from '../utils/slugify';
+import Icon from '../components/icons/Icon';
 
 const log = createLogger('Contact');
 
@@ -353,7 +354,7 @@ const Contact = () => {
                     key={topic.title}
                     className="p-5 bg-altivum-dark/50 border border-white/5 hover:border-altivum-gold/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-altivum-gold/5 transition-all duration-300"
                   >
-                    <span className="material-icons text-altivum-gold mb-3 block">{topic.icon}</span>
+                    <Icon name={topic.icon} className="text-altivum-gold mb-3 block" />
                     <h3 id={slugify(topic.title)} className="text-white text-sm font-medium mb-1">
                       {topic.title}
                     </h3>
@@ -378,7 +379,7 @@ const Contact = () => {
                   'Veteran organization events',
                 ].map((item) => (
                   <li key={item} className="flex items-center text-altivum-silver">
-                    <span className="material-icons text-altivum-gold mr-3 text-sm">arrow_forward</span>
+                    <Icon name="arrow_forward" className="text-altivum-gold mr-3 text-sm" />
                     {item}
                   </li>
                 ))}
@@ -397,7 +398,7 @@ const Contact = () => {
                   download
                   className="inline-flex items-center gap-2 px-5 py-3 bg-altivum-gold/10 border border-altivum-gold text-altivum-gold text-sm font-medium uppercase tracking-wider hover:bg-altivum-gold hover:text-altivum-dark transition-all duration-300"
                 >
-                  <span className="material-icons text-lg">download</span>
+                  <Icon name="download" className="text-lg" />
                   Download Press Kit
                 </a>
               </div>
@@ -705,7 +706,7 @@ const Contact = () => {
                     <div className="flex items-start gap-6">
                       <div className="w-12 h-12 flex items-center justify-center text-altivum-gold/50 group-hover:text-altivum-gold transition-colors">
                         {channel.kind === 'icon' ? (
-                          <span className="material-icons text-3xl">{channel.icon}</span>
+                          <Icon name={channel.icon} className="text-3xl" />
                         ) : (
                           <SocialIcon platform={channel.platform} />
                         )}
@@ -735,19 +736,19 @@ const Contact = () => {
                 </h3>
                 <ul className="space-y-3">
                   <li className="flex items-center text-altivum-silver">
-                    <span className="material-icons text-altivum-gold mr-3 text-sm">check_circle</span>
+                    <Icon name="check_circle" className="text-altivum-gold mr-3 text-sm" />
                     Virtual consultations available
                   </li>
                   <li className="flex items-center text-altivum-silver">
-                    <span className="material-icons text-altivum-gold mr-3 text-sm">check_circle</span>
+                    <Icon name="check_circle" className="text-altivum-gold mr-3 text-sm" />
                     Speaking engagements
                   </li>
                   <li className="flex items-center text-altivum-silver">
-                    <span className="material-icons text-altivum-gold mr-3 text-sm">check_circle</span>
+                    <Icon name="check_circle" className="text-altivum-gold mr-3 text-sm" />
                     Podcast guest appearances
                   </li>
                   <li className="flex items-center text-altivum-silver">
-                    <span className="material-icons text-altivum-gold mr-3 text-sm">check_circle</span>
+                    <Icon name="check_circle" className="text-altivum-gold mr-3 text-sm" />
                     Strategic consulting
                   </li>
                 </ul>
@@ -784,12 +785,12 @@ const Contact = () => {
               className="absolute top-4 right-4 text-altivum-silver hover:text-white transition-colors"
               aria-label="Close"
             >
-              <span className="material-icons text-2xl">close</span>
+              <Icon name="close" className="text-2xl" />
             </button>
 
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-altivum-gold/10 border-2 border-altivum-gold mb-6">
-                <span className="material-icons text-altivum-gold text-4xl">check_circle</span>
+                <Icon name="check_circle" className="text-altivum-gold text-4xl" />
               </div>
 
               <h3 id="contact-modal-title" className="text-white mb-4" style={typography.cardTitleLarge}>

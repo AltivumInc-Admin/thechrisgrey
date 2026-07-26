@@ -1,3 +1,4 @@
+import Icon from '../icons/Icon';
 interface IconButtonProps {
   icon: string;
   label: string;
@@ -18,18 +19,14 @@ export const IconButton = ({ icon, label, onClick, href, className = '' }: IconB
         target="_blank"
         rel="noopener noreferrer"
       >
-        <span className="material-icons" aria-hidden="true">
-          {icon}
-        </span>
+        <Icon name={icon} aria-hidden="true" />
       </a>
     );
   }
 
   return (
     <button onClick={onClick} aria-label={label} className={`${baseClasses} ${className}`}>
-      <span className="material-icons" aria-hidden="true">
-        {icon}
-      </span>
+      <Icon name={icon} aria-hidden="true" />
     </button>
   );
 };

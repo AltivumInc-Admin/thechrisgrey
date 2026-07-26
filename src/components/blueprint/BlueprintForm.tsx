@@ -11,6 +11,7 @@ import {
   type ComplianceRegime,
   type PreferredLanguage,
 } from '../../types/blueprint';
+import Icon from '../icons/Icon';
 
 interface BlueprintFormProps {
   onSubmit: (input: BlueprintInput) => void;
@@ -142,9 +143,7 @@ export function BlueprintForm({ onSubmit, isGenerating, disabled }: BlueprintFor
           aria-expanded={showAdvanced}
           aria-controls="advanced-fields"
         >
-          <span className="material-icons text-sm mr-1" aria-hidden="true">
-            {showAdvanced ? 'expand_less' : 'expand_more'}
-          </span>
+          <Icon name={showAdvanced ? 'expand_less' : 'expand_more'} className="text-sm mr-1" aria-hidden="true" />
           {showAdvanced ? 'Hide' : 'Show'} optional details
         </button>
       </div>

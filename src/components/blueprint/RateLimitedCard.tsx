@@ -1,5 +1,6 @@
 import { typography } from '../../utils/typography';
 import { Waitlist } from './Waitlist';
+import Icon from '../icons/Icon';
 
 interface RateLimitedCardProps {
   message: string;
@@ -10,9 +11,7 @@ export function RateLimitedCard({ message }: RateLimitedCardProps) {
     <div className="space-y-6">
       <div className="p-6 rounded-lg border border-altivum-gold/30 bg-altivum-navy/60" role="status" aria-live="polite">
         <div className="flex items-start gap-3">
-          <span className="material-icons text-altivum-gold shrink-0" aria-hidden="true">
-            hourglass_bottom
-          </span>
+          <Icon name="hourglass_bottom" className="text-altivum-gold shrink-0" aria-hidden="true" />
           <div className="min-w-0">
             <h3 className="text-white mb-2" style={typography.cardTitleSmall}>
               You've used your free blueprint for this 30-day window.
