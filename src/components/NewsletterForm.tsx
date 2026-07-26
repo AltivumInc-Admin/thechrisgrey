@@ -1,7 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { typography } from '../utils/typography';
 import { isValidEmail } from '../utils/validators';
-import { useFocusTrap } from '../hooks';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { trackEvent } from '../utils/analytics';
 import { createLogger } from '../utils/logger';
 import { withTraceId } from '../utils/traceId';

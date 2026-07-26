@@ -29,4 +29,14 @@ describe('Testimonials', () => {
     render(<Testimonials />);
     expect(screen.getByText(/Christian brings the same clarity/)).toBeInTheDocument();
   });
+
+  it('section uses content-visibility: auto for below-fold rendering (VAL-PERF-010)', () => {
+    // The Testimonials section is always below the fold (social proof), so it
+    // carries the cv-below-fold utility which applies content-visibility: auto
+    // + contain-intrinsic-size to skip rendering work until scrolled near.
+    const { container } = render(<Testimonials items={[{ quote: 'Great work.', author: 'Jane Doe', role: 'CEO' }]} />);
+    const section = container.querySelector('section');
+    expect(section).toBeInTheDocument();
+    expect(section?.className).toContain('cv-below-fold');
+  });
 });

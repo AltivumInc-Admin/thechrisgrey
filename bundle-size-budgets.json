@@ -1,9 +1,9 @@
 {
-  "description": "Gzipped size budgets (KB) for the frontend production bundle, enforced by scripts/track-bundle-size.mjs after `vite build`. Per-chunk budgets guard the named code-split groups from vite.config.ts; the totals guard against unnoticed dependency bloat across all emitted JS/CSS. Budgets are gzipped (what CloudFront transfers) and carry deliberate headroom over observed sizes. Raise a budget only when a chunk grows for a justified reason.",
+  "description": "Gzipped size budgets (KB) for the frontend production bundle, enforced by scripts/track-bundle-size.mjs after `vite build`. Per-chunk budgets guard the named code-split groups from vite.config.ts; the totals guard against unnoticed dependency bloat across all emitted JS/CSS. Budgets are gzipped (what CloudFront transfers) and carry deliberate headroom over observed sizes. Raise a budget only when a chunk grows for a justified reason. The entry (index) budget was raised from 45 to 55 KB after lazy-loading the chat widget panel (VAL-PERF-013): rolldown merged the previously separate SEO/Icon/hooks shared chunks into the entry, so the entry grew but the total initial JS gzip dropped ~12 KB (191 KB -> 179 KB) and the chat engine is now deferred until the widget opens.",
   "totalJsGzipKB": 2100,
   "totalCssGzipKB": 25,
   "chunks": {
-    "entry (index)": { "match": "index-", "ext": "js", "maxGzipKB": 45 },
+    "entry (index)": { "match": "index-", "ext": "js", "maxGzipKB": 55 },
     "vendor (react)": { "match": "vendor-", "ext": "js", "maxGzipKB": 80 },
     "router": { "match": "router-", "ext": "js", "maxGzipKB": 30 },
     "sanity": { "match": "sanity-", "ext": "js", "maxGzipKB": 55 },

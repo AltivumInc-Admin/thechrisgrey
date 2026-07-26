@@ -156,11 +156,14 @@ const Home = () => {
       <Testimonials />
 
       {/* Visible FAQ — mirrors the FAQPage JSON-LD emitted by <SEO faq={homeFAQs}>
-          so the DOM text and structured data agree (VAL-AEO-004). */}
-      <FAQSection faqs={homeFAQs} />
+          so the DOM text and structured data agree (VAL-AEO-004). Below-fold:
+          content-visibility: auto skips render until scrolled near
+          (VAL-PERF-010). */}
+      <FAQSection faqs={homeFAQs} className="cv-below-fold" />
 
-      {/* CTA Section */}
-      <section className="bg-linear-to-br from-altivum-navy to-altivum-blue py-16 sm:py-24 md:py-32 lg:py-50">
+      {/* CTA Section. Below-fold: content-visibility: auto skips render until
+          scrolled near (VAL-PERF-010). */}
+      <section className="cv-below-fold bg-linear-to-br from-altivum-navy to-altivum-blue py-16 sm:py-24 md:py-32 lg:py-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 id={slugify("Let's Connect")} className="text-white mb-4 sm:mb-6" style={typography.sectionHeader}>
             Let's Connect

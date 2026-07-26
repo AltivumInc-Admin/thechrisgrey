@@ -80,6 +80,20 @@
   text-wrap: balance;
 }
 
+/* Below-fold content-visibility utility (VAL-PERF-010).
+   `content-visibility: auto` lets the browser skip rendering/layout/paint for
+   sections off-screen until they are scrolled near, reducing initial render
+   cost and INP on long pages. `contain-intrinsic-size: auto <px>` provides a
+   placeholder height so the scrollbar is stable before the section renders,
+   then remembers the actual rendered size after first paint (the `auto`
+   keyword). Applied to below-fold sections (Testimonials, FAQ, CTA) that do
+   not contribute to the first viewport. Safe with view transitions because
+   the section still renders once scrolled into view. */
+@utility cv-below-fold {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
+
 @utility link-underline {
   position: relative;
 

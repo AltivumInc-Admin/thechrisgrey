@@ -22,7 +22,7 @@ const Testimonials = ({
   if (!items || items.length === 0) return null;
 
   return (
-    <section className="py-20 sm:py-24 border-t border-white/5">
+    <section className="cv-below-fold py-20 sm:py-24 border-t border-white/5">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <div className="inline-block px-4 py-1 bg-altivum-gold/10 border border-altivum-gold/20 rounded-full mb-6">

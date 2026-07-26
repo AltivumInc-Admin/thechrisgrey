@@ -44,7 +44,9 @@ describe('ChatWidget', () => {
     renderWidget();
 
     await user.click(screen.getByTestId('widget-button'));
-    expect(screen.getByTestId('widget-panel')).toBeInTheDocument();
+    // The panel is lazy-loaded (VAL-PERF-013), so it appears asynchronously
+    // once the dynamic chunk resolves. findByTestId waits for it.
+    expect(await screen.findByTestId('widget-panel')).toBeInTheDocument();
   });
 
   it('should close the panel when button is toggled again', async () => {
@@ -52,7 +54,7 @@ describe('ChatWidget', () => {
     renderWidget();
 
     await user.click(screen.getByTestId('widget-button'));
-    expect(screen.getByTestId('widget-panel')).toBeInTheDocument();
+    expect(await screen.findByTestId('widget-panel')).toBeInTheDocument();
 
     await user.click(screen.getByTestId('widget-button'));
     expect(screen.queryByTestId('widget-panel')).not.toBeInTheDocument();
@@ -63,7 +65,7 @@ describe('ChatWidget', () => {
     renderWidget();
 
     await user.click(screen.getByTestId('widget-button'));
-    expect(screen.getByTestId('widget-panel')).toBeInTheDocument();
+    expect(await screen.findByTestId('widget-panel')).toBeInTheDocument();
 
     await user.click(screen.getByText('Close Panel'));
     expect(screen.queryByTestId('widget-panel')).not.toBeInTheDocument();

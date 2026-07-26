@@ -62,14 +62,20 @@ customHeaders:
     headers:
       - key: 'Cache-Control'
         value: 'public, max-age=31536000, immutable'
+  # HTML: `no-cache, must-revalidate` (NOT `no-store`) preserves bfcache
+  # eligibility (VAL-PERF-009). `no-store` disables back/forward cache in
+  # Chromium because the page is treated as non-cacheable; `no-cache` still
+  # revalidates with the origin on navigation but lets the browser keep a
+  # stale copy for instant bfcache restore. Hashed assets below remain
+  # immutable for a year.
   - pattern: '*.html'
     headers:
       - key: 'Cache-Control'
-        value: 'no-cache, no-store, must-revalidate'
+        value: 'no-cache, must-revalidate'
   - pattern: 'index.html'
     headers:
       - key: 'Cache-Control'
-        value: 'no-cache, no-store, must-revalidate'
+        value: 'no-cache, must-revalidate'
   - pattern: '**/*.png'
     headers:
       - key: 'Cache-Control'

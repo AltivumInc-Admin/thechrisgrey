@@ -83,15 +83,37 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Cloudflare Web Analytics -->
+    <!-- Cloudflare Web Analytics.
+         Cloudflare's beacon.min.js is served from an unversioned URL that
+         Cloudflare updates globally (ETag rotates with each release), so it
+         has no stable hash to pin via SRI. It is mitigated by the CSP
+         script-src allowlist (customHttp.yml) which restricts execution to
+         static.cloudflareinsights.com. `defer` keeps it off the critical
+         render path (VAL-PERF-012). -->
     <script
       defer
       src="https://static.cloudflareinsights.com/beacon.min.js"
-      data-cf-beacon='{"token": "dce081f277f9412c9cb0d916e2d76b60"}'
+      data-cf-beacon='{"token": "********************************"}'
     ></script>
 
-    <!-- Plausible Analytics (privacy-friendly, no cookies) -->
-    <script async src="https://plausible.io/js/pa-bQzxzh5KzDB8jWsj-fPb8.js"></script>
-    <script src="/plausible-init.js"></script>
+    <!-- Plausible Analytics (privacy-friendly, no cookies).
+         The filename is hash-derived and stable per-site, so an SRI hash is
+         pinned (VAL-PERF-014): if the CDN is compromised and the bytes
+         change, the browser refuses to execute the tampered script.
+         `async` keeps it non-render-blocking; `crossorigin="anonymous"` is
+         required for the integrity check (Plausible serves
+         Access-Control-Allow-Origin: *). `defer` is unnecessary alongside
+         `async` (async wins for an external script). -->
+    <script
+      async
+      integrity="sha384-q9y5VkohSxIzDbobAXX3qmh75XQ5YEiK6z9XTygIc78qrxOAFCl9ruJYtQ7eQHCQ"
+      crossorigin="anonymous"
+      src="https://plausible.io/js/pa-bQzxzh5KzDB8jWsj-fPb8.js"
+    ></script>
+    <!-- plausible-init.js sets up the stub queue before the analytics script
+         loads. `defer` keeps it off the critical render path (VAL-PERF-012);
+         it executes after parse but before DOMContentLoaded, in order before
+         the deferred Cloudflare beacon. -->
+    <script defer src="/plausible-init.js"></script>
   </body>
 </html>
