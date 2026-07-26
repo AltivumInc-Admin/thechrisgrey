@@ -30,14 +30,20 @@ interface ServiceData {
 
 /**
  * Enhanced Person schema with E-E-A-T signals
+ *
+ * @param options.image - Optional image URL override for the Person's `image`
+ *   field. Defaults to the shared `/og.png`. Pass the per-route og:image so the
+ *   JSON-LD primary image and the og:image meta tag resolve to the same asset
+ *   (VAL-SD-010). For routes with a page-specific schema image (Article,
+ *   PodcastSeries), that image is primary and already matches og:image.
  */
-export const buildPersonSchema = () => ({
+export const buildPersonSchema = (options?: { image?: string }) => ({
   '@type': 'Person',
   '@id': `${SITE_URL}/#person`,
   name: 'Christian Perez',
   alternateName: ['thechrisgrey', 'Chris Perez'],
   url: SITE_URL,
-  image: `${SITE_URL}/og.png`,
+  image: options?.image ?? `${SITE_URL}/og.png`,
   description:
     'Founder & CEO of Altivum Inc., Former Green Beret (18D), Bronze Star Recipient, Host of The Vector Podcast, and Author of Beyond the Assessment.',
   jobTitle: 'Founder & CEO',

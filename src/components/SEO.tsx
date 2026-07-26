@@ -69,7 +69,12 @@ export const SEO = ({
 
   // Build default structured data graph
   const defaultGraph: Record<string, unknown>[] = [
-    buildPersonSchema(),
+    // Person.image is aligned with the per-route og:image so the JSON-LD
+    // primary image and the og:image meta tag resolve to the same asset
+    // (VAL-SD-010). For routes with a page-specific schema image (Article,
+    // PodcastSeries, etc.), that page-specific image is primary and already
+    // matches og:image; for all other routes Person.image is primary.
+    buildPersonSchema({ image: ogImage }),
     buildOrganizationSchema(),
     buildWebSiteSchema(),
   ];
@@ -120,7 +125,17 @@ export const SEO = ({
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
       {keywords && <meta name="keywords" content={keywords} />}
-      {noindex && <meta name="robots" content="noindex, nofollow" />}
+      {/* Robots meta is emitted on EVERY route so there is exactly one robots
+          directive per page (VAL-SEO-010). Indexable routes get the full
+          index, follow + max-image/snippet/video directive; noindex routes
+          (/chat, /admin, 404) get noindex, nofollow. This replaces the prior
+          static shell robots meta, which conflicted with noindex routes. */}
+      <meta
+        name="robots"
+        content={
+          noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
+        }
+      />
       <link rel="canonical" href={url} />
 
       {/* Open Graph / Facebook */}

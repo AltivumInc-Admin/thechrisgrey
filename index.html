@@ -7,19 +7,16 @@
 
     <!-- Primary Meta Tags -->
     <!-- IMPORTANT: keep ONLY invariant, non-per-page tags in this static shell.
-         Per-page title/description and ALL og:*/twitter:* title/description/image/
-         url/type/card tags are emitted per route by the <SEO> component
-         (react-helmet) and appear in each prerendered page's <head>. Anything
-         per-page duplicated here would ALSO precede helmet's tags in the snapshot,
-         and scrapers take the FIRST og:image / og:title / description — which let
-         the generic shell values silently win over the real per-route ones.
-         See src/components/SEO.tsx. -->
-    <title>Christian Perez - thechrisgrey</title>
+         Per-page title, description, robots meta, and all og/twitter title,
+         description, image, url, type, and card tags are emitted per route by
+         the SEO component (react-helmet) and appear in each prerendered page's
+         head. The per-page title tag and robots meta are intentionally NOT
+         duplicated here: a static shell title tag produced a duplicate title
+         in every prerendered page (VAL-SEO-006), and a static shell robots
+         meta conflicted with the noindex meta on /chat (VAL-SEO-010). The SEO
+         component emits the correct robots meta per route (index, follow, ...
+         for indexable routes; noindex, nofollow for /chat, /admin, 404). -->
     <meta name="author" content="Christian Perez" />
-
-    <!-- SEO & Crawler Directives -->
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-    <meta name="googlebot" content="index, follow" />
 
     <!-- PWA & Mobile Optimization -->
     <meta name="theme-color" content="#0A0F1C" />

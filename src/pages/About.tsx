@@ -25,7 +25,7 @@ const About = () => {
         keywords="Christian Perez bio, Green Beret, 18D, Special Forces Medic, Altivum founder, veteran entrepreneur, Bronze Star, 1st Special Forces Group"
         url="https://thechrisgrey.com/about"
         imageAlt="About Christian Perez — former Green Beret, Bronze Star recipient, and Founder of Altivum Inc."
-        type="profile"
+        type="website"
         faq={aboutFAQs}
         breadcrumbs={breadcrumbs}
         structuredData={[
@@ -154,8 +154,9 @@ const About = () => {
       {/* Credentials & Recognition — visible trust signals mirroring the
           Person / Organization JSON-LD (Bronze Star, Green Beret / 18D, AWS
           Community Builder, Anthropic Academy certifications, Veteran Business
-          of the Month). */}
-      <Credentials />
+          of the Month). The heading is phrased as a question so it counts
+          toward the question-heading ratio (VAL-AEO-003). */}
+      <Credentials heading="What credentials & recognition has Christian earned?" />
 
       {/* Visible FAQ — mirrors the FAQPage JSON-LD emitted by <SEO faq={aboutFAQs}>
           so the DOM text and structured data agree (VAL-AEO-004). */}
@@ -163,7 +164,7 @@ const About = () => {
 
       <NewsletterCTA
         source="about"
-        heading="Follow the work"
+        heading="Want to follow Christian's work?"
         blurb="I write about building with AI, the road from the military to tech, and lessons in leadership. Get new pieces in your inbox."
       />
     </div>

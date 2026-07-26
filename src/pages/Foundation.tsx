@@ -205,7 +205,7 @@ const Foundation = () => {
                   {area.ordinal}
                 </p>
                 <QuestionHeading as="h3" className="mb-4 group-hover:text-altivum-gold transition-colors">
-                  {area.name}
+                  {`Why ${area.name}?`}
                 </QuestionHeading>
                 <p className="text-altivum-silver" style={typography.bodyText}>
                   {area.description}
@@ -293,12 +293,12 @@ const Foundation = () => {
 
       <NewsletterCTA
         source="foundation"
-        heading="Follow the Foundation"
+        heading="Want to follow the Foundation?"
         blurb="Updates on veteran grants, program launches, and partnerships. We email rarely and never share your address."
       />
 
       <CrossLinkBand
-        heading="Explore more"
+        heading="Want to explore more?"
         eyebrow="Keep exploring"
         links={[
           {

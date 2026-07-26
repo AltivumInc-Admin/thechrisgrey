@@ -198,11 +198,11 @@ describe('SEO Integration Across Pages', () => {
       });
     });
 
-    it('sets OG type to article', async () => {
+    it('sets OG type to website (blog listing is non-article — VAL-SEO-007)', async () => {
       renderPage(Blog, '/blog');
       await waitFor(() => {
         const ogType = document.querySelector('meta[property="og:type"]');
-        expect(ogType).toHaveAttribute('content', 'article');
+        expect(ogType).toHaveAttribute('content', 'website');
       });
     });
   });

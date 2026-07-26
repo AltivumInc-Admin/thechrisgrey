@@ -129,6 +129,14 @@ describe('schemaViolations', () => {
         '@id': 'https://thechrisgrey.com/blog/#collectionpage',
         url: 'https://thechrisgrey.com/blog',
         name: 'Blog',
+        hasPart: [
+          {
+            '@type': 'Article',
+            '@id': 'https://thechrisgrey.com/blog/foo/#article',
+            headline: 'Foo',
+            url: 'https://thechrisgrey.com/blog/foo',
+          },
+        ],
       },
     ]);
     expect(schemaViolations(html, '/blog')).toEqual([]);
@@ -138,6 +146,20 @@ describe('schemaViolations', () => {
     const html = graphFixture([websiteWithSearchAction]);
     const v = schemaViolations(html, '/blog');
     expect(v.some((x) => x.includes('"CollectionPage" missing'))).toBe(true);
+  });
+
+  it('flags a CollectionPage on /blog with no hasPart references (VAL-SD-004)', () => {
+    const html = graphFixture([
+      websiteWithSearchAction,
+      {
+        '@type': 'CollectionPage',
+        '@id': 'https://thechrisgrey.com/blog/#collectionpage',
+        url: 'https://thechrisgrey.com/blog',
+        name: 'Blog',
+      },
+    ]);
+    const v = schemaViolations(html, '/blog');
+    expect(v.some((x) => x.includes('missing hasPart'))).toBe(true);
   });
 
   it('flags a missing PodcastEpisode on /podcast (VAL-SD-005)', () => {
@@ -163,6 +185,36 @@ describe('schemaViolations', () => {
     const v = schemaViolations(html, '/aws');
     expect(v.some((x) => x.includes('"EducationalOccupationalCredential" missing'))).toBe(true);
     expect(v.some((x) => x.includes('"FAQPage" missing'))).toBe(true);
+  });
+
+  it('flags an EducationalOccupationalCredential on /aws missing the url field (VAL-SD-006)', () => {
+    const html = graphFixture([
+      websiteWithSearchAction,
+      {
+        '@type': 'EducationalOccupationalCredential',
+        name: 'AWS Community Builder',
+        credentialCategory: 'Community Program Membership',
+        recognizedBy: { '@type': 'Organization', name: 'Amazon Web Services' },
+      },
+      { '@type': 'FAQPage', mainEntity: [] },
+    ]);
+    const v = schemaViolations(html, '/aws');
+    expect(v.some((x) => x.includes('missing url field'))).toBe(true);
+  });
+
+  it('passes /aws when the EducationalOccupationalCredential has a url (VAL-SD-006)', () => {
+    const html = graphFixture([
+      websiteWithSearchAction,
+      {
+        '@type': 'EducationalOccupationalCredential',
+        name: 'AWS Community Builder',
+        credentialCategory: 'Community Program Membership',
+        recognizedBy: { '@type': 'Organization', name: 'Amazon Web Services' },
+        url: 'https://aws.amazon.com/developer/community/community-builders/',
+      },
+      { '@type': 'FAQPage', mainEntity: [] },
+    ]);
+    expect(schemaViolations(html, '/aws')).toEqual([]);
   });
 
   it('flags a missing FAQPage on /links (VAL-SD-007)', () => {
@@ -407,5 +459,45 @@ describe('seoMetaViolations', () => {
     const html = seoFixture({ images: [{ alt: 'A descriptive alt' }] });
     const v = seoMetaViolations(html, '/about');
     expect(v.filter((x) => x.includes('VAL-SEO-011'))).toEqual([]);
+  });
+
+  it('flags og:type that is not "website" on a static route (VAL-SEO-007)', () => {
+    const html = seoFixture().replace('content="website"', 'content="profile"');
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('og:type is "profile"'))).toBe(true);
+  });
+
+  it('flags a Person.image that does not match og:image (VAL-SD-010)', () => {
+    const graph = {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Person',
+          '@id': 'https://thechrisgrey.com/#person',
+          name: 'Christian Perez',
+          image: 'https://thechrisgrey.com/og.png',
+        },
+      ],
+    };
+    const html = seoFixture() + `<script type="application/ld+json">${JSON.stringify(graph)}</script>`;
+    const v = seoMetaViolations(html, '/about');
+    expect(v.some((x) => x.includes('Person.image') && x.includes('VAL-SD-010'))).toBe(true);
+  });
+
+  it('does not flag when Person.image matches og:image (VAL-SD-010)', () => {
+    const graph = {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Person',
+          '@id': 'https://thechrisgrey.com/#person',
+          name: 'Christian Perez',
+          image: 'https://thechrisgrey.com/og/about.png',
+        },
+      ],
+    };
+    const html = seoFixture() + `<script type="application/ld+json">${JSON.stringify(graph)}</script>`;
+    const v = seoMetaViolations(html, '/about');
+    expect(v.filter((x) => x.includes('VAL-SD-010'))).toEqual([]);
   });
 });

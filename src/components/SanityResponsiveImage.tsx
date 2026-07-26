@@ -52,6 +52,11 @@ const SanityResponsiveImage = ({
     .auto('format')
     .url();
 
+  // An empty `alt` marks the image as decorative. Per VAL-SEO-011, decorative
+  // images must also carry role="presentation" or aria-hidden="true" so the
+  // prerender SEO gate and accessibility tooling recognize the intent.
+  const isDecorative = !alt.trim();
+
   return (
     <div
       className="relative overflow-hidden"
@@ -66,6 +71,7 @@ const SanityResponsiveImage = ({
         srcSet={srcSet}
         sizes={sizes}
         alt={alt}
+        {...(isDecorative ? { role: 'presentation', 'aria-hidden': 'true' } : {})}
         loading={priority ? 'eager' : 'lazy'}
         decoding={priority ? 'sync' : 'async'}
         fetchPriority={priority ? 'high' : undefined}

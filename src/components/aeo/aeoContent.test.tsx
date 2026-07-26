@@ -88,10 +88,10 @@ describe('FAQSection', () => {
     expect(answers).toEqual(faqs.map((f) => f.answer));
   });
 
-  it('gives each question h3 a stable slug-form id', () => {
+  it('gives each question h3 a stable slug-form id prefixed with faq-', () => {
     const { container } = render(<FAQSection faqs={faqs} />);
     const ids = Array.from(container.querySelectorAll('h3')).map((h) => h.id);
-    expect(ids).toEqual(['what-is-altivum-inc', 'who-founded-altivum']);
+    expect(ids).toEqual(['faq-what-is-altivum-inc', 'faq-who-founded-altivum']);
   });
 
   it('ids are unique within the section', () => {

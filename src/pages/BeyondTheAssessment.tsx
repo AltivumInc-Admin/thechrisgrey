@@ -27,7 +27,7 @@ const BeyondTheAssessment = () => {
         keywords="Beyond the Assessment, Christian Perez book, leadership book, special operations leadership, resilience, Green Beret author, military leadership"
         url="https://thechrisgrey.com/beyond-the-assessment"
         imageAlt="Beyond the Assessment — a book by Christian Perez on leadership and resilience"
-        type="book"
+        type="website"
         faq={bookFAQs}
         breadcrumbs={breadcrumbs}
         structuredData={[buildBookSchema()]}

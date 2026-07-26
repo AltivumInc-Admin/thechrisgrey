@@ -74,6 +74,32 @@ describe('SEO', () => {
     });
   });
 
+  it('emits an index, follow robots meta on indexable routes (VAL-SEO-010)', async () => {
+    renderSEO({ title: 'About', description: 'desc', url: 'https://thechrisgrey.com/about' });
+    await waitFor(() => {
+      const meta = document.querySelector('meta[name="robots"]');
+      expect(meta).toBeTruthy();
+      const content = meta?.getAttribute('content') || '';
+      expect(content).toContain('index');
+      expect(content).toContain('follow');
+      expect(content).not.toContain('noindex');
+    });
+  });
+
+  it('aligns Person.image with the per-route og:image (VAL-SD-010)', async () => {
+    renderSEO({ title: 'About', description: 'desc', url: 'https://thechrisgrey.com/about' });
+    await waitFor(() => {
+      const og = document.querySelector('meta[property="og:image"]');
+      expect(og).toBeTruthy();
+      const ogImage = og?.getAttribute('content');
+      const script = document.querySelector('script[type="application/ld+json"]');
+      expect(script).toBeTruthy();
+      const graph = JSON.parse(script!.textContent!);
+      const person = graph['@graph'].find((n: Record<string, unknown>) => n['@type'] === 'Person');
+      expect(person.image).toBe(ogImage);
+    });
+  });
+
   it('should set canonical link', async () => {
     renderSEO({ title: 'Test', description: 'desc', url: 'https://thechrisgrey.com/test' });
     await waitFor(() => {

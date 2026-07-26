@@ -20,6 +20,8 @@ describe('About Page Integration', () => {
   describe('Credentials & Recognition section', () => {
     it('renders a visible Credentials & Recognition heading', () => {
       renderAbout();
+      // The heading is phrased as a question (VAL-AEO-003) but still contains
+      // "credentials & recognition" so the section is discoverable.
       expect(screen.getByRole('heading', { level: 2, name: /credentials & recognition/i })).toBeInTheDocument();
     });
 

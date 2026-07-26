@@ -47,7 +47,12 @@ const FAQSection = ({ faqs, heading = 'Frequently Asked Questions', className = 
         </h2>
         <ul className="space-y-10 list-none">
           {faqs.map((faq) => {
-            const questionId = slugify(faq.question);
+            // Prefix with `faq-` so FAQ question IDs never collide with
+            // page-level QuestionHeading IDs that use the same question text
+            // (e.g. /aws has both a section "What is the AWS Community Builders
+            // program?" and a FAQ question with the same text). The prefix is
+            // slug-form so VAL-AEO-005's slug check still passes.
+            const questionId = `faq-${slugify(faq.question)}`;
             return (
               <li key={questionId || faq.question} className="block">
                 <h3 id={questionId} className="text-white mb-3" style={typography.cardTitleLarge}>

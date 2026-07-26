@@ -268,9 +268,15 @@ async function crawl() {
 
   console.log('[prerender] Prerendering routes...');
   const blogRoutes = await fetchBlogRoutes();
-  const routes = [...STATIC_ROUTES, ...blogRoutes];
+  // /chat is prerendered ONLY so its served HTML carries the noindex robots
+  // meta (VAL-SEO-010, VAL-AEO-008) without inheriting Home's index, follow
+  // meta from the SPA shell. It is intentionally NOT in STATIC_ROUTES (so the
+  // sitemap and validate-prerender-seo gate do not include it) — it is an app
+  // shell, not indexable content.
+  const PRERENDER_ONLY_ROUTES = ['/chat'];
+  const routes = [...STATIC_ROUTES, ...PRERENDER_ONLY_ROUTES, ...blogRoutes];
   console.log(
-    `[prerender] Routes to prerender: ${routes.length} (${STATIC_ROUTES.length} static + ${blogRoutes.length} blog)`,
+    `[prerender] Routes to prerender: ${routes.length} (${STATIC_ROUTES.length} static + ${PRERENDER_ONLY_ROUTES.length} app-shell + ${blogRoutes.length} blog)`,
   );
 
   // Snapshot the pristine SPA shell NOW, before the loop writes any route. The

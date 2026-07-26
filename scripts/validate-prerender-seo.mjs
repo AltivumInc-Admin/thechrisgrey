@@ -72,6 +72,12 @@ const EXPECTED_SCHEMA_TYPES_BY_ROUTE = {
   '/links': ['FAQPage'],
 };
 
+// Routes whose page-specific schema node must carry a hasPart array with post
+// references (VAL-SD-004). The /blog CollectionPage must reference the visible
+// post collection so AI crawlers and search engines see the collection's
+// members in the prerendered HTML.
+const HASPART_ROUTES = new Set(['/blog']);
+
 /**
  * Parse the single JSON-LD block from a prerendered HTML string and return the
  * @graph array (or [] when the block is missing/invalid). The caller already
@@ -125,6 +131,32 @@ export function schemaViolations(html, route) {
       action.target.urlTemplate.includes('/blog?q=');
     if (!isSearchAction) {
       violations.push('WebSite node missing valid SearchAction targeting /blog?q= (VAL-SD-009)');
+    }
+  }
+
+  // VAL-SD-004: CollectionPage on /blog must include hasPart references to the
+  // visible post collection (at least one Article reference). Without hasPart
+  // the collection node does not describe its members.
+  if (HASPART_ROUTES.has(route)) {
+    const collection = graph.find((n) => n['@type'] === 'CollectionPage');
+    if (collection) {
+      const hasPart = Array.isArray(collection.hasPart) ? collection.hasPart : null;
+      if (!hasPart || hasPart.length === 0) {
+        violations.push('CollectionPage missing hasPart post references (VAL-SD-004)');
+      }
+    }
+  }
+
+  // VAL-SD-006: EducationalOccupationalCredential nodes should carry a url
+  // field where available. /aws and /claude emit page-specific credentials.
+  if (route === '/aws' || route === '/claude') {
+    const creds = graph.filter((n) => n['@type'] === 'EducationalOccupationalCredential');
+    for (const cred of creds) {
+      if (!cred.url) {
+        violations.push(
+          `EducationalOccupationalCredential "${cred.name || '(unnamed)'}" missing url field (VAL-SD-006)`,
+        );
+      }
     }
   }
 
@@ -287,12 +319,12 @@ export function aeoViolations(html, route) {
  * Cross-route uniqueness (title/description) is handled by the caller in main().
  */
 
-// --- VAL-SEO-006: exactly one per-page <title> (ignoring the static shell) ---
-// The prerendered HTML may carry the static shell's <title>Christian Perez
-// - thechrisgrey</title> alongside the per-page <title> emitted by
-// react-helmet-async. The shell title is invariant and appears on every
-// route; we filter it out before counting so the check targets the per-page
-// title that actually varies by route.
+// --- VAL-SEO-006: exactly one per-page <title> ---
+// The static shell no longer carries a <title> (it was removed from index.html
+// to avoid a duplicate <title> in every prerendered page — VAL-SEO-006). The
+// shell title constant is retained as a safety net in case a stale shell is
+// ever served; it is filtered out before counting so the check targets the
+// per-page title emitted by react-helmet-async.
 const SHELL_TITLE = 'Christian Perez - thechrisgrey';
 
 function titleViolations(html) {
@@ -450,6 +482,37 @@ function imageAltViolations(html) {
   return violations;
 }
 
+// --- VAL-SEO-007: og:type must be "website" for static (non-article) routes ---
+// Blog posts (og:type=article) are not in STATIC_ROUTES, so every route the
+// validator checks must emit og:type=website. Catches the prior /about (profile),
+// /beyond-the-assessment (book), and /blog (article) misconfigurations.
+function ogTypeViolations(html) {
+  const violations = [];
+  const m = html.match(/<meta[^>]*property="og:type"[^>]*content="([^"]*)"/i);
+  if (m && m[1] !== 'website') {
+    violations.push(`og:type is "${m[1]}"; expected "website" for a non-article route (VAL-SEO-007)`);
+  }
+  return violations;
+}
+
+// --- VAL-SD-010: JSON-LD primary image must match og:image ---
+// For routes without a page-specific schema image (Article, PodcastSeries),
+// the Person.image is primary and must equal the og:image URL. This check
+// compares the Person node's image against the og:image meta tag.
+function schemaImageMatchViolations(html) {
+  const violations = [];
+  const ogMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"/i);
+  if (!ogMatch) return violations; // missing og:image is flagged elsewhere
+  const ogImage = ogMatch[1];
+  const graph = graphFromHtml(html);
+  if (graph.length === 0) return violations;
+  const person = graph.find((n) => n['@type'] === 'Person');
+  if (person && person.image && person.image !== ogImage) {
+    violations.push(`Person.image (${person.image}) does not match og:image (${ogImage}) (VAL-SD-010)`);
+  }
+  return violations;
+}
+
 export function seoMetaViolations(html, route) {
   const OG_TAGS = ['og:title', 'og:description', 'og:type', 'og:url', 'og:image', 'og:image:alt'];
   const TWITTER_TAGS = [
@@ -468,10 +531,12 @@ export function seoMetaViolations(html, route) {
     ...metaTagViolations(html, OG_TAGS, 'property', 'VAL-SEO-007'),
     ...metaTagViolations(html, TWITTER_TAGS, 'name', 'VAL-SEO-008'),
     ...twitterCardViolations(html),
+    ...ogTypeViolations(html),
     ...robotsMetaViolations(html, route),
     ...hreflangAndLocaleViolations(html),
     ...rssLinkViolations(html, route),
     ...imageAltViolations(html),
+    ...schemaImageMatchViolations(html),
   ];
 }
 

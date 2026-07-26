@@ -29,8 +29,13 @@ interface SocialLink {
 /**
  * A single social/contact card. Shared by the Personal and Company grids, which
  * were previously byte-identical markup.
+ *
+ * `idPrefix` namespaces the card's h3 id so the Personal and Company grids —
+ * which share profile names like "Facebook", "X (Twitter)", "LinkedIn", and
+ * "Email" — never produce duplicate slug-form IDs on the same page
+ * (VAL-AEO-005).
  */
-const SocialCard = ({ social }: { social: SocialLink }) => (
+const SocialCard = ({ social, idPrefix }: { social: SocialLink; idPrefix: string }) => (
   <a
     href={social.url}
     target="_blank"
@@ -43,7 +48,7 @@ const SocialCard = ({ social }: { social: SocialLink }) => (
       </div>
       <div className="flex-1 min-w-0">
         <h3
-          id={slugify(social.name)}
+          id={`${idPrefix}${slugify(social.name)}`}
           className="text-white group-hover:text-altivum-gold transition-colors"
           style={typography.cardTitleSmall}
         >
@@ -313,7 +318,7 @@ const Links = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {personalSocials.map((social) => (
-              <SocialCard key={social.name + social.handle} social={social} />
+              <SocialCard key={social.name + social.handle} social={social} idPrefix="personal-" />
             ))}
           </div>
         </div>
@@ -332,7 +337,7 @@ const Links = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {companySocials.map((social) => (
-              <SocialCard key={social.name + social.handle} social={social} />
+              <SocialCard key={social.name + social.handle} social={social} idPrefix="company-" />
             ))}
           </div>
         </div>

@@ -45,6 +45,10 @@ const AWS = () => {
             description:
               'Recognized builder in the AI Engineering track of the AWS Community Builders program, awarded by Amazon Web Services.',
             credentialCategory: 'Community Program Membership',
+            // The credential's own URL — the AWS Community Builders program page
+            // where this recognition is published (VAL-SD-006 requires a url
+            // where available).
+            url: 'https://aws.amazon.com/developer/community/community-builders/',
             recognizedBy: {
               name: 'Amazon Web Services',
               url: 'https://aws.amazon.com/developer/community/community-builders/',
