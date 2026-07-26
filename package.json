@@ -19,6 +19,7 @@
     "build": "node scripts/validate-env.js && node scripts/validate-endpoints.mjs && node scripts/generate-podcast-episodes.js && node scripts/generate-blog-previews.js && npm run lint && tsc && vite build && node scripts/generate-og-images.mjs && node scripts/prerender.js && node scripts/validate-prerender-seo.mjs && node scripts/generate-sitemap.js && node scripts/generate-rss.js",
     "build:analyze": "tsc && vite build && npx vite-bundle-visualizer",
     "bundle:size": "node scripts/track-bundle-size.mjs",
+    "lambda:size": "node scripts/track-lambda-size.mjs",
     "build:timed": "node scripts/track-build-performance.mjs",
     "build:compare": "node scripts/compare-build-performance.mjs",
     "lint": "eslint src --max-warnings 0",

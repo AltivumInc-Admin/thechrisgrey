@@ -43,6 +43,7 @@ rebuild in the container automatically.
 | `npm run build:timed`             | Build with per-step timing report                               |
 | `npm run build:compare`           | Compare build timing vs previous CI run                         |
 | `npm run bundle:size`             | Measure + budget-check the built frontend bundle                |
+| `npm run lambda:size`             | Measure + budget-check every Lambda deployment package          |
 | `npm run build:analyze`           | Interactive bundle treemap (vite-bundle-visualizer)             |
 | `npm run preview`                 | Serve the production build locally                              |
 | `npm run lint`                    | ESLint on `src/` (`--max-warnings 0`)                           |
@@ -98,6 +99,18 @@ emitted chunk and checks the named code-split groups + JS/CSS totals against
 CI job runs it against the freshly built dist output, reports gzip-size deltas
 vs the previous run, and uploads a `bundle-size-report` artifact. For an interactive
 treemap, run `npm run build:analyze`.
+
+Lambda deployment package sizes are measured and budgeted by `npm run
+lambda:size` (`scripts/track-lambda-size.mjs`). For each service it reinstalls
+the production dependency tree self-contained (`--no-workspaces`, matching
+`scripts/deploy-lambda.sh`), dereferences `lambda-shared` into `node_modules`,
+then measures the unzipped source + `node_modules` size and the `function.zip`
+size, checking both against per-service ceilings in `lambda-size-budgets.json`.
+AWS Lambda enforces 250 MB unzipped / 50 MB zipped hard limits; the budgets
+carry ~40% headroom under those, so a heavy-dependency regression fails the
+check before it breaks a deploy. Pass `--no-install` to measure an already
+installed tree (e.g. in CI after the Lambda install step), `--lambda <name>` to
+measure a single service, or `--output report.json` to emit a JSON report.
 
 ## Testing
 

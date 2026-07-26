@@ -1,0 +1,13 @@
+{
+  "description": "Lambda deployment package size budgets (MB), enforced by scripts/track-lambda-size.mjs. Unzipped is the production dependency tree + source that scripts/deploy-lambda.sh zips into function.zip; zipped is the function.zip size. AWS Lambda limits are 250 MB unzipped / 50 MB zipped. Budgets carry ~40% headroom over observed sizes so normal dependency growth is allowed but a heavy-dependency regression (e.g. a new SDK, a transitive bloat) fails the check before it breaks deploys. Raise a budget only when a service grows for a justified reason.",
+  "default": { "maxUnzippedMB": 150, "maxZippedMB": 45 },
+  "services": {
+    "chat-stream": { "maxUnzippedMB": 120, "maxZippedMB": 35 },
+    "blueprint": { "maxUnzippedMB": 90, "maxZippedMB": 28 },
+    "kb-builder": { "maxUnzippedMB": 90, "maxZippedMB": 28 },
+    "metrics": { "maxUnzippedMB": 75, "maxZippedMB": 22 },
+    "kb-sync": { "maxUnzippedMB": 70, "maxZippedMB": 21 },
+    "mcp-server": { "maxUnzippedMB": 85, "maxZippedMB": 27 },
+    "session-token": { "maxUnzippedMB": 70, "maxZippedMB": 21 }
+  }
+}
