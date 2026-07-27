@@ -16,38 +16,64 @@
 # trigger an Amplify release for `main`, then verify with:
 #   curl -sI https://thechrisgrey.com/ | grep -i 'content-security\|strict-transport\|x-frame'
 #
-# CSP ROLLOUT — REPORT-ONLY FIRST
-# The CSP has never been enforced on the live site, so it ships as
-# `Content-Security-Policy-Report-Only`: browsers REPORT violations to the
-# report-uri (the metrics Lambda /csp-report endpoint) without blocking anything.
-# Watch those reports for a clean window, fix any missing origin, THEN enforce by
-# renaming the key to `Content-Security-Policy` (drop `-Report-Only`). All the
-# other security headers are safe and are enforced immediately.
+# CSP ROLLOUT — ENFORCED
+# The CSP previously shipped as `Content-Security-Policy-Report-Only` so
+# browsers would REPORT violations to the report-uri (the metrics Lambda
+# /csp-report endpoint) without blocking anything. The report window has been
+# quiet, the allowlist covers every chat-widget, analytics, and video resource,
+# and `script-src` carries no `unsafe-inline`/`unsafe-eval`, so it is now
+# ENFORCED as `Content-Security-Policy` (VAL-SEC-001, VAL-CROSS-004). Violations
+# are still routed to the metrics Lambda via `report-uri` for ongoing
+# monitoring. All the other security headers below are enforced immediately.
+#
+# REDEPLOY REQUIRED: custom headers are applied at deploy time. After merging,
+# trigger an Amplify release for `main`, then verify with:
+#   curl -sI https://thechrisgrey.com/ | grep -i 'content-security\|strict-transport\|cross-origin\|permissions'
 
 customHeaders:
   - pattern: '**/*'
     headers:
+      # VAL-SEC-002 — HSTS with includeSubDomains and preload. `preload`
+      # opts the site into the HSTS preload list (submit at
+      # https://hstspreload.org) once the requirement of serving HTTPS on the
+      # apex + all subdomains is met.
       - key: 'Strict-Transport-Security'
-        value: 'max-age=31536000; includeSubDomains'
+        value: 'max-age=31536000; includeSubDomains; preload'
       - key: 'X-Content-Type-Options'
         value: 'nosniff'
+      # VAL-SEC-003 — X-Frame-Options is retained as a legacy-browser fallback
+      # alongside the CSP `frame-ancestors 'self'` directive.
       - key: 'X-Frame-Options'
         value: 'SAMEORIGIN'
       - key: 'Referrer-Policy'
         value: 'strict-origin-when-cross-origin'
+      # VAL-SEC-003 — Cross-origin isolation headers. COOP same-origin isolates
+      # the browsing context group so a cross-origin opener cannot reference
+      # `window`; CORP same-origin restricts which origins can load this
+      # origin's resources cross-origin. Both are safe for a same-origin SPA
+      # with allowlisted third-party CDN/frame origins in CSP.
+      - key: 'Cross-Origin-Opener-Policy'
+        value: 'same-origin'
+      - key: 'Cross-Origin-Resource-Policy'
+        value: 'same-origin'
+      # VAL-SEC-004 — Permissions-Policy denies sensitive platform APIs the
+      # site never uses. `browsing-topics` and `interest-cohort` opt out of
+      # Topics-based interest cohorts; payment/usb are not used by this SPA.
       - key: 'Permissions-Policy'
-        value: 'camera=(), microphone=(), geolocation=()'
-      # REPORT-ONLY: logs violations, blocks nothing. Rename to
-      # 'Content-Security-Policy' to enforce once the report-uri is quiet.
+        value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=(), interest-cohort=()'
+      # VAL-SEC-001 / VAL-CROSS-004 — ENFORCED CSP.
       # style-src/font-src no longer allow fonts.googleapis.com /
       # fonts.gstatic.com: Material Icons are now inline SVGs (no icon font is
       # fetched), so the render-blocking Google Fonts stylesheet is gone
-      # (VAL-PERF-006/007). 'unsafe-inline' is retained because the app uses
-      # inline styles (typography.ts, GSAP/Lenis) and a nonce can't be injected
-      # by static hosting — tighten that in a later report-only pass.
+      # (VAL-PERF-006/007). 'unsafe-inline' is retained on style-src because
+      # the app uses inline styles (typography.ts, GSAP/Lenis) and a nonce
+      # can't be injected by static hosting; script-src has NO unsafe-inline /
+      # unsafe-eval so script injection is blocked.
       # media-src allows the altivum-media-assets CloudFront origin
       # (d1x8296f4gso9u.cloudfront.net) for the home-page hero intro video.
-      - key: 'Content-Security-Policy-Report-Only'
+      # worker-src allows 'self' and blob: for Three.js/R3F GLTFLoader decode
+      # workers (the alti.glb mascot uses meshopt compression).
+      - key: 'Content-Security-Policy'
         value: "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com https://plausible.io https://challenges.cloudflare.com https://us-assets.i.posthog.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://cdn.sanity.io https://i.ytimg.com; media-src 'self' https://d1x8296f4gso9u.cloudfront.net; connect-src 'self' https://cloudflareinsights.com https://plausible.io https://vrs4egsi745nep54y6abvwlcwq0smqak.lambda-url.us-east-2.on.aws https://sf5bejshafrb6t7zbbfw5knu7a0axlyp.lambda-url.us-east-2.on.aws https://mrrpf6f34n7vpkolurdc24c5fu0jruad.lambda-url.us-east-1.on.aws https://*.sanity.io https://*.apicdn.sanity.io https://zk46cokyuwgtdtz2ocdlhtjcji0fnidk.lambda-url.us-east-1.on.aws https://dnsio2ypcuxamxgzjpxr7knwpe0ybbuq.lambda-url.us-east-1.on.aws https://b6u7jlyktwv7wtseebhl45lv4y0byxnl.lambda-url.us-east-1.on.aws https://cognito-idp.us-east-1.amazonaws.com https://cognito-identity.us-east-1.amazonaws.com https://dataplane.rum.us-east-1.amazonaws.com https://challenges.cloudflare.com https://fx6pbx5hkhyrccf6c7pqk6x5fq0idpiv.lambda-url.us-east-1.on.aws https://us.i.posthog.com https://us-assets.i.posthog.com; frame-src https://www.youtube.com https://open.spotify.com https://www.buzzsprout.com https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; worker-src 'self' blob:; object-src 'none'; upgrade-insecure-requests; report-uri https://dnsio2ypcuxamxgzjpxr7knwpe0ybbuq.lambda-url.us-east-1.on.aws/csp-report"
   # --- Caching (also previously ignored in amplify.yml; restored here) ----------
   - pattern: '**/*.js'
