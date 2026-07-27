@@ -1,7 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import YouTubeFacade from './YouTubeFacade';
+
+// Mock react-helmet-async so Helmet renders its children inline (into the
+// body) instead of hoisting <link> tags into document.head. This avoids the
+// React 19 + react-helmet-async + jsdom removeChild race during unmount
+// (documented in the SEO integration test) while still letting us assert the
+// preconnect <link> is emitted. Head-side behavior is covered by the SEO
+// integration test, which uses the real HelmetProvider.
+vi.mock('react-helmet-async', () => ({
+  Helmet: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+const renderFacade = (props: { videoId: string; title: string; embedParams?: string; startSeconds?: number }) =>
+  render(<YouTubeFacade {...props} />);
 
 describe('YouTubeFacade', () => {
   const defaultProps = {
@@ -13,9 +26,13 @@ describe('YouTubeFacade', () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   describe('initial render (facade state)', () => {
     it('should render a play button, not an iframe', () => {
-      render(<YouTubeFacade {...defaultProps} />);
+      renderFacade(defaultProps);
       const playButton = screen.getByRole('button', {
         name: /play test video/i,
       });
@@ -24,30 +41,36 @@ describe('YouTubeFacade', () => {
     });
 
     it('should show thumbnail image with maxresdefault URL', () => {
-      render(<YouTubeFacade {...defaultProps} />);
+      renderFacade(defaultProps);
       const img = screen.getByAltText('Test Video');
       expect(img).toBeInTheDocument();
       expect(img).toHaveAttribute('src', 'https://i.ytimg.com/vi/abc123/maxresdefault.jpg');
     });
 
     it('should set loading="lazy" on thumbnail image', () => {
-      render(<YouTubeFacade {...defaultProps} />);
+      renderFacade(defaultProps);
       const img = screen.getByAltText('Test Video');
       expect(img).toHaveAttribute('loading', 'lazy');
     });
 
     it('should have an accessible aria-label on the play button', () => {
-      render(<YouTubeFacade {...defaultProps} />);
+      renderFacade(defaultProps);
       const button = screen.getByRole('button', {
         name: 'Play Test Video',
       });
       expect(button).toBeInTheDocument();
     });
+
+    it('should inject a preconnect to i.ytimg.com (VAL-PERF-008)', () => {
+      renderFacade(defaultProps);
+      const preconnect = document.querySelector('link[rel="preconnect"][href="https://i.ytimg.com"]');
+      expect(preconnect, 'expected a preconnect to https://i.ytimg.com').not.toBeNull();
+    });
   });
 
   describe('thumbnail fallback', () => {
     it('should fall back to hqdefault.jpg on image error', () => {
-      render(<YouTubeFacade {...defaultProps} />);
+      renderFacade(defaultProps);
       const img = screen.getByAltText('Test Video');
 
       // Simulate image load error
@@ -57,7 +80,7 @@ describe('YouTubeFacade', () => {
     });
 
     it('should not change src if already using hqdefault', () => {
-      render(<YouTubeFacade {...defaultProps} />);
+      renderFacade(defaultProps);
       const img = screen.getByAltText('Test Video');
 
       // First error: switch to hqdefault
@@ -73,7 +96,7 @@ describe('YouTubeFacade', () => {
   describe('click to play (iframe state)', () => {
     it('should render an iframe after clicking the play button', async () => {
       const user = userEvent.setup();
-      render(<YouTubeFacade {...defaultProps} />);
+      renderFacade(defaultProps);
 
       const playButton = screen.getByRole('button', {
         name: /play test video/i,
@@ -87,7 +110,7 @@ describe('YouTubeFacade', () => {
 
     it('should include autoplay=1 in iframe src', async () => {
       const user = userEvent.setup();
-      render(<YouTubeFacade {...defaultProps} />);
+      renderFacade(defaultProps);
 
       await user.click(screen.getByRole('button', { name: /play test video/i }));
 
@@ -97,7 +120,7 @@ describe('YouTubeFacade', () => {
 
     it('should include embedParams in iframe src when provided', async () => {
       const user = userEvent.setup();
-      render(<YouTubeFacade {...defaultProps} embedParams="rel=0&modestbranding=1" />);
+      renderFacade({ ...defaultProps, embedParams: 'rel=0&modestbranding=1' });
 
       await user.click(screen.getByRole('button', { name: /play test video/i }));
 
@@ -107,7 +130,7 @@ describe('YouTubeFacade', () => {
 
     it('should remove the play button after clicking', async () => {
       const user = userEvent.setup();
-      render(<YouTubeFacade {...defaultProps} />);
+      renderFacade(defaultProps);
 
       await user.click(screen.getByRole('button', { name: /play test video/i }));
 
@@ -116,7 +139,7 @@ describe('YouTubeFacade', () => {
 
     it('should set sandbox attribute on iframe', async () => {
       const user = userEvent.setup();
-      render(<YouTubeFacade {...defaultProps} />);
+      renderFacade(defaultProps);
 
       await user.click(screen.getByRole('button', { name: /play test video/i }));
 
@@ -126,25 +149,35 @@ describe('YouTubeFacade', () => {
 
     it('should set allowFullScreen on iframe', async () => {
       const user = userEvent.setup();
-      render(<YouTubeFacade {...defaultProps} />);
+      renderFacade(defaultProps);
 
       await user.click(screen.getByRole('button', { name: /play test video/i }));
 
       const iframe = screen.getByTitle('Test Video');
       expect(iframe).toHaveAttribute('allowfullscreen', '');
     });
+
+    it('should keep the i.ytimg.com preconnect after clicking play', async () => {
+      const user = userEvent.setup();
+      renderFacade(defaultProps);
+
+      await user.click(screen.getByRole('button', { name: /play test video/i }));
+
+      const preconnect = document.querySelector('link[rel="preconnect"][href="https://i.ytimg.com"]');
+      expect(preconnect, 'preconnect should persist in the iframe state').not.toBeNull();
+    });
   });
 
   describe('with different videoId', () => {
     it('should use the correct videoId in thumbnail URL', () => {
-      render(<YouTubeFacade videoId="xyz789" title="Another Video" />);
+      renderFacade({ videoId: 'xyz789', title: 'Another Video' });
       const img = screen.getByAltText('Another Video');
       expect(img).toHaveAttribute('src', 'https://i.ytimg.com/vi/xyz789/maxresdefault.jpg');
     });
 
     it('should use the correct videoId in embed URL after click', async () => {
       const user = userEvent.setup();
-      render(<YouTubeFacade videoId="xyz789" title="Another Video" />);
+      renderFacade({ videoId: 'xyz789', title: 'Another Video' });
 
       await user.click(screen.getByRole('button', { name: /play another video/i }));
 

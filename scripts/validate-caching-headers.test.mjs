@@ -87,4 +87,51 @@ describe('caching and third-party script config', () => {
       expect(match[0], 'crossorigin attribute').toMatch(/\bcrossorigin="anonymous"/);
     });
   });
+
+  describe('VAL-PERF-008 — preconnect set covers used origins, no dead preconnects', () => {
+    // Origins that are preconnected globally in index.html (used on every
+    // page within 10s). Page-specific origins (cdn.sanity.io, i.ytimg.com,
+    // d1x8296f4gso9u.cloudfront.net) are injected per-route by SEO.tsx and
+    // therefore must NOT appear in the static shell.
+    const globalPreconnects = [
+      'https://plausible.io',
+      'https://static.cloudflareinsights.com',
+      'https://us.i.posthog.com',
+    ];
+    // Dead preconnects — no page requests these within 10s, so they must be
+    // absent from index.html entirely.
+    const deadPreconnects = [
+      'https://dataplane.rum.us-east-1.amazonaws.com',
+      'https://www.buzzsprout.com',
+      'https://cognito-idp.us-east-1.amazonaws.com',
+    ];
+    // Page-specific preconnects — injected per-route by SEO.tsx, so they must
+    // NOT be in the global shell (which would put them on every page).
+    const pageSpecificPreconnects = [
+      'https://cdn.sanity.io',
+      'https://i.ytimg.com',
+      'https://d1x8296f4gso9u.cloudfront.net',
+    ];
+
+    const preconnectHrefs = () =>
+      [...indexHtml.matchAll(/<link\s+[^>]*rel="preconnect"[^>]*href="([^"]+)"/gi)].map((m) => m[1]);
+
+    for (const origin of globalPreconnects) {
+      it(`index.html globally preconnects to ${origin}`, () => {
+        expect(preconnectHrefs(), `expected a global preconnect to ${origin}`).toContain(origin);
+      });
+    }
+
+    for (const origin of deadPreconnects) {
+      it(`index.html does NOT preconnect to dead origin ${origin}`, () => {
+        expect(preconnectHrefs(), `dead preconnect to ${origin} must be removed`).not.toContain(origin);
+      });
+    }
+
+    for (const origin of pageSpecificPreconnects) {
+      it(`index.html does NOT globally preconnect to page-specific origin ${origin}`, () => {
+        expect(preconnectHrefs(), `${origin} must be per-route, not global`).not.toContain(origin);
+      });
+    }
+  });
 });

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { ROUTES, ROUTES_BY_PATH, HOME_CONTEXT, NAVIGATION_CONFIG } from './routes';
+import { ROUTES, ROUTES_BY_PATH, HOME_CONTEXT, NAVIGATION_CONFIG, preconnectsForPath } from './routes';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -206,5 +206,80 @@ describe('Navigation ↔ ROUTES drift detector', () => {
 
   it('the About dropdown still has its 8 known items (regression guard)', () => {
     expect(NAVIGATION_CONFIG.aboutDropdown).toHaveLength(8);
+  });
+});
+
+/**
+ * Per-route preconnect metadata (VAL-PERF-008).
+ *
+ * `preconnectsForPath` resolves a pathname to the route-specific preconnect
+ * origins declared in `routes.ts`. The global, every-page preconnects
+ * (analytics beacons) live in `index.html` and are intentionally NOT returned
+ * here — only origins a specific route uses within 10s. This keeps the
+ * prerendered HTML for each page preconnecting to exactly the third-party
+ * origins it needs, with no dead or unused preconnects.
+ */
+describe('preconnectsForPath — per-route preconnect resolution (VAL-PERF-008)', () => {
+  it('Home preconnects to the CloudFront hero video origin only', () => {
+    expect(preconnectsForPath('/')).toEqual(['https://d1x8296f4gso9u.cloudfront.net']);
+  });
+
+  it('/podcast preconnects to the Sanity CDN (guest images)', () => {
+    expect(preconnectsForPath('/podcast')).toEqual(['https://cdn.sanity.io']);
+  });
+
+  it('/blog preconnects to the Sanity CDN (post card images)', () => {
+    expect(preconnectsForPath('/blog')).toEqual(['https://cdn.sanity.io']);
+  });
+
+  it('/blog/:slug posts preconnect to the Sanity CDN', () => {
+    expect(preconnectsForPath('/blog/some-post')).toEqual(['https://cdn.sanity.io']);
+  });
+
+  it('routes with no third-party origins return an empty list (no dead preconnects)', () => {
+    expect(preconnectsForPath('/about')).toEqual([]);
+    expect(preconnectsForPath('/contact')).toEqual([]);
+    expect(preconnectsForPath('/aws')).toEqual([]);
+    expect(preconnectsForPath('/claude')).toEqual([]);
+    expect(preconnectsForPath('/links')).toEqual([]);
+    expect(preconnectsForPath('/privacy')).toEqual([]);
+  });
+
+  it('normalizes trailing slashes (Amplify serves /podcast/)', () => {
+    expect(preconnectsForPath('/podcast/')).toEqual(['https://cdn.sanity.io']);
+    expect(preconnectsForPath('/blog/')).toEqual(['https://cdn.sanity.io']);
+  });
+
+  it('keeps the bare /blog path distinct from /blog/:slug posts', () => {
+    // Both resolve to cdn.sanity.io today, but the lookup keys differ —
+    // /blog is a direct key, /blog/<slug> resolves via the /blog/:slug route.
+    // This guards against a future change that accidentally drops one.
+    expect(preconnectsForPath('/blog')).toEqual(['https://cdn.sanity.io']);
+    expect(preconnectsForPath('/blog/another-post')).toEqual(['https://cdn.sanity.io']);
+  });
+
+  it('does NOT return i.ytimg.com (injected by YouTubeFacade, not route metadata)', () => {
+    // i.ytimg.com is injected by the YouTubeFacade component only on pages
+    // that actually render a YouTube facade, so it must never appear in the
+    // route-level preconnect set (which would put it on every blog post).
+    expect(preconnectsForPath('/podcast')).not.toContain('https://i.ytimg.com');
+    expect(preconnectsForPath('/blog/some-post')).not.toContain('https://i.ytimg.com');
+  });
+
+  it('does NOT return any dead preconnect origin', () => {
+    const dead = [
+      'https://dataplane.rum.us-east-1.amazonaws.com',
+      'https://www.buzzsprout.com',
+      'https://cognito-idp.us-east-1.amazonaws.com',
+    ];
+    for (const route of ROUTES.map((r) => r.path)) {
+      const origins = preconnectsForPath(route);
+      for (const origin of dead) {
+        expect(origins, `${route} must not preconnect to dead origin ${origin}`).not.toContain(origin);
+      }
+    }
+    for (const origin of dead) {
+      expect(preconnectsForPath('/'), `Home must not preconnect to dead origin ${origin}`).not.toContain(origin);
+    }
   });
 });

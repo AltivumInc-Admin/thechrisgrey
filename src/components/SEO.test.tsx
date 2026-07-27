@@ -1,15 +1,23 @@
-import { describe, it, expect } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, waitFor, cleanup } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { SEO } from './SEO';
 
 // react-helmet-async with HelmetProvider context works in server mode.
 // In jsdom, we check the document.head directly after render.
+//
+// SEO resolves per-route preconnects via useLocation(), so it must render
+// inside a Router. The initial route is a neutral path with no route-specific
+// preconnects (/about) so existing assertions are not affected by preconnect
+// <link> tags, and a dedicated test below covers the per-route injection.
 
 const renderSEO = (props: Parameters<typeof SEO>[0]) => {
   return render(
     <HelmetProvider>
-      <SEO {...props} />
+      <MemoryRouter initialEntries={['/about']}>
+        <SEO {...props} />
+      </MemoryRouter>
     </HelmetProvider>,
   );
 };
@@ -314,5 +322,66 @@ describe('SEO', () => {
     const alternates = document.querySelectorAll('link[rel="alternate"]');
     // No alternate links should be emitted by the SEO component (RSS is in the shell)
     expect(alternates).toHaveLength(0);
+  });
+
+  describe('per-route preconnect injection (VAL-PERF-008)', () => {
+    const renderSEOAt = (route: string, props: Parameters<typeof SEO>[0]) =>
+      render(
+        <HelmetProvider>
+          <MemoryRouter initialEntries={[route]}>
+            <SEO {...props} />
+          </MemoryRouter>
+        </HelmetProvider>,
+      );
+
+    afterEach(() => {
+      // React 19 + react-helmet-async + jsdom: Helmet's head-tag teardown
+      // during unmount can throw removeChild on already-detached nodes. Match
+      // the SEO integration test pattern: clear the tags Helmet injected, then
+      // run cleanup() in try/catch so the unmount race never fails the test.
+      document.head.querySelectorAll('link[rel="preconnect"]').forEach((el) => el.remove());
+      try {
+        cleanup();
+      } catch {
+        // ignore removeChild errors from Helmet + React 19 unmount race
+      }
+    });
+
+    it('injects a preconnect to cdn.sanity.io when the route is /blog', async () => {
+      renderSEOAt('/blog', { title: 'Blog', description: 'desc', url: 'https://thechrisgrey.com/blog' });
+      await waitFor(() => {
+        expect(document.title).toBe('Blog | Christian Perez');
+      });
+      const preconnect = document.head.querySelector('link[rel="preconnect"][href="https://cdn.sanity.io"]');
+      expect(preconnect, '/blog should preconnect to cdn.sanity.io').not.toBeNull();
+    });
+
+    it('injects a preconnect to cdn.sanity.io for a /blog/:slug post', async () => {
+      renderSEOAt('/blog/some-post', {
+        title: 'Post',
+        description: 'desc',
+        url: 'https://thechrisgrey.com/blog/some-post',
+      });
+      await waitFor(() => {
+        expect(document.title).toBe('Post | Christian Perez');
+      });
+      const preconnect = document.head.querySelector('link[rel="preconnect"][href="https://cdn.sanity.io"]');
+      expect(preconnect, '/blog/:slug should preconnect to cdn.sanity.io').not.toBeNull();
+    });
+
+    it('does NOT inject cdn.sanity.io or CloudFront preconnects on /about', async () => {
+      renderSEOAt('/about', { title: 'About', description: 'desc', url: 'https://thechrisgrey.com/about' });
+      await waitFor(() => {
+        expect(document.title).toBe('About | Christian Perez');
+      });
+      expect(
+        document.head.querySelector('link[rel="preconnect"][href="https://cdn.sanity.io"]'),
+        '/about must not preconnect to cdn.sanity.io',
+      ).toBeNull();
+      expect(
+        document.head.querySelector('link[rel="preconnect"][href="https://d1x8296f4gso9u.cloudfront.net"]'),
+        '/about must not preconnect to the CloudFront video origin',
+      ).toBeNull();
+    });
   });
 });

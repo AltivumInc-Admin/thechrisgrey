@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   buildPersonSchema,
@@ -8,6 +9,7 @@ import {
   buildBreadcrumbSchema,
 } from '../utils/schemas';
 import { ogImageForUrl } from '../utils/ogCards';
+import { preconnectsForPath } from '../routes';
 
 interface BreadcrumbItem {
   name: string;
@@ -66,6 +68,16 @@ export const SEO = ({
   // og:image:alt / twitter:image:alt (VAL-SEO-007). A non-empty descriptive
   // default keeps every route compliant even when the page doesn't override.
   const ogImageAlt = imageAlt?.trim() ? imageAlt.trim() : `${fullTitle} — Christian Perez (@thechrisgrey)`;
+
+  // Per-route preconnect origins (VAL-PERF-008). The global, every-page
+  // preconnects (analytics beacons) live in index.html; this resolves only the
+  // route-specific origins declared in src/routes.ts so each prerendered page
+  // preconnects to exactly the third-party origins it uses within 10 seconds.
+  // `useLocation` gives the live pathname (the `url` prop is the canonical URL,
+  // which for blog posts is `/blog/<slug>` — the same value, but `useLocation`
+  // is the single resolver for dynamic `/blog/:slug` matching in routes.ts).
+  const { pathname } = useLocation();
+  const routePreconnects = useMemo(() => preconnectsForPath(pathname), [pathname]);
 
   // Build default structured data graph
   const defaultGraph: Record<string, unknown>[] = [
@@ -137,6 +149,14 @@ export const SEO = ({
         }
       />
       <link rel="canonical" href={url} />
+
+      {/* Per-route preconnects (VAL-PERF-008). Only origins this route
+          actually uses within 10s; the global analytics preconnects stay in
+          index.html. react-helmet-async deduplicates link tags by href so a
+          route with multiple preconnects emits one link per origin. */}
+      {routePreconnects.map((origin) => (
+        <link key={origin} rel="preconnect" href={origin} crossOrigin="anonymous" />
+      ))}
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={type} />

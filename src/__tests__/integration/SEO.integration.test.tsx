@@ -116,8 +116,47 @@ describe('SEO Integration Across Pages', () => {
     }
     document.title = '';
     document.head
-      .querySelectorAll('meta, link[rel="canonical"], script[type="application/ld+json"]')
+      .querySelectorAll('meta, link[rel="canonical"], link[rel="preconnect"], script[type="application/ld+json"]')
       .forEach((el) => el.remove());
+  });
+
+  describe('Per-route preconnect injection (VAL-PERF-008)', () => {
+    it('Home preconnects to the CloudFront hero video origin', async () => {
+      renderPage(Home, '/');
+      await waitFor(() => {
+        const preconnect = document.head.querySelector(
+          'link[rel="preconnect"][href="https://d1x8296f4gso9u.cloudfront.net"]',
+        );
+        expect(preconnect, 'Home should preconnect to the CloudFront video origin').not.toBeNull();
+      });
+    });
+
+    it('Blog preconnects to the Sanity CDN', async () => {
+      renderPage(Blog, '/blog');
+      await waitFor(() => {
+        const preconnect = document.head.querySelector('link[rel="preconnect"][href="https://cdn.sanity.io"]');
+        expect(preconnect, '/blog should preconnect to cdn.sanity.io').not.toBeNull();
+      });
+    });
+
+    it('AWS (no route-specific preconnects) does NOT emit cdn.sanity.io or CloudFront preconnects', async () => {
+      renderPage(AWS, '/aws');
+      await waitFor(() => {
+        expect(document.title).toContain('Amazon Web Services');
+      });
+      expect(
+        document.head.querySelector('link[rel="preconnect"][href="https://cdn.sanity.io"]'),
+        '/aws must not preconnect to cdn.sanity.io',
+      ).toBeNull();
+      expect(
+        document.head.querySelector('link[rel="preconnect"][href="https://d1x8296f4gso9u.cloudfront.net"]'),
+        '/aws must not preconnect to the CloudFront video origin',
+      ).toBeNull();
+      expect(
+        document.head.querySelector('link[rel="preconnect"][href="https://i.ytimg.com"]'),
+        '/aws must not preconnect to i.ytimg.com (no YouTube facade)',
+      ).toBeNull();
+    });
   });
 
   describe('Home page SEO', () => {
@@ -315,7 +354,7 @@ describe('SEO Integration Across Pages', () => {
         // Clean up between pages
         document.title = '';
         document.head
-          .querySelectorAll('meta, link[rel="canonical"], script[type="application/ld+json"]')
+          .querySelectorAll('meta, link[rel="canonical"], link[rel="preconnect"], script[type="application/ld+json"]')
           .forEach((el) => el.remove());
 
         const { unmount } = renderPage(Page, route);

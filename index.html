@@ -37,26 +37,29 @@
          visit are preconnected (VAL-PERF-008). The Google Fonts Material Icons
          preconnects were removed when icons moved to inline SVG
          (VAL-PERF-006/007). Lambda Function URLs used only on form submission
-         or admin auth are NOT preconnected (they are not first-10s origins). -->
-    <link rel="preconnect" href="https://cdn.sanity.io" crossorigin />
+         or admin auth are NOT preconnected (they are not first-10s origins).
+
+         The preconnects listed here are GLOBAL — origins every page requests
+         within 10s (the analytics beacons loaded by the scripts below). Origins
+         used only on specific routes are NOT here; they are injected per-route
+         by the SEO component (src/components/SEO.tsx) from src/routes.ts
+         `preconnects` metadata so each prerendered page preconnects to exactly
+         the origins it uses:
+           - d1x8296f4gso9u.cloudfront.net (hero video) -> Home only
+           - cdn.sanity.io (Sanity CDN images) -> /blog, /podcast, /blog/:slug
+           - i.ytimg.com (YouTube thumbnails) -> /podcast + blog posts that
+             embed a YouTube facade (injected by YouTubeFacade itself)
+         The following origins were removed entirely (dead preconnects — no
+         page requests them within 10s): dataplane.rum.us-east-1.amazonaws.com,
+         cognito-idp.us-east-1.amazonaws.com, www.buzzsprout.com. -->
+    <!-- Plausible Analytics script origin (loaded on every page below). -->
     <link rel="preconnect" href="https://plausible.io" crossorigin />
-    <!-- Hero intro video origin — discovered early so the MP4 request starts
-         without waiting for the JS bundle to parse and create the <video>. -->
-    <link rel="preconnect" href="https://d1x8296f4gso9u.cloudfront.net" crossorigin />
-    <!-- YouTube thumbnails (episode cards on /podcast, embedded videos). -->
-    <link rel="preconnect" href="https://i.ytimg.com" crossorigin />
+    <!-- Cloudflare Web Analytics beacon origin (loaded on every page below). -->
+    <link rel="preconnect" href="https://static.cloudflareinsights.com" crossorigin />
     <!-- PostHog product analytics (consent-gated; preconnecting early speeds
          up the first event after the visitor accepts the banner). The host is
          configurable via VITE_POSTHOG_HOST and defaults to us.i.posthog.com. -->
     <link rel="preconnect" href="https://us.i.posthog.com" crossorigin />
-    <!-- CloudWatch RUM telemetry (errors + performance + http) runs cookieless
-         on every page load when configured, hitting the us-east-1 dataplane. -->
-    <link rel="preconnect" href="https://dataplane.rum.us-east-1.amazonaws.com" crossorigin />
-    <!-- Cognito identity pool is used by RUM (anonymous auth) at startup when
-         RUM is configured, so it is a first-10s origin in that configuration. -->
-    <link rel="preconnect" href="https://cognito-idp.us-east-1.amazonaws.com" crossorigin />
-    <!-- Buzzsprout hosts the podcast embeds loaded on /podcast. -->
-    <link rel="preconnect" href="https://www.buzzsprout.com" crossorigin />
     <link rel="dns-prefetch" href="https://altivum.ai" />
     <link rel="dns-prefetch" href="https://vector.altivum.ai" />
     <link rel="dns-prefetch" href="https://logic.altivum.ai" />

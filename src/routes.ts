@@ -68,6 +68,20 @@ export interface RouteDefinition {
    * unindexed).
    */
   noIndex?: boolean;
+  /**
+   * Third-party origins to `<link rel="preconnect">` on this route's prerendered
+   * HTML (VAL-PERF-008). Only origins actually requested within the first ~10
+   * seconds of a visit on this route belong here; preconnecting to an origin a
+   * route never uses wastes a connection and is flagged as an unused preconnect.
+   *
+   * The global, every-page preconnects (analytics beacons used on all routes)
+   * live in `index.html`; this field carries only route-specific origins so the
+   * prerendered HTML for a route preconnects to exactly the origins it needs.
+   * `preconnectsForPath()` (below) resolves a pathname — including the dynamic
+   * `/blog/:slug` form — to this list, and `SEO.tsx` injects the resulting
+   * `<link>` tags via react-helmet-async so they land in the prerendered head.
+   */
+  preconnects?: readonly string[];
 }
 
 /**
@@ -83,6 +97,11 @@ export const HOME_CONTEXT = {
     'Tell me about the podcast',
     "What's Beyond the Assessment about?",
   ],
+  // The hero intro video (HeroIntroVideo) streams its MP4 from the CloudFront
+  // video origin, so only Home preconnects to it (VAL-PERF-003/008). Other
+  // routes never request this origin, so the preconnect is route-specific
+  // rather than global in index.html.
+  preconnects: ['https://d1x8296f4gso9u.cloudfront.net'] as readonly string[],
 };
 
 export const ROUTES: readonly RouteDefinition[] = [
@@ -124,6 +143,12 @@ export const ROUTES: readonly RouteDefinition[] = [
       'What topics does it cover?',
       'How can I listen?',
     ],
+    // Podcast guest images are served from the Sanity CDN (podcast project
+    // uaxzdsfa, same cdn.sanity.io host as the blog project). Episode
+    // thumbnails come from i.ytimg.com but those preconnects are injected by
+    // the YouTubeFacade component itself (only when an episode card actually
+    // renders a facade), so they are not listed here.
+    preconnects: ['https://cdn.sanity.io'],
   },
   {
     path: '/beyond-the-assessment',
@@ -168,6 +193,9 @@ export const ROUTES: readonly RouteDefinition[] = [
       'What are the most popular posts?',
       'Does he have a blog series?',
     ],
+    // Blog post cards render Sanity CDN images (cdn.sanity.io) for every post
+    // in the listing, so /blog preconnects to the Sanity CDN (VAL-PERF-008).
+    preconnects: ['https://cdn.sanity.io'],
   },
   {
     path: '/blog/:slug',
@@ -185,6 +213,11 @@ export const ROUTES: readonly RouteDefinition[] = [
     // in the regular prefetch map would shadow that. See
     // `prefetchBlogPostChunk` in routeManifest.ts.
     noPrefetch: true,
+    // Blog posts render Sanity CDN images (cdn.sanity.io) for the hero image
+    // and inline PortableText image blocks. YouTube embeds (i.ytimg.com) are
+    // injected by the YouTubeFacade component only on posts that actually
+    // embed a video, so i.ytimg.com is intentionally NOT listed here.
+    preconnects: ['https://cdn.sanity.io'],
   },
   {
     path: '/links',
@@ -248,6 +281,29 @@ export const ROUTES: readonly RouteDefinition[] = [
  * the array is the canonical form so the in-file ordering can be controlled.
  */
 export const ROUTES_BY_PATH: ReadonlyMap<string, RouteDefinition> = new Map(ROUTES.map((r) => [r.path, r]));
+
+/**
+ * Resolve the route-specific preconnect origins for a pathname
+ * (VAL-PERF-008). Returns the `preconnects` declared on the matching route —
+ * Home uses `HOME_CONTEXT`, dynamic `/blog/:slug` posts resolve to that
+ * route's entry, and routes without `preconnects` return an empty array. The
+ * global, every-page preconnects (analytics beacons) live in `index.html` and
+ * are NOT returned here; `SEO.tsx` injects only these route-specific origins
+ * so a page's prerendered `<head>` preconnects to exactly the third-party
+ * origins it actually uses within the first 10 seconds.
+ *
+ * Trailing slashes are normalized (Amplify serves `/podcast/`); the bare
+ * `/blog` path is kept distinct from `/blog/:slug` posts.
+ */
+export function preconnectsForPath(pathname: string): readonly string[] {
+  // Normalize trailing slashes (keep '/' as-is).
+  const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  if (normalized === HOME_CONTEXT.path) return HOME_CONTEXT.preconnects ?? [];
+  // Dynamic blog posts share the /blog/:slug route's preconnects.
+  const isBlogPost = normalized.startsWith('/blog/') && normalized !== '/blog';
+  const lookupKey = isBlogPost ? '/blog/:slug' : normalized;
+  return ROUTES_BY_PATH.get(lookupKey)?.preconnects ?? [];
+}
 
 /** A single header-nav / About-dropdown entry. */
 export interface NavigationItem {
