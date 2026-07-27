@@ -225,6 +225,51 @@ describe('useChatEngine', () => {
       expect(lastMessage.content).toBe('Test message');
     });
 
+    it('should send firstMessage=true on the first user message of a session (VAL-ENG-012)', async () => {
+      const mockReader = {
+        read: vi.fn().mockResolvedValue({ done: true, value: undefined }),
+      };
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        body: { getReader: () => mockReader },
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const { result } = renderHook(() => useChatEngine());
+
+      await act(async () => {
+        await result.current.handleSend('first message');
+      });
+
+      const firstBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(firstBody.firstMessage).toBe(true);
+    });
+
+    it('should NOT send firstMessage on the second message of a session (no repeat)', async () => {
+      const mockReader = {
+        read: vi.fn().mockResolvedValue({ done: true, value: undefined }),
+      };
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        body: { getReader: () => mockReader },
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const { result } = renderHook(() => useChatEngine());
+
+      await act(async () => {
+        await result.current.handleSend('first message');
+      });
+      await act(async () => {
+        await result.current.handleSend('second message');
+      });
+
+      const secondBody = JSON.parse(mockFetch.mock.calls[1][1].body);
+      // firstMessage must be absent (or false) on the second turn so the
+      // welcome-back greeting never repeats on later messages.
+      expect(secondBody.firstMessage ?? false).toBe(false);
+    });
+
     it('should handle fetch errors gracefully', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});

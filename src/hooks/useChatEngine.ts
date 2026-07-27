@@ -177,6 +177,14 @@ export function useChatEngine(pageContext?: PageContext, options?: ChatEngineOpt
         content: msg.content,
       }));
 
+      // Welcome-back (VAL-ENG-012): signal the backend that this is the first
+      // user message of a new session. The backend only emits the welcome-back
+      // greeting when this is true AND the visitor has stored facts, so a
+      // first-time visitor never sees it and it never repeats on later turns.
+      // Computed from the PRIOR message list (before userMessage was appended)
+      // so the very first send in a session is the one that carries the flag.
+      const isFirstMessage = !messagesRef.current.some((m) => m.role === 'user');
+
       const assistantMessageId = `assistant-${crypto.randomUUID()}`;
       const myId = assistantMessageId;
       streamingMessageIdRef.current = assistantMessageId;
@@ -189,6 +197,7 @@ export function useChatEngine(pageContext?: PageContext, options?: ChatEngineOpt
         const requestBody = JSON.stringify({
           messages: conversationHistory,
           ...(deviceId && { deviceId }),
+          ...(isFirstMessage && { firstMessage: true }),
           ...(pageContext && {
             pageContext: {
               currentPage: pageContext.currentPage,

@@ -153,6 +153,15 @@ components:
           type: string
           pattern: '^[a-zA-Z0-9_-]{8,64}$'
           description: Opaque device identifier; enables visitor memory when present.
+        firstMessage:
+          type: boolean
+          default: false
+          description: |
+            True when this is the first user message of a new session. When true
+            AND the visitor has stored facts (returning visitor), the system
+            prompt includes a one-time welcome-back instruction so the assistant
+            opens its first reply with a brief greeting. Anything other than
+            literal `true` is treated as `false`.
     ForgetRequest:
       type: object
       required: [deviceId]

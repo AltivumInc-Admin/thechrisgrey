@@ -1,6 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BASE_SYSTEM_PROMPT, buildVisitorContext, buildMemoryContext, buildSystemPrompt } from "../prompts.mjs";
+import {
+  BASE_SYSTEM_PROMPT,
+  buildVisitorContext,
+  buildMemoryContext,
+  buildWelcomeBackContext,
+  buildSystemPrompt,
+} from "../prompts.mjs";
 
 test("buildVisitorContext returns empty string for null", () => {
   assert.equal(buildVisitorContext(null), "");
@@ -148,4 +154,72 @@ test("buildSystemPrompt includes visitor + memory + retrieved context together",
 test("buildSystemPrompt omits memory block when facts empty", () => {
   const out = buildSystemPrompt(null, null, []);
   assert.doesNotMatch(out, /VISITOR MEMORY/);
+});
+
+// --- Welcome-back branch (VAL-ENG-012) -------------------------------------
+// The welcome-back greeting fires ONLY when (a) the visitor has stored facts
+// (returning visitor) AND (b) the client signals this is the first message of
+// a new session. Every other combination must omit it so first-time visitors
+// never see it and it never repeats on later turns.
+
+test("buildWelcomeBackContext returns empty when firstMessage is false", () => {
+  assert.equal(buildWelcomeBackContext(["a fact"], false), "");
+});
+
+test("buildWelcomeBackContext returns empty when facts are missing", () => {
+  assert.equal(buildWelcomeBackContext([], true), "");
+  assert.equal(buildWelcomeBackContext(null, true), "");
+  assert.equal(buildWelcomeBackContext(undefined, true), "");
+});
+
+test("buildWelcomeBackContext returns empty for first-time visitor on first message (no facts)", () => {
+  // A first-time visitor sends firstMessage=true but has no stored facts —
+  // the greeting must NOT appear (VAL-ENG-012: "does not appear for first-time
+  // visitors").
+  assert.equal(buildWelcomeBackContext([], true), "");
+});
+
+test("buildWelcomeBackContext includes greeting only for returning visitor on first message", () => {
+  const out = buildWelcomeBackContext(["Is preparing for SFAS"], true);
+  assert.match(out, /WELCOME BACK/);
+  assert.match(out, /first/i);
+  assert.match(out, /welcome-back/i);
+  // Must instruct the model NOT to list the stored facts or repeat the greeting.
+  assert.match(out, /do not list/i);
+  assert.match(out, /repeat/i);
+});
+
+test("buildSystemPrompt includes welcome-back only when facts + firstMessage", () => {
+  const facts = ["Is preparing for SFAS"];
+
+  // firstMessage=true + facts → welcome-back present
+  const firstReturning = buildSystemPrompt(null, null, facts, "widget", true);
+  assert.match(firstReturning, /WELCOME BACK/);
+
+  // firstMessage=false + facts → welcome-back absent (later message in session)
+  const laterReturning = buildSystemPrompt(null, null, facts, "widget", false);
+  assert.doesNotMatch(laterReturning, /WELCOME BACK/);
+
+  // firstMessage=true + no facts → welcome-back absent (first-time visitor)
+  const firstTime = buildSystemPrompt(null, null, [], "widget", true);
+  assert.doesNotMatch(firstTime, /WELCOME BACK/);
+
+  // firstMessage omitted (default false) + facts → welcome-back absent
+  const defaultFlag = buildSystemPrompt(null, null, facts, "widget");
+  assert.doesNotMatch(defaultFlag, /WELCOME BACK/);
+});
+
+test("buildSystemPrompt: welcome-back appears before render_ui etiquette on the page surface", () => {
+  const out = buildSystemPrompt("ctx", null, ["a fact"], "page", true);
+  const wbIdx = out.indexOf("WELCOME BACK");
+  const genUiIdx = out.indexOf("GENERATIVE UI");
+  assert.ok(wbIdx > -1, "welcome-back block must be present");
+  assert.ok(genUiIdx > -1, "render_ui etiquette must be present on the page surface");
+  assert.ok(wbIdx < genUiIdx, "welcome-back should render before render_ui etiquette");
+});
+
+test("buildSystemPrompt: welcome-back is omitted on the widget surface too when no facts", () => {
+  // Sanity: surface alone never triggers welcome-back — facts + firstMessage do.
+  const widget = buildSystemPrompt(null, null, [], "widget", true);
+  assert.doesNotMatch(widget, /WELCOME BACK/);
 });

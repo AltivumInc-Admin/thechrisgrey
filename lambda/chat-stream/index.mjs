@@ -222,6 +222,12 @@ export const handler = awslambda.streamifyResponse(async (event, responseStream,
     const messages = body.messages || [];
     const pageContext = validatePageContext(body.pageContext);
     const deviceId = validateDeviceId(body.deviceId);
+    // The client signals `firstMessage: true` on the first user message of a
+    // new session so the system prompt can include a one-time welcome-back
+    // acknowledgment for returning visitors (those with stored facts). Coerce
+    // strictly to a boolean — anything other than literal `true` is treated as
+    // false so a malformed/attacker-crafted body can't force the greeting.
+    const firstMessage = body.firstMessage === true;
 
     const validation = validateInput(messages);
     if (!validation.valid) {
@@ -313,7 +319,7 @@ export const handler = awslambda.streamifyResponse(async (event, responseStream,
       return;
     }
 
-    const systemPrompt = buildSystemPrompt(retrievedContext, pageContext, facts, surface);
+    const systemPrompt = buildSystemPrompt(retrievedContext, pageContext, facts, surface, firstMessage);
 
     const tools = buildTools({
       responseStream,

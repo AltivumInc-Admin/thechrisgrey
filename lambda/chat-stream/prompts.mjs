@@ -98,24 +98,63 @@ You have a render_ui tool that draws a small visual block to supplement an answe
 - ALWAYS write your short text reply too. The block supplements your words — it never replaces them. Never dump raw data into the block that you wouldn't say out loud.`;
 
 /**
+ * Build the welcome-back instruction block. This fires ONLY on the first
+ * message of a new session for a RETURNING visitor — i.e. when the visitor
+ * already has stored facts (`facts.length > 0`) and the client signals this
+ * is the session's first user message (`firstMessage === true`). The block
+ * asks the model to open its reply with one short, warm welcome-back phrase
+ * and to NOT list the stored facts or repeat the greeting on later turns.
+ *
+ * Returns an empty string in every other case: first-time visitors (no facts),
+ * returning visitors on a non-first turn, or when facts are missing. That keeps
+ * the welcome-back from leaking to first-time visitors or repeating across
+ * every message in a session (VAL-ENG-012).
+ */
+/** @param {any[]} facts @param {boolean} firstMessage @returns {string} */
+export function buildWelcomeBackContext(facts, firstMessage) {
+  if (!firstMessage) return "";
+  if (!Array.isArray(facts) || facts.length === 0) return "";
+
+  return `
+
+=== WELCOME BACK (internal use only — apply once this session) ===
+This is the FIRST message of a new session from a returning visitor you have spoken with before — you have stored facts about them (see VISITOR MEMORY above). Begin your reply with a brief, warm welcome-back acknowledgment — one short phrase such as "Welcome back!" or "Good to see you again." — then answer their question naturally.
+- Keep the welcome-back to a single short phrase at the very start of your reply.
+- Do NOT list, quote, or reference the stored facts in the greeting.
+- Do NOT repeat this welcome-back on any later message in this session — it is a one-time, first-reply-only acknowledgment.
+=== END WELCOME BACK ===`;
+}
+
+/**
  * Assemble the full system prompt for a request. When no KB context is
  * retrieved, the prompt falls back to a brief reminder of who Christian is.
  * Facts (optional) is the visitor's stored memory from the remember_fact tool.
  * Surface ('page' | 'widget') controls whether render_ui guidance is included.
+ * firstMessage (optional boolean) marks the first user message of a new
+ * session; when true AND facts exist, a one-time welcome-back instruction is
+ * injected so the model opens its first reply with a brief greeting.
  */
-/** @param {string|null} retrievedContext @param {any} pageContext @param {any[]} facts @param {string} surface @returns {string} */
-export function buildSystemPrompt(retrievedContext, pageContext, facts, surface) {
+/**
+ * @param {string|null} retrievedContext
+ * @param {any} pageContext
+ * @param {any[]} facts
+ * @param {string} surface
+ * @param {boolean} [firstMessage=false]
+ * @returns {string}
+ */
+export function buildSystemPrompt(retrievedContext, pageContext, facts, surface, firstMessage = false) {
   const visitorContext = buildVisitorContext(pageContext);
   const memoryContext = buildMemoryContext(facts);
+  const welcomeBack = buildWelcomeBackContext(facts, firstMessage);
   const renderUiEtiquette = surface === "page" ? RENDER_UI_ETIQUETTE : "";
 
   if (!retrievedContext) {
-    return `${BASE_SYSTEM_PROMPT}${visitorContext}${memoryContext}${renderUiEtiquette}
+    return `${BASE_SYSTEM_PROMPT}${visitorContext}${memoryContext}${welcomeBack}${renderUiEtiquette}
 
 Note: No specific context was retrieved for this query. Answer based on general knowledge about Christian Perez as the Founder & CEO of Altivum Inc., a former Green Beret (18D), host of The Vector Podcast, and author of "Beyond the Assessment."`;
   }
 
-  return `${BASE_SYSTEM_PROMPT}${visitorContext}${memoryContext}${renderUiEtiquette}
+  return `${BASE_SYSTEM_PROMPT}${visitorContext}${memoryContext}${welcomeBack}${renderUiEtiquette}
 
 === RETRIEVED CONTEXT ===
 The following information was retrieved from Christian's personal knowledge base. Use this to provide accurate, detailed answers:

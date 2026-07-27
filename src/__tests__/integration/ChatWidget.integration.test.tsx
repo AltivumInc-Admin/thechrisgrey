@@ -13,6 +13,28 @@ vi.mock('../../components/chat/AltiMascot', () => ({
   ),
 }));
 
+// Stub the chat endpoint so handleSend/handleForgetMemory can build request URLs.
+// Without this, CHAT_ENDPOINT is undefined and handleForgetMemory's
+// `CHAT_ENDPOINT.endsWith('/')` throws before fetch is ever called.
+vi.stubEnv('VITE_CHAT_ENDPOINT', 'https://test-chat-endpoint.example.com');
+
+// Mock session-token issuance so tests don't depend on Turnstile, the issuer
+// endpoint, or the network. No token => no Authorization header (the unset-endpoint
+// path); request bodies and streaming behavior are unaffected.
+vi.mock('../../utils/sessionToken', () => ({
+  getSessionToken: vi.fn().mockResolvedValue(''),
+}));
+
+// jsdom in this Vitest config does not expose window.localStorage, so
+// getOrCreateDeviceId() would return null and handleForgetMemory would
+// short-circuit before issuing the /forget fetch. Provide a stable device id
+// so the forget path is exercised end-to-end.
+vi.mock('../../utils/deviceId', () => ({
+  getOrCreateDeviceId: vi.fn(() => 'test-device-id-1234'),
+  clearDeviceId: vi.fn(),
+  DEVICE_ID_STORAGE_KEY: 'alti-device-id',
+}));
+
 // jsdom does not implement scrollTo on elements; polyfill for these tests
 beforeEach(() => {
   Element.prototype.scrollTo = vi.fn();
@@ -187,6 +209,133 @@ describe('Chat Widget Integration', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /clear conversation/i })).toBeInTheDocument();
+      });
+    });
+
+    it('renders a Forget me control distinct from clear/reset (VAL-ENG-013)', async () => {
+      const user = userEvent.setup();
+      renderWidget();
+
+      await user.click(screen.getByRole('button', { name: /open chat/i }));
+
+      // Forget-me is always present (even before any message), distinct from the
+      // clear/reset control (which only appears after a user message).
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /forget me/i })).toBeInTheDocument();
+      });
+      // Clear conversation must NOT be present yet (no user messages sent).
+      expect(screen.queryByRole('button', { name: /clear conversation/i })).not.toBeInTheDocument();
+    });
+
+    it('fires POST /forget and shows a distinct confirmation when Forget me is activated (VAL-ENG-013)', async () => {
+      const user = userEvent.setup();
+      // /forget returns JSON { ok: true, deleted: N }
+      fetchSpy.mockImplementation(async (url: string | URL | Request) => {
+        const u = String(url);
+        if (u.includes('/forget') || u.endsWith('forget')) {
+          return { ok: true, json: async () => ({ ok: true, deleted: 3 }) } as Response;
+        }
+        // chat-stream call (shouldn't be reached in this test)
+        return {
+          ok: true,
+          body: new ReadableStream({
+            start(controller) {
+              controller.close();
+            },
+          }),
+        } as Response;
+      });
+
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      renderWidget();
+
+      await user.click(screen.getByRole('button', { name: /open chat/i }));
+
+      const forgetButton = await screen.findByRole('button', { name: /forget me/i });
+      await user.click(forgetButton);
+
+      // A POST to the /forget endpoint was issued.
+      await waitFor(() => {
+        const forgetCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes('forget'));
+        expect(forgetCall).toBeDefined();
+        expect((forgetCall![1] as RequestInit).method).toBe('POST');
+      });
+
+      // A distinct confirmation banner appears in the panel.
+      await waitFor(() => {
+        expect(screen.getByText(/I've forgotten 3 saved item/i)).toBeInTheDocument();
+      });
+
+      confirmSpy.mockRestore();
+    });
+
+    it('does NOT fire /forget when the visitor cancels the confirm dialog', async () => {
+      const user = userEvent.setup();
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        json: async () => ({ ok: true, deleted: 0 }),
+      } as Response);
+
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+      renderWidget();
+
+      await user.click(screen.getByRole('button', { name: /open chat/i }));
+
+      const forgetButton = await screen.findByRole('button', { name: /forget me/i });
+      await user.click(forgetButton);
+
+      // No /forget call was issued.
+      const forgetCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes('forget'));
+      expect(forgetCall).toBeUndefined();
+      // No confirmation banner.
+      expect(screen.queryByText(/I've forgotten/i)).not.toBeInTheDocument();
+
+      confirmSpy.mockRestore();
+    });
+
+    it('renders the "What do you know about me?" memory-inspection chip (VAL-ENG-013)', async () => {
+      const user = userEvent.setup();
+      renderWidget();
+
+      await user.click(screen.getByRole('button', { name: /open chat/i }));
+
+      // The memory-inspection affordance is a distinct chip shown alongside the
+      // contextual starter chips when suggestions are visible.
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /what do you know about me\?/i })).toBeInTheDocument();
+      });
+    });
+
+    it('sends the memory-inspection prompt as a message when the chip is clicked (VAL-ENG-013)', async () => {
+      const user = userEvent.setup();
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        body: new ReadableStream({
+          start(controller) {
+            controller.close();
+          },
+        }),
+      } as Response);
+
+      renderWidget();
+
+      await user.click(screen.getByRole('button', { name: /open chat/i }));
+
+      const chip = await screen.findByRole('button', { name: /what do you know about me\?/i });
+      await user.click(chip);
+
+      // The chip's text is sent to the chat endpoint as the latest user message.
+      await waitFor(() => {
+        const chatCall = fetchSpy.mock.calls.find(
+          (c) => !String(c[0]).includes('forget') && (c[1] as RequestInit).method === 'POST',
+        );
+        expect(chatCall).toBeDefined();
+        const body = JSON.parse((chatCall![1] as RequestInit).body as string);
+        const last = body.messages[body.messages.length - 1];
+        expect(last.role).toBe('user');
+        expect(last.content).toBe('What do you know about me?');
       });
     });
   });
