@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import { ViteImageOptimizer } from 'vite-plugin-image-optimizer';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { execSync } from 'child_process';
+import { readdirSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
 import { responsiveImagesPlugin } from './vite-plugins/responsive-images';
 
 // Git commit hash for RUM release ID (source map resolution in CloudWatch).
@@ -17,6 +19,37 @@ function getReleaseId(): string {
 }
 
 const releaseId = getReleaseId();
+
+// Vite plugin: remove generated source maps from dist/ after the build so they
+// are never deployed publicly (VAL-SEC-011). Hidden source maps (`sourcemap:
+// 'hidden'`) are generated for Sentry/RUM upload — when SENTRY_AUTH_TOKEN is
+// set, the Sentry plugin uploads them and deletes the local copies via
+// `filesToDeleteAfterUpload`. This plugin ensures .map files are removed from
+// dist/ even when Sentry upload is not configured (local builds, CI without the
+// token). Runs in `closeBundle` (after the Sentry plugin's upload/delete) so
+// it never interferes with the upload. The `force: true` flag makes deletion
+// idempotent — a no-op if the files were already removed by Sentry.
+function removeSourcemapsPlugin() {
+  return {
+    name: 'remove-sourcemaps-from-dist',
+    apply: 'build' as const,
+    closeBundle() {
+      const distDir = join(process.cwd(), 'dist');
+      try {
+        // recursive: true is supported in Node 18.17+ / 20+.
+        const entries = readdirSync(distDir, { recursive: true });
+        for (const entry of entries) {
+          const file = String(entry);
+          if (file.endsWith('.map')) {
+            rmSync(join(distDir, file), { force: true });
+          }
+        }
+      } catch {
+        // dist/ may not exist if the build failed — nothing to clean up.
+      }
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -57,6 +90,10 @@ export default defineConfig({
           }),
         ]
       : []),
+    // Remove .map files from dist/ after build (VAL-SEC-011). Placed after the
+    // Sentry plugin so it runs after any Sentry upload. Ensures source maps are
+    // never deployed publicly, even in local builds without SENTRY_AUTH_TOKEN.
+    removeSourcemapsPlugin(),
   ],
   define: {
     'import.meta.env.VITE_RUM_RELEASE_ID': JSON.stringify(releaseId),
