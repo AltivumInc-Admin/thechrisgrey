@@ -21,6 +21,28 @@ import { createHmac, timingSafeEqual } from "crypto";
 export const SESSION_TOKEN_VERSION = "v1";
 
 /**
+ * Determine whether auth verification should fail closed when a signing key is
+ * unset. In production (AWS Lambda) an empty key MUST NOT silently bypass
+ * verification — that turns a misconfigured deploy into an open endpoint. In
+ * local/dev the empty-key-disables convention is preserved so tests and local
+ * stacks run without a server-only secret.
+ *
+ * Resolution order:
+ *   1. Explicit `AUTH_FAIL_CLOSED` env var (`1`/`true` on, `0`/`false` off).
+ *   2. Otherwise fail closed when running inside the AWS Lambda runtime
+ *      (`AWS_LAMBDA_FUNCTION_NAME` is set by the platform, not by tests).
+ *   3. Otherwise fail open (local/dev).
+ * @returns {boolean}
+ */
+export function shouldFailClosedOnMissingKey() {
+  const flag = process.env.AUTH_FAIL_CLOSED;
+  if (flag !== undefined) {
+    return flag === "1" || flag === "true";
+  }
+  return Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
+}
+
+/**
  * @param {string|number} exp
  * @param {string} scope
  * @param {string} deviceHash
@@ -54,6 +76,11 @@ export function issueSessionToken({ deviceHash, scope }, key, ttlSeconds) {
  */
 export function verifySessionToken(token, key, { scope } = {}) {
   if (!key) {
+    // Fail closed in production: an unset SESSION_TOKEN_KEY must NOT silently
+    // authenticate. In local/dev the empty-key convention is preserved.
+    if (shouldFailClosedOnMissingKey()) {
+      return { valid: false, error: "missing_signing_key" };
+    }
     return { valid: true, deviceHash: undefined };
   }
   if (!token || typeof token !== "string") {

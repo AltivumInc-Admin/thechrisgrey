@@ -106,18 +106,35 @@ test("rejects an EXPIRED signature timestamp", { timeout: 10000 }, async () => {
 });
 
 test("a VALID signature passes verification and does NOT emit the rejection message", { timeout: 10000 }, async () => {
-  // Past signature verification the request hits rate-limiting / processing, which
-  // fail without AWS credentials — but the signature-rejection message must never appear,
-  // proving a correctly-signed request is admitted past the security front door.
-  const stream = makeStream();
-  const body = '{"messages":[{"role":"user","content":"hi"}]}';
-  const headers = signHeaders(body, KEY);
-  await handler(makeEvent({ headers, body }), stream, {});
-  assert.ok(
-    !stream.output.includes("Unable to process request."),
-    `a valid signature must not be rejected; got: ${JSON.stringify(stream.output)}`,
-  );
+  // The legacy HMAC transition window is now gated behind ALLOW_LEGACY_HMAC.
+  // Re-enable it here to assert a correctly-signed legacy request is still
+  // admitted when the flag is on (rollback / staged-rollout safety).
+  process.env.ALLOW_LEGACY_HMAC = "1";
+  try {
+    const stream = makeStream();
+    const body = '{"messages":[{"role":"user","content":"hi"}]}';
+    const headers = signHeaders(body, KEY);
+    await handler(makeEvent({ headers, body }), stream, {});
+    assert.ok(
+      !stream.output.includes("Unable to process request."),
+      `a valid signature must not be rejected; got: ${JSON.stringify(stream.output)}`,
+    );
+  } finally {
+    delete process.env.ALLOW_LEGACY_HMAC;
+  }
 });
+
+test(
+  "a VALID legacy signature is REJECTED once session tokens are rolled out (ALLOW_LEGACY_HMAC unset)",
+  { timeout: 10000 },
+  async () => {
+    const stream = makeStream();
+    const body = '{"messages":[{"role":"user","content":"hi"}]}';
+    const headers = signHeaders(body, KEY);
+    await handler(makeEvent({ headers, body }), stream, {});
+    assert.equal(stream.output, SYS + "Unable to process request.");
+  },
+);
 
 test("a VALID chat-scoped bearer session token is admitted past the auth front door", { timeout: 10000 }, async () => {
   const stream = makeStream();

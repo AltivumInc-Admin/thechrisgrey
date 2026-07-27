@@ -87,6 +87,40 @@ test("missing signing key disables verification (parity with hmac.mjs)", () => {
   assert.equal(result.valid, true);
 });
 
+test("empty key fails closed when AUTH_FAIL_CLOSED is explicitly enabled", () => {
+  process.env.AUTH_FAIL_CLOSED = "1";
+  try {
+    const result = verifySessionToken("anything", "", { scope: "chat" });
+    assert.equal(result.valid, false);
+    assert.equal(result.error, "missing_signing_key");
+  } finally {
+    delete process.env.AUTH_FAIL_CLOSED;
+  }
+});
+
+test("empty key fails closed on the AWS Lambda runtime (AWS_LAMBDA_FUNCTION_NAME set)", () => {
+  process.env.AWS_LAMBDA_FUNCTION_NAME = "thechrisgrey-chat-stream";
+  try {
+    const result = verifySessionToken("anything", "", { scope: "chat" });
+    assert.equal(result.valid, false);
+    assert.equal(result.error, "missing_signing_key");
+  } finally {
+    delete process.env.AWS_LAMBDA_FUNCTION_NAME;
+  }
+});
+
+test("AUTH_FAIL_CLOSED=0 explicitly preserves the empty-key bypass (local/dev)", () => {
+  process.env.AUTH_FAIL_CLOSED = "0";
+  process.env.AWS_LAMBDA_FUNCTION_NAME = "thechrisgrey-chat-stream";
+  try {
+    const result = verifySessionToken("anything", "", { scope: "chat" });
+    assert.equal(result.valid, true);
+  } finally {
+    delete process.env.AUTH_FAIL_CLOSED;
+    delete process.env.AWS_LAMBDA_FUNCTION_NAME;
+  }
+});
+
 test("the bare HMAC matches the documented payload shape", () => {
   // Lock the wire format so the client and any re-implementation stay compatible.
   const exp = Math.floor(Date.now() / 1000) + 300;

@@ -7,15 +7,26 @@ info:
     spec; Haiku 4.5 grades it for quality. Deployed as an AWS Lambda Function URL
     invoked with `awslambda.streamifyResponse`.
 
-    Authentication accepts EITHER a server-issued session token
-    (`Authorization: Bearer <token>`, scope `blueprint`) OR the legacy HMAC
-    signature (`x-blueprint-timestamp` + `x-blueprint-signature`).
+    Authentication accepts a server-issued session token
+    (`Authorization: Bearer <token>`, scope `blueprint`) as the primary
+    credential. The legacy HMAC signature (`x-blueprint-timestamp` +
+    `x-blueprint-signature`) is gated behind the `ALLOW_LEGACY_HMAC` env flag
+    (defaults to OFF): once `SESSION_TOKEN_KEY` is configured, a request with
+    no bearer is rejected with 401 unless `ALLOW_LEGACY_HMAC=1` re-enables the
+    transition window. In production (AWS Lambda), an unset
+    `SESSION_TOKEN_KEY` fails closed (rejects) rather than silently
+    authenticating.
+
+    A max body-size guard (`BLUEPRINT_MAX_BODY_BYTES`, default 1 MiB) rejects
+    oversized raw bodies with 413 `request_too_large` BEFORE JSON parsing or
+    engine invocation.
 
     On success the response is newline-delimited JSON (`application/x-ndjson`):
     each line is one event (`ready`, `status`, `token`, `complete`, or `error`).
     The HTTP status locks at 200 once the stream opens; the terminal event
     (`complete` vs `error`) distinguishes outcomes. Pre-stream failures (auth,
-    validation, rate limit) return a normal JSON body with the appropriate status.
+    body-size, validation, rate limit) return a normal JSON body with the
+    appropriate status.
 
     Rate limited to 1 blueprint per 30-day window, keyed by device hash.
 servers:
@@ -31,7 +42,6 @@ paths:
       summary: Generate an architecture blueprint from a spec
       security:
         - sessionToken: []
-        - legacyHmac: []
       requestBody:
         required: true
         content:
@@ -55,6 +65,12 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: request_too_large — raw body exceeds BLUEPRINT_MAX_BODY_BYTES (default 1 MiB)
           content:
             application/json:
               schema:
@@ -90,12 +106,18 @@ components:
     sessionToken:
       type: http
       scheme: bearer
-      description: Server-issued session token with scope `blueprint`.
+      description: |
+        Server-issued session token with scope `blueprint`. Required once
+        `SESSION_TOKEN_KEY` is configured; a present-but-invalid token is
+        rejected (no silent fallthrough to legacy).
     legacyHmac:
       type: apiKey
       in: header
       name: x-blueprint-signature
-      description: Legacy HMAC-SHA256 signature; paired with `x-blueprint-timestamp`.
+      description: |
+        Legacy HMAC-SHA256 signature; paired with `x-blueprint-timestamp`.
+        Only accepted when `ALLOW_LEGACY_HMAC=1` is set AND no bearer token is
+        supplied. Defaults to OFF once session tokens are rolled out.
   schemas:
     BlueprintRequest:
       type: object

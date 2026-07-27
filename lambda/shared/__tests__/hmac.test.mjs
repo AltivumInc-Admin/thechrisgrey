@@ -38,8 +38,32 @@ for (const cfg of CONFIGS) {
   const signWith = (body, key, extra = {}) =>
     sign(body, key, { signatureHeader: cfg.signatureHeader, timestampHeader: cfg.timestampHeader, ...extra });
 
-  test(`[${cfg.name}] empty signing key bypasses verification`, () => {
+  test(`[${cfg.name}] empty signing key bypasses verification (local/dev)`, () => {
     assert.deepEqual(verify(makeEvent({ body: "{}" }), ""), { valid: true });
+  });
+
+  test(`[${cfg.name}] empty signing key fails closed when AUTH_FAIL_CLOSED=1`, () => {
+    process.env.AUTH_FAIL_CLOSED = "1";
+    try {
+      assert.deepEqual(verify(makeEvent({ body: "{}" }), ""), {
+        valid: false,
+        error: "missing_signing_key",
+      });
+    } finally {
+      delete process.env.AUTH_FAIL_CLOSED;
+    }
+  });
+
+  test(`[${cfg.name}] empty signing key fails closed on the AWS Lambda runtime`, () => {
+    process.env.AWS_LAMBDA_FUNCTION_NAME = "thechrisgrey-test";
+    try {
+      assert.deepEqual(verify(makeEvent({ body: "{}" }), ""), {
+        valid: false,
+        error: "missing_signing_key",
+      });
+    } finally {
+      delete process.env.AWS_LAMBDA_FUNCTION_NAME;
+    }
   });
 
   test(`[${cfg.name}] valid signature passes`, () => {

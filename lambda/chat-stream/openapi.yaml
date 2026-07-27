@@ -7,10 +7,15 @@ info:
     Haiku 4.5 + Strands SDK + Knowledge Base RAG). Deployed as an AWS Lambda
     Function URL invoked with `awslambda.streamifyResponse`.
 
-    Authentication accepts EITHER a server-issued session token
-    (`Authorization: Bearer <token>`, scope `chat`) OR the legacy request-body
-    HMAC signature (`X-Chat-Timestamp` + `X-Chat-Signature`) during the
-    transition window. See `lambda/shared/requestAuth.mjs`.
+    Authentication accepts a server-issued session token
+    (`Authorization: Bearer <token>`, scope `chat`) as the primary credential.
+    The legacy request-body HMAC signature (`X-Chat-Timestamp` +
+    `X-Chat-Signature`) is gated behind the `ALLOW_LEGACY_HMAC` env flag
+    (defaults to OFF): once `SESSION_TOKEN_KEY` is configured, a request with
+    no bearer is rejected with 401 unless `ALLOW_LEGACY_HMAC=1` re-enables the
+    transition window. In production (AWS Lambda), an unset `SESSION_TOKEN_KEY`
+    fails closed (rejects) rather than silently authenticating. See
+    `lambda/shared/requestAuth.mjs` and `lambda/shared/sessionToken.mjs`.
 
     Responses are NOT JSON: `POST /` streams raw assistant text interleaved with
     framed control payloads. Events are framed as `\x00EVT\x00{json}\x00EVT\x00`
@@ -34,7 +39,6 @@ paths:
         Knowledge Base context, then streams the agent response.
       security:
         - sessionToken: []
-        - legacyHmac: []
       requestBody:
         required: true
         content:
@@ -45,12 +49,17 @@ paths:
         '200':
           description: |
             Streamed response. Raw assistant text plus framed events. May instead
-            carry a single `\x00SYS\x00`-prefixed system message on validation,
-            rate-limit, guardrail, or error conditions.
+            carry a single `\x00SYS\x00`-prefixed system message on auth
+            rejection, validation, rate-limit, guardrail, or error conditions.
           content:
             text/plain:
               schema:
                 type: string
+        '401':
+          description: |
+            Auth rejection (missing/invalid session token, or legacy HMAC
+            supplied while `ALLOW_LEGACY_HMAC` is unset). Surfaced in-stream as
+            a `\x00SYS\x00` system message rather than an HTTP status.
     options:
       tags: [chat]
       operationId: chatPreflight
@@ -66,7 +75,6 @@ paths:
       summary: Erase all stored visitor memory for a device
       security:
         - sessionToken: []
-        - legacyHmac: []
       requestBody:
         required: true
         content:
@@ -85,12 +93,18 @@ components:
     sessionToken:
       type: http
       scheme: bearer
-      description: Server-issued session token with scope `chat` (see session-token API).
+      description: |
+        Server-issued session token with scope `chat` (see session-token API).
+        Required once `SESSION_TOKEN_KEY` is configured. A present-but-invalid
+        token is rejected (no silent fallthrough to legacy).
     legacyHmac:
       type: apiKey
       in: header
       name: X-Chat-Signature
-      description: Legacy HMAC-SHA256 signature; paired with the `X-Chat-Timestamp` header.
+      description: |
+        Legacy HMAC-SHA256 signature; paired with the `X-Chat-Timestamp` header.
+        Only accepted when `ALLOW_LEGACY_HMAC=1` is set AND no bearer token is
+        supplied. Defaults to OFF once session tokens are rolled out.
   schemas:
     ChatMessage:
       type: object

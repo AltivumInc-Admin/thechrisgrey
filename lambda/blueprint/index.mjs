@@ -49,6 +49,10 @@ const RATE_LIMIT_TABLE =
 const RATE_LIMIT_MAX = 1;
 const RATE_LIMIT_WINDOW_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const DEVICE_ID_PATTERN = /^[a-zA-Z0-9_-]{8,64}$/;
+// Max raw body size accepted before JSON parsing. Guards against oversized spec
+// payloads that would otherwise consume Bedrock Opus budget / trigger deep
+// validation on adversarial input. Default 1 MiB; override via env for tuning.
+const MAX_BODY_BYTES = Number(process.env.BLUEPRINT_MAX_BODY_BYTES || 1024 * 1024);
 
 const bedrockClient = new BedrockRuntimeClient({ region: REGION });
 const dynamoClient = new DynamoDBClient({ region: REGION });
@@ -212,6 +216,24 @@ export const handler = awslambda.streamifyResponse(async (event, responseStream,
     // Watch the legacy path drain to zero before retiring the bundled HMAC key.
     metrics.record(auth.method === "token" ? "AuthSessionToken" : "AuthLegacySignature");
     addBreadcrumb("auth", "request_authenticated", { method: auth.method });
+
+    // Body-size guard: reject oversized payloads BEFORE parsing the spec JSON
+    // or invoking the engine. Prevents adversarial/costly inputs from reaching
+    // Bedrock Opus. The raw body is measured in bytes (not characters) so
+    // multi-byte UTF-8 is accounted for correctly.
+    const rawBody = typeof event.body === "string" ? event.body : "";
+    if (Buffer.byteLength(rawBody, "utf8") > MAX_BODY_BYTES) {
+      metrics.record("BlueprintBodyTooLarge");
+      logStructured(requestId, "body_too_large", {
+        bytes: Buffer.byteLength(rawBody, "utf8"),
+        limit: MAX_BODY_BYTES,
+      });
+      closeWithJson(413, {
+        error: "request_too_large",
+        message: "The submitted spec exceeds the maximum allowed size.",
+      });
+      return;
+    }
 
     // Parse body
     let payload;

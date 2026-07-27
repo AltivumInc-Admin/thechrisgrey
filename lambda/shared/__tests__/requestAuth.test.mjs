@@ -51,19 +51,26 @@ test("a bearer token minted for another scope is rejected", () => {
   assert.equal(r.error, "scope_mismatch");
 });
 
-test("with no bearer header, a valid legacy HMAC signature still authenticates (transition window)", () => {
-  const body = JSON.stringify({ messages: [] });
-  const headers = legacySign(body, LEGACY_KEY);
-  const r = authenticateRequest(evt({ headers, body }), {
-    sessionKey: SESSION_KEY,
-    scope: "chat",
-    legacyKey: LEGACY_KEY,
-  });
-  assert.equal(r.valid, true);
-  assert.equal(r.method, "legacy");
+test("with no bearer header, a valid legacy HMAC signature authenticates ONLY when ALLOW_LEGACY_HMAC=1", () => {
+  // The legacy transition window is now gated behind ALLOW_LEGACY_HMAC.
+  process.env.ALLOW_LEGACY_HMAC = "1";
+  try {
+    const body = JSON.stringify({ messages: [] });
+    const headers = legacySign(body, LEGACY_KEY);
+    const r = authenticateRequest(evt({ headers, body }), {
+      sessionKey: SESSION_KEY,
+      scope: "chat",
+      legacyKey: LEGACY_KEY,
+    });
+    assert.equal(r.valid, true);
+    assert.equal(r.method, "legacy");
+  } finally {
+    delete process.env.ALLOW_LEGACY_HMAC;
+  }
 });
 
-test("with no bearer and an invalid legacy signature, the request is rejected", () => {
+test("with no bearer and ALLOW_LEGACY_HMAC unset, the request is rejected as missing_token (token path)", () => {
+  // sessionKey configured + no bearer → token path rejects before legacy runs.
   const r = authenticateRequest(
     evt({ headers: { "x-chat-timestamp": "123", "x-chat-signature": "bad" }, body: "{}" }),
     {
@@ -73,21 +80,27 @@ test("with no bearer and an invalid legacy signature, the request is rejected", 
     },
   );
   assert.equal(r.valid, false);
-  assert.equal(r.method, "legacy");
+  assert.equal(r.method, "token");
+  assert.equal(r.error, "missing_token");
 });
 
-test("honors custom legacy signature header names (blueprint)", () => {
-  const body = JSON.stringify({ spec: {} });
-  const opts = { signatureHeader: "x-blueprint-signature", timestampHeader: "x-blueprint-timestamp" };
-  const headers = legacySign(body, LEGACY_KEY, opts);
-  const r = authenticateRequest(evt({ headers, body }), {
-    sessionKey: SESSION_KEY,
-    scope: "blueprint",
-    legacyKey: LEGACY_KEY,
-    legacySigOptions: opts,
-  });
-  assert.equal(r.valid, true);
-  assert.equal(r.method, "legacy");
+test("honors custom legacy signature header names (blueprint) when ALLOW_LEGACY_HMAC=1", () => {
+  process.env.ALLOW_LEGACY_HMAC = "1";
+  try {
+    const body = JSON.stringify({ spec: {} });
+    const opts = { signatureHeader: "x-blueprint-signature", timestampHeader: "x-blueprint-timestamp" };
+    const headers = legacySign(body, LEGACY_KEY, opts);
+    const r = authenticateRequest(evt({ headers, body }), {
+      sessionKey: SESSION_KEY,
+      scope: "blueprint",
+      legacyKey: LEGACY_KEY,
+      legacySigOptions: opts,
+    });
+    assert.equal(r.valid, true);
+    assert.equal(r.method, "legacy");
+  } finally {
+    delete process.env.ALLOW_LEGACY_HMAC;
+  }
 });
 
 test("a bearer present but sessionKey unset falls through to legacy (deploy-ordering safety)", () => {
@@ -102,4 +115,70 @@ test("a bearer present but sessionKey unset falls through to legacy (deploy-orde
   });
   assert.equal(r.valid, true);
   assert.equal(r.method, "legacy");
+});
+
+test("when SESSION_TOKEN_KEY is set, a request with NO bearer is rejected (legacy HMAC no longer accepted)", () => {
+  // Even with a valid legacy signature, the presence of a configured session
+  // signing key means tokens are now required — legacy HMAC alone is rejected.
+  const body = "{}";
+  const headers = legacySign(body, LEGACY_KEY);
+  const r = authenticateRequest(evt({ headers, body }), {
+    sessionKey: SESSION_KEY,
+    scope: "chat",
+    legacyKey: LEGACY_KEY,
+  });
+  assert.equal(r.valid, false);
+  assert.equal(r.method, "token");
+  assert.equal(r.error, "missing_token");
+});
+
+test("ALLOW_LEGACY_HMAC=1 re-enables the legacy transition window when sessionKey is set", () => {
+  process.env.ALLOW_LEGACY_HMAC = "1";
+  try {
+    const body = "{}";
+    const headers = legacySign(body, LEGACY_KEY);
+    const r = authenticateRequest(evt({ headers, body }), {
+      sessionKey: SESSION_KEY,
+      scope: "chat",
+      legacyKey: LEGACY_KEY,
+    });
+    assert.equal(r.valid, true);
+    assert.equal(r.method, "legacy");
+  } finally {
+    delete process.env.ALLOW_LEGACY_HMAC;
+  }
+});
+
+test("ALLOW_LEGACY_HMAC=1 does NOT rescue an invalid legacy signature", () => {
+  process.env.ALLOW_LEGACY_HMAC = "1";
+  try {
+    const r = authenticateRequest(
+      evt({ headers: { "x-chat-timestamp": "123", "x-chat-signature": "bad" }, body: "{}" }),
+      {
+        sessionKey: SESSION_KEY,
+        scope: "chat",
+        legacyKey: LEGACY_KEY,
+      },
+    );
+    assert.equal(r.valid, false);
+    assert.equal(r.method, "legacy");
+  } finally {
+    delete process.env.ALLOW_LEGACY_HMAC;
+  }
+});
+
+test("a valid bearer token still authenticates via the token path even when ALLOW_LEGACY_HMAC=1", () => {
+  process.env.ALLOW_LEGACY_HMAC = "1";
+  try {
+    const token = issueSessionToken({ deviceHash: DEVICE_HASH, scope: "chat" }, SESSION_KEY, 300);
+    const r = authenticateRequest(evt({ headers: { authorization: `Bearer ${token}` } }), {
+      sessionKey: SESSION_KEY,
+      scope: "chat",
+      legacyKey: LEGACY_KEY,
+    });
+    assert.equal(r.valid, true);
+    assert.equal(r.method, "token");
+  } finally {
+    delete process.env.ALLOW_LEGACY_HMAC;
+  }
 });

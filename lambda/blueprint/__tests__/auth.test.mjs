@@ -90,9 +90,22 @@ test("a chat-scoped token is rejected on the blueprint endpoint (401)", async ()
   assert.equal(status, 401);
 });
 
-test("a valid legacy x-blueprint-* signature still passes auth (transition window)", async () => {
+test("a valid legacy x-blueprint-* signature is REJECTED once session tokens are rolled out", async () => {
+  // With SESSION_TOKEN_KEY configured and ALLOW_LEGACY_HMAC unset, legacy HMAC
+  // alone (no bearer) is no longer accepted — tokens are required.
   const body = "{}";
   const { status } = await run(makeEvent({ headers: legacySign(body, LEGACY_KEY), body }));
-  assert.notEqual(status, 401);
-  assert.equal(status, 400); // missing_spec, i.e. past auth
+  assert.equal(status, 401);
+});
+
+test("ALLOW_LEGACY_HMAC=1 re-enables the legacy transition window", async () => {
+  process.env.ALLOW_LEGACY_HMAC = "1";
+  try {
+    const body = "{}";
+    const { status } = await run(makeEvent({ headers: legacySign(body, LEGACY_KEY), body }));
+    assert.notEqual(status, 401);
+    assert.equal(status, 400); // missing_spec, i.e. past auth
+  } finally {
+    delete process.env.ALLOW_LEGACY_HMAC;
+  }
 });

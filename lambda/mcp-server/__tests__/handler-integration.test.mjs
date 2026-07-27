@@ -37,6 +37,11 @@ process.env.AWS_REGION = "us-east-1";
 // Disable Sanity so only askAlti is wired (no blog tools).
 delete process.env.SANITY_PROJECT_ID;
 
+// Configure a session-token signing key so the tools/call auth lockdown uses
+// real verification. The handler reads SESSION_TOKEN_KEY at module load.
+const SESSION_KEY = "mcp-session-key-for-tests";
+process.env.SESSION_TOKEN_KEY = SESSION_KEY;
+
 const { DynamoDBDocumentClient } = await import("@aws-sdk/lib-dynamodb");
 const { BedrockRuntimeClient } = await import("@aws-sdk/client-bedrock-runtime");
 const { BedrockAgentRuntimeClient } = await import("@aws-sdk/client-bedrock-agent-runtime");
@@ -64,6 +69,7 @@ BedrockAgentRuntimeClient.prototype.send = async function (cmd) {
 };
 
 const { handler } = await import("../index.mjs");
+const { issueSessionToken } = await import("lambda-shared/sessionToken");
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -82,13 +88,41 @@ function parseBody(res) {
   return JSON.parse(res.body);
 }
 
+/** A valid chat-scoped session token for the tools/call auth lockdown. */
+function authHeaders() {
+  const token = issueSessionToken({ deviceHash: "a".repeat(64), scope: "chat" }, SESSION_KEY, 300);
+  return { authorization: `Bearer ${token}` };
+}
+
 // ── Tests ───────────────────────────────────────────────────────────────────
 
-test("OPTIONS preflight returns 204 with CORS headers", async () => {
+test("OPTIONS preflight returns 204 with tightened CORS headers", async () => {
   const res = await handler(makeEvent({ method: "OPTIONS" }));
   assert.equal(res.statusCode, 204);
-  assert.equal(res.headers["Access-Control-Allow-Origin"], "*");
+  // CORS is no longer a wildcard — it echoes the configured production origin
+  // when no allowlisted Origin header is supplied.
+  assert.notEqual(res.headers["Access-Control-Allow-Origin"], "*");
+  assert.equal(res.headers["Access-Control-Allow-Origin"], "https://thechrisgrey.com");
   assert.equal(res.headers["Access-Control-Allow-Methods"], "POST, OPTIONS");
+  assert.equal(res.headers["Access-Control-Allow-Credentials"], "true");
+  assert.ok(
+    res.headers["Access-Control-Allow-Headers"].toLowerCase().includes("authorization"),
+    "Authorization header is allowed for tools/call bearer tokens",
+  );
+});
+
+test("OPTIONS preflight echoes an allowlisted request Origin", async () => {
+  const res = await handler(makeEvent({ method: "OPTIONS", headers: { origin: "https://thechrisgrey.com" } }));
+  assert.equal(res.statusCode, 204);
+  assert.equal(res.headers["Access-Control-Allow-Origin"], "https://thechrisgrey.com");
+  assert.equal(res.headers["Vary"], "Origin");
+});
+
+test("OPTIONS preflight does NOT echo a non-allowlisted Origin", async () => {
+  const res = await handler(makeEvent({ method: "OPTIONS", headers: { origin: "https://evil.example.com" } }));
+  assert.equal(res.statusCode, 204);
+  assert.notEqual(res.headers["Access-Control-Allow-Origin"], "https://evil.example.com");
+  assert.equal(res.headers["Access-Control-Allow-Origin"], "https://thechrisgrey.com");
 });
 
 test("GET /health returns 200 with server info", async () => {
@@ -169,6 +203,7 @@ test("tools/call ask_alti returns a text response from Bedrock", async () => {
   try {
     const res = await handler(
       makeEvent({
+        headers: authHeaders(),
         body: {
           jsonrpc: "2.0",
           id: 3,

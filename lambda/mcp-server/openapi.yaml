@@ -8,9 +8,21 @@ info:
     Transport is JSON-RPC 2.0 over a single `POST /` endpoint; a `GET /health`
     probe is also provided. Deployed as an AWS Lambda Function URL.
 
-    CORS is open (`*`). Rate limited to 60 requests/hour per source IP (hashed).
-    JSON-RPC notifications (requests without an `id`) return `202 Accepted` with
-    an empty body per MCP guidance.
+    CORS is tightened to the production site origin (`https://thechrisgrey.com`,
+    or the `MCP_CORS_ORIGIN` / `CORS_ORIGIN` env var); additional first-party
+    origins can be allowlisted via `MCP_ALLOWED_ORIGINS`. The `Access-Control-
+    Allow-Origin` header is never `*` — it echoes the request Origin only when
+    allowlisted, with `Vary: Origin` and `Access-Control-Allow-Credentials: true`.
+
+    `tools/call` requires a valid server-issued session token
+    (`Authorization: Bearer <token>`, scope `chat` or the configured
+    `MCP_SESSION_TOKEN_SCOPE`); missing or invalid tokens return 401/403.
+    Discovery methods (`initialize`, `tools/list`, `ping`) remain open so MCP
+    clients can negotiate the protocol before presenting credentials.
+
+    Rate limited to 60 requests/hour per source IP (hashed). JSON-RPC
+    notifications (requests without an `id`) return `202 Accepted` with an
+    empty body per MCP guidance.
 servers:
   - url: https://mcp-server.lambda-url.us-east-1.on.aws
     description: Lambda Function URL (region us-east-1)
@@ -23,15 +35,31 @@ paths:
       tags: [mcp]
       operationId: handleJsonRpc
       summary: JSON-RPC 2.0 MCP request
-      security: []
+      security:
+        - sessionToken: []
+        - none: []
       description: |
         Standard MCP methods (`initialize`, `tools/list`, `tools/call`, ...).
         Requests are dispatched by the MCP server (`server.mjs`). Notifications
         return 202 with no body.
+
+        `tools/call` requires a valid `Authorization: Bearer <session-token>`
+        header (scope `chat`); `initialize`, `tools/list`, and `ping` are
+        unauthenticated (discovery handshake). A missing/invalid token on
+        `tools/call` returns 401/403 with a JSON-RPC error (code -32001).
       parameters:
         - name: Mcp-Protocol-Version
           in: header
           required: false
+          schema:
+            type: string
+        - name: Authorization
+          in: header
+          required: false
+          description: |
+            `Bearer <session-token>`. Required for `tools/call`; ignored for
+            discovery methods. Issued by the session-token Lambda after a
+            Cloudflare Turnstile check.
           schema:
             type: string
       requestBody:
@@ -55,6 +83,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JsonRpcResponse'
+        '401':
+          description: Unauthorized — `tools/call` requires a Bearer session token (code -32001)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonRpcResponse'
+        '403':
+          description: Forbidden — the supplied session token was rejected (code -32001)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonRpcResponse'
         '405':
           description: Method not allowed on this endpoint (-32600)
           content:
@@ -72,6 +112,11 @@ paths:
       operationId: mcpPreflight
       summary: CORS preflight
       security: []
+      description: |
+        Returns `Access-Control-Allow-Origin` set to the allowlisted request
+        Origin (or the configured production origin when the request Origin is
+        not allowlisted), with `Vary: Origin` and
+        `Access-Control-Allow-Credentials: true`. Never `*`.
       responses:
         '204':
           description: No content
@@ -93,6 +138,22 @@ paths:
                   server: { type: string }
                   version: { type: string }
 components:
+  securitySchemes:
+    sessionToken:
+      type: http
+      scheme: bearer
+      description: |
+        Server-issued session token (scope `chat` or the configured
+        `MCP_SESSION_TOKEN_SCOPE`), required for `tools/call`. Issued by the
+        session-token Lambda after a Cloudflare Turnstile check.
+    none:
+      type: apiKey
+      in: header
+      name: X-No-Auth
+      description: |
+        Sentinel for unauthenticated discovery methods (`initialize`,
+        `tools/list`, `ping`). No header is actually required — this scheme
+        documents that those methods accept no credentials.
   schemas:
     JsonRpcRequest:
       type: object
