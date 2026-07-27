@@ -245,8 +245,17 @@ export const ROUTES: readonly RouteDefinition[] = [
     path: '/chat',
     importer: () => import('./pages/Chat'),
     context: { pageTitle: 'AI Chat', section: 'AI Chat' },
-    // /chat has its own ChatSuggestions starter chips inside the page; the
-    // PAGE_SUGGESTIONS path isn't consulted there. No entry needed.
+    // /chat is the destination of widget interactions and the canonical surface
+    // for tool-powered prompts, so its starter chips showcase Alti's agentic
+    // capabilities (cross-source synthesis, podcast citation, blog search) rather
+    // than the generic defaults. The /chat page reads these via
+    // getSuggestionsForPage('/chat') (VAL-ENG-011).
+    suggestions: [
+      "Compare Christian's military and tech careers",
+      'What did guests say about AI in defense?',
+      'Search the blog for posts on AI strategy',
+      'Draft a speaking inquiry for an upcoming event',
+    ],
     noPrefetch: true,
     noIndex: true, // App-shell page — never index (VAL-AEO-008, VAL-SEO-010).
   },

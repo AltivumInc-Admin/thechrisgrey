@@ -10,6 +10,7 @@ import TypingIndicator from '../components/chat/TypingIndicator';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { ChatErrorFallback } from '../components/ErrorFallbacks';
 import { useChatEngine, usePageContext, CHAT_STORAGE_KEY } from '../hooks';
+import { getSuggestionsForPage } from '../utils/pageContext';
 import Icon from '../components/icons/Icon';
 
 const breadcrumbs = [
@@ -19,6 +20,10 @@ const breadcrumbs = [
 
 const ChatContent = () => {
   const pageContext = usePageContext();
+  // /chat starter chips are context-specific (tool-powered prompts declared on
+  // the /chat route in routes.ts), not the generic DEFAULT_SUGGESTIONS fallback
+  // (VAL-ENG-011). getSuggestionsForPage resolves the /chat entry directly.
+  const chatSuggestions = getSuggestionsForPage(pageContext.currentPage);
   const {
     messages,
     isTyping,
@@ -132,7 +137,7 @@ const ChatContent = () => {
         {/* Suggestions */}
         {showSuggestions && (
           <div className="max-w-4xl mx-auto">
-            <ChatSuggestions onSelect={handleSuggestionSelect} />
+            <ChatSuggestions onSelect={handleSuggestionSelect} suggestions={chatSuggestions} />
           </div>
         )}
       </div>

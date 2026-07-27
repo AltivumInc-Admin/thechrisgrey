@@ -218,5 +218,105 @@ describe('Chat Widget Integration', () => {
         expect(messagesRegion).toHaveAttribute('aria-live', 'polite');
       });
     });
+
+    it('launcher exposes a non-empty accessible name and a tooltip describing the action', () => {
+      renderWidget();
+
+      const button = screen.getByRole('button', { name: /open chat/i });
+      // Accessible name must be non-empty (VAL-ENG-010).
+      expect(button.getAttribute('aria-label')).toBeTruthy();
+      expect(button.getAttribute('aria-label')!.length).toBeGreaterThan(0);
+      // Tooltip element exists and is associated via aria-describedby.
+      const tooltipId = button.getAttribute('aria-describedby');
+      expect(tooltipId).toBeTruthy();
+      const tooltip = document.getElementById(tooltipId!);
+      expect(tooltip).not.toBeNull();
+      expect(tooltip!.getAttribute('role')).toBe('tooltip');
+      expect(tooltip!.textContent).toBeTruthy();
+    });
+
+    it('moves focus inside the panel when opened', async () => {
+      const user = userEvent.setup();
+      renderWidget();
+
+      const button = screen.getByRole('button', { name: /open chat/i });
+      await user.click(button);
+
+      // The data-autofocus chat input should receive focus shortly after open.
+      await waitFor(() => {
+        const input = screen.getByRole('textbox', { name: /type a message/i });
+        expect(document.activeElement).toBe(input);
+      });
+    });
+
+    it('returns focus to the launcher when the panel is closed via Escape', async () => {
+      const user = userEvent.setup();
+      renderWidget();
+
+      const button = screen.getByRole('button', { name: /open chat/i });
+      await user.click(button);
+
+      // Wait for focus to land inside the panel.
+      await waitFor(() => {
+        const input = screen.getByRole('textbox', { name: /type a message/i });
+        expect(document.activeElement).toBe(input);
+      });
+
+      await user.keyboard('{Escape}');
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      });
+
+      // Focus should be restored to the launcher (VAL-ENG-010).
+      expect(document.activeElement).toBe(button);
+    });
+  });
+
+  describe('Context-aware suggestions per route (VAL-ENG-011)', () => {
+    it('shows About-page suggestions on /about', async () => {
+      const user = userEvent.setup();
+      renderWidget('/about');
+
+      await user.click(screen.getByRole('button', { name: /open chat/i }));
+
+      await waitFor(() => {
+        // About-specific chip from routes.ts.
+        expect(screen.getByText('What was his military career like?')).toBeInTheDocument();
+      });
+    });
+
+    it('shows AWS-page suggestions on /aws', async () => {
+      const user = userEvent.setup();
+      renderWidget('/aws');
+
+      await user.click(screen.getByRole('button', { name: /open chat/i }));
+
+      await waitFor(() => {
+        // AWS-specific chip from routes.ts.
+        expect(screen.getByText('What does he do as an AWS Community Builder?')).toBeInTheDocument();
+      });
+    });
+
+    it('shows different suggestion sets on /about vs /aws', async () => {
+      // /about
+      const { unmount: unmountAbout } = renderWidget('/about');
+      await userEvent.setup().click(screen.getByRole('button', { name: /open chat/i }));
+      await waitFor(() => {
+        expect(screen.getByText('What was his military career like?')).toBeInTheDocument();
+      });
+      // The AWS-specific chip must NOT appear on /about.
+      expect(screen.queryByText('What does he do as an AWS Community Builder?')).not.toBeInTheDocument();
+      unmountAbout();
+
+      // /aws
+      renderWidget('/aws');
+      await userEvent.setup().click(screen.getByRole('button', { name: /open chat/i }));
+      await waitFor(() => {
+        expect(screen.getByText('What does he do as an AWS Community Builder?')).toBeInTheDocument();
+      });
+      // The About-specific chip must NOT appear on /aws.
+      expect(screen.queryByText('What was his military career like?')).not.toBeInTheDocument();
+    });
   });
 });

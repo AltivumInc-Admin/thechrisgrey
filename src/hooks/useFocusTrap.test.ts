@@ -37,6 +37,33 @@ describe('useFocusTrap', () => {
     document.body.removeChild(button);
   });
 
+  it('restores focus to the previously focused element on unmount while active', () => {
+    // ChatWidgetPanel is conditionally rendered ({isOpen && <Panel/>}) and
+    // unmounts on close, so the [isActive] effect never re-runs with
+    // isActive=false. The unmount-only cleanup must still return focus to the
+    // launcher (VAL-ENG-010).
+    const launcher = document.createElement('button');
+    document.body.appendChild(launcher);
+    launcher.focus();
+
+    const { rerender, unmount } = renderHook(({ isActive }) => useFocusTrap(isActive), {
+      initialProps: { isActive: false },
+    });
+
+    rerender({ isActive: true });
+    act(() => {
+      vi.advanceTimersByTime(20);
+    });
+
+    // Simulate a close path that unmounts the trap while it is still active
+    // (the real ChatWidgetPanel close-on-Escape path).
+    unmount();
+
+    expect(document.activeElement).toBe(launcher);
+
+    document.body.removeChild(launcher);
+  });
+
   it('should focus the first focusable element when activated', () => {
     const { result } = renderHook(() => useFocusTrap(true));
 

@@ -49,6 +49,24 @@ export function useFocusTrap(isActive: boolean) {
     }
   }, [isActive]);
 
+  // Return focus to the previously focused element when the trap unmounts
+  // while active. Consumers like ChatWidgetPanel are conditionally rendered
+  // ({isOpen && <Panel/>}) and removed from the tree on close, so the
+  // [isActive] effect above never re-runs with isActive=false — the else
+  // branch that restores focus is skipped. This unmount-only cleanup closes
+  // that gap so Escape (and any other close path that unmounts the trap)
+  // returns focus to the launcher (VAL-ENG-010). The ref is null when the
+  // trap was never active or when the [isActive] else branch already ran,
+  // so this is a safe no-op in those cases.
+  useEffect(() => {
+    return () => {
+      if (previouslyFocusedRef.current) {
+        previouslyFocusedRef.current.focus();
+        previouslyFocusedRef.current = null;
+      }
+    };
+  }, []);
+
   // Callback-ref form for consumers that need to wire multiple refs to the
   // same DOM element (e.g. FallbackDetail tracks its own panelRef alongside
   // the focus-trap container). Use this in a JSX `ref={(el) => { ... }}`

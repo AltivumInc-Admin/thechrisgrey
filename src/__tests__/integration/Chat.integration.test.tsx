@@ -89,11 +89,19 @@ describe('Chat Page Integration', () => {
       expect(screen.getByRole('button', { name: /send message/i })).toBeInTheDocument();
     });
 
-    it('shows suggested prompts when no user messages exist', () => {
+    it('shows context-specific suggested prompts (not generic defaults) when no user messages exist', () => {
       renderChat();
 
-      expect(screen.getByText('How did he go from Green Beret to tech CEO?')).toBeInTheDocument();
-      expect(screen.getByText("What drives Altivum's mission?")).toBeInTheDocument();
+      // /chat starter chips are context-specific tool-powered prompts declared
+      // on the /chat route in routes.ts (VAL-ENG-011), NOT the generic
+      // DEFAULT_SUGGESTIONS used as a fallback elsewhere.
+      expect(screen.getByText("Compare Christian's military and tech careers")).toBeInTheDocument();
+      expect(screen.getByText('Search the blog for posts on AI strategy')).toBeInTheDocument();
+
+      // Generic defaults must NOT appear on /chat — that would mean the page
+      // fell back to DEFAULT_SUGGESTIONS instead of the /chat route entry.
+      expect(screen.queryByText('How did he go from Green Beret to tech CEO?')).not.toBeInTheDocument();
+      expect(screen.queryByText("What drives Altivum's mission?")).not.toBeInTheDocument();
     });
 
     it('does not show the clear button when no user messages exist', () => {
@@ -199,10 +207,11 @@ describe('Chat Page Integration', () => {
       } as Response);
       renderChat();
 
-      await user.click(screen.getByText('How did he go from Green Beret to tech CEO?'));
+      // Use a context-specific /chat suggestion (declared on the /chat route).
+      await user.click(screen.getByText("Compare Christian's military and tech careers"));
 
       await waitFor(() => {
-        expect(screen.getByText('How did he go from Green Beret to tech CEO?')).toBeInTheDocument();
+        expect(screen.getByText("Compare Christian's military and tech careers")).toBeInTheDocument();
       });
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -216,20 +225,19 @@ describe('Chat Page Integration', () => {
       } as Response);
       renderChat();
 
-      // Suggestions should be visible initially
-      expect(screen.getByText("What drives Altivum's mission?")).toBeInTheDocument();
+      // Suggestions should be visible initially (context-specific /chat chips).
+      expect(screen.getByText('Search the blog for posts on AI strategy')).toBeInTheDocument();
 
-      await user.click(screen.getByText('How did he go from Green Beret to tech CEO?'));
+      await user.click(screen.getByText("Compare Christian's military and tech careers"));
 
       await waitFor(() => {
-        // The suggestion text should now appear as a user message,
-        // but the suggestions section should be gone
-        // We cannot simply check for absence since the text is in the user message now.
-        // Instead, verify the other suggestions are gone
-        const drivesButton = screen.queryByRole('button', {
-          name: /What drives Altivum's mission/i,
+        // The suggestion text now appears as a user message; the suggestions
+        // section is gone. Verify the other suggestion chips are no longer
+        // rendered as buttons.
+        const searchButton = screen.queryByRole('button', {
+          name: /Search the blog for posts on AI strategy/i,
         });
-        expect(drivesButton).not.toBeInTheDocument();
+        expect(searchButton).not.toBeInTheDocument();
       });
     });
   });

@@ -43,6 +43,39 @@ describe('ChatWidgetButton', () => {
     expect(button).toHaveAttribute('aria-expanded', 'true');
   });
 
+  it('should expose a non-empty accessible name on the launcher', () => {
+    render(<ChatWidgetButton isOpen={false} onClick={vi.fn()} />);
+    const button = screen.getByRole('button', { name: /open chat/i });
+    expect(button.getAttribute('aria-label')).toBeTruthy();
+    expect(button.getAttribute('aria-label')!.length).toBeGreaterThan(0);
+  });
+
+  it('should render a tooltip element describing the launcher action', () => {
+    render(<ChatWidgetButton isOpen={false} onClick={vi.fn()} />);
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toBeInTheDocument();
+    // Tooltip text is non-empty and reflects the closed state affordance.
+    expect(tooltip.textContent).toBeTruthy();
+    expect(tooltip.textContent).toMatch(/chat/i);
+  });
+
+  it('should associate the launcher button with the tooltip via aria-describedby', () => {
+    render(<ChatWidgetButton isOpen={false} onClick={vi.fn()} />);
+    const button = screen.getByRole('button', { name: /open chat/i });
+    const tooltip = screen.getByRole('tooltip');
+    const describedById = button.getAttribute('aria-describedby');
+    expect(describedById).toBe(tooltip.id);
+    expect(tooltip.id).toBeTruthy();
+  });
+
+  it('should show a "Chat with Alti" tooltip when closed and a "Close chat" tooltip when open', () => {
+    const { rerender } = render(<ChatWidgetButton isOpen={false} onClick={vi.fn()} />);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Chat with Alti');
+
+    rerender(<ChatWidgetButton isOpen={true} onClick={vi.fn()} />);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Close chat');
+  });
+
   it('should render AltiMascot with isOpen prop', async () => {
     render(<ChatWidgetButton isOpen={false} onClick={vi.fn()} />);
     const mascot = await screen.findByTestId('alti-mascot');
