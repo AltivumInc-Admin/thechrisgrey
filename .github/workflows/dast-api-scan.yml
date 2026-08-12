@@ -1,0 +1,110 @@
+name: DAST API Scan
+
+# Dynamic Application Security Testing for the Lambda HTTP services.
+# The frontend is covered by dast-scan.yml (ZAP baseline against the live
+# site). This workflow directly scans the six HTTP Lambda backends by
+# importing each service's OpenAPI 3.1 spec into ZAP and scanning every
+# defined endpoint against the real deployed Function URL.
+#
+# The Lambda Function URLs are read from repository secrets (one per
+# service). The OpenAPI specs in the repo carry placeholder server URLs, so
+# each run substitutes the placeholder with the real URL from the matching
+# secret before handing the spec to ZAP. Services without a configured
+# secret are skipped with a notice so coverage is opt-in per service.
+#
+# ZAP API scan is active — it sends probe payloads to the imported
+# endpoints. This is safe for these services because every mutating
+# endpoint is gated by auth (session token, Cognito, Turnstile, HMAC) and
+# rate-limited, so unauthenticated probes are rejected before reaching
+# Bedrock/Sanity. The unauthenticated /health endpoints return static
+# JSON. Only scan endpoints you own (these are all thechrisgrey services).
+#
+# Findings open a per-service tracked GitHub issue so vulnerabilities
+# cannot sit unaddressed. Runs weekly (Mondays 07:00 UTC, after the
+# frontend baseline scan at 06:00) and on manual dispatch.
+
+on:
+  schedule:
+    - cron: '0 7 * * 1' # Mondays 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  zap-api-scan:
+    name: ZAP API Scan (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: chat-stream
+            openapi: lambda/chat-stream/openapi.yaml
+          - service: blueprint
+            openapi: lambda/blueprint/openapi.yaml
+          - service: kb-builder
+            openapi: lambda/kb-builder/openapi.yaml
+          - service: metrics
+            openapi: lambda/metrics/openapi.yaml
+          - service: mcp-server
+            openapi: lambda/mcp-server/openapi.yaml
+          - service: session-token
+            openapi: lambda/session-token/openapi.yaml
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Resolve Lambda URL and prepare OpenAPI spec
+        id: resolve
+        env:
+          CHAT_STREAM_URL: ${{ secrets.CHAT_STREAM_URL }}
+          BLUEPRINT_URL: ${{ secrets.BLUEPRINT_URL }}
+          KB_BUILDER_URL: ${{ secrets.KB_BUILDER_URL }}
+          METRICS_URL: ${{ secrets.METRICS_URL }}
+          MCP_SERVER_URL: ${{ secrets.MCP_SERVER_URL }}
+          SESSION_TOKEN_URL: ${{ secrets.SESSION_TOKEN_URL }}
+        run: |
+          case "${{ matrix.service }}" in
+            chat-stream) URL="$CHAT_STREAM_URL" ;;
+            blueprint) URL="$BLUEPRINT_URL" ;;
+            kb-builder) URL="$KB_BUILDER_URL" ;;
+            metrics) URL="$METRICS_URL" ;;
+            mcp-server) URL="$MCP_SERVER_URL" ;;
+            session-token) URL="$SESSION_TOKEN_URL" ;;
+          esac
+          if [ -z "$URL" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No URL secret set for ${{ matrix.service }}; skipping. Set the ${{ matrix.service }} Function URL repository secret to enable DAST coverage."
+          else
+            SPEC="${{ matrix.openapi }}"
+            RESOLVED="${SPEC}.resolved"
+            # Substitute the placeholder server URL with the real deployed Function URL.
+            sed -E "s|https://[a-z-]+\.lambda-url\.[a-z0-9-]+\.on\.aws|${URL}|g" "$SPEC" > "$RESOLVED"
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "spec=$RESOLVED" >> "$GITHUB_OUTPUT"
+            echo "::notice::Resolved ${{ matrix.service }} OpenAPI spec ($SPEC -> $RESOLVED) with server URL $URL"
+          fi
+
+      - name: ZAP API Scan
+        if: steps.resolve.outputs.enabled == 'true'
+        uses: zaproxy/action-api-scan@v0.10.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target: ${{ steps.resolve.outputs.spec }}
+          format: openapi
+          fail_action: false
+          allow_issue_writing: true
+          issue_title: 'DAST: ${{ matrix.service }} Lambda API ZAP scan findings'
+          artifact_name: zap-api-report-${{ matrix.service }}
+
+      - name: Upload resolved OpenAPI spec
+        if: always() && steps.resolve.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-api-spec-${{ matrix.service }}
+          path: ${{ steps.resolve.outputs.spec }}
+          retention-days: 7
