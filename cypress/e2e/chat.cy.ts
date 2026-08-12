@@ -140,7 +140,7 @@ describe('Alti Chat Page', () => {
   });
 
   it('should not display the chat widget FAB on the chat page', () => {
-    cy.get('button[aria-label="Open chat"]').should('not.exist');
+    cy.get('button[aria-label="Open chat with Alti"]').should('not.exist');
   });
 
   it('should not display the footer on the chat page', () => {

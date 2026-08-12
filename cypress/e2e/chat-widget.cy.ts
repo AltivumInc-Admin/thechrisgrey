@@ -9,21 +9,21 @@ describe('Chat Widget', () => {
   });
 
   it('should display the chat widget FAB button', () => {
-    cy.get('button[aria-label="Open chat"]').should('be.visible');
+    cy.get('button[aria-label="Open chat with Alti"]').should('be.visible');
   });
 
   it('should have correct aria attributes on the FAB', () => {
-    cy.get('button[aria-label="Open chat"]').should('have.attr', 'aria-expanded', 'false');
+    cy.get('button[aria-label="Open chat with Alti"]').should('have.attr', 'aria-expanded', 'false');
   });
 
   it('should open the chat panel when clicking the FAB', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
 
     cy.get('[role="dialog"][aria-label="Alti - Altivum\'s AI Agent"]').should('be.visible');
   });
 
   it('should update the FAB aria attributes when open', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
 
     // After opening, the FAB label changes to "Close chat" and has aria-expanded="true"
     // There are two "Close chat" buttons (FAB + panel header), target the one with aria-expanded
@@ -31,7 +31,7 @@ describe('Chat Widget', () => {
   });
 
   it('should display the welcome message in the widget panel', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
 
     cy.get('[role="dialog"]').within(() => {
       cy.contains("Altivum's official AI Agent").should('be.visible');
@@ -39,7 +39,7 @@ describe('Chat Widget', () => {
   });
 
   it('should display the header with the Alti label and status dot', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
 
     cy.get('[role="dialog"]').within(() => {
       cy.contains('Alti').should('be.visible');
@@ -47,7 +47,7 @@ describe('Chat Widget', () => {
   });
 
   it('should display the expand, and close buttons in the panel header', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
 
     cy.get('[role="dialog"]').within(() => {
       cy.get('button[aria-label="Open full chat"]').should('be.visible');
@@ -56,7 +56,7 @@ describe('Chat Widget', () => {
   });
 
   it('should display the chat input in the widget panel', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
 
     cy.get('[role="dialog"]').within(() => {
       cy.get('textarea[aria-label="Type a message"]').should('be.visible');
@@ -64,7 +64,7 @@ describe('Chat Widget', () => {
   });
 
   it('should send a message in the widget', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
 
     cy.get('[role="dialog"]').within(() => {
       cy.get('textarea[aria-label="Type a message"]').type('Hello{enter}');
@@ -73,7 +73,7 @@ describe('Chat Widget', () => {
   });
 
   it('should receive a response in the widget', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
 
     cy.get('[role="dialog"]').within(() => {
       cy.get('textarea[aria-label="Type a message"]').type('Who is Christian?{enter}');
@@ -82,7 +82,7 @@ describe('Chat Widget', () => {
   });
 
   it('should show the Clear button after sending a message', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
 
     cy.get('[role="dialog"]').within(() => {
       cy.get('textarea[aria-label="Type a message"]').type('Hello{enter}');
@@ -91,7 +91,7 @@ describe('Chat Widget', () => {
   });
 
   it('should close the widget panel when clicking the close button', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
     cy.get('[role="dialog"]').should('be.visible');
 
     cy.get('[role="dialog"]').within(() => {
@@ -102,7 +102,7 @@ describe('Chat Widget', () => {
   });
 
   it('should close the widget panel when pressing Escape', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
     cy.get('[role="dialog"]').should('be.visible');
 
     cy.get('body').type('{esc}');
@@ -110,7 +110,7 @@ describe('Chat Widget', () => {
   });
 
   it('should close the widget when clicking the FAB while open', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
     cy.get('[role="dialog"]').should('be.visible');
 
     // The FAB label changes to "Close chat" when open
@@ -119,7 +119,7 @@ describe('Chat Widget', () => {
   });
 
   it('should navigate to the full chat page when clicking expand', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
 
     cy.get('[role="dialog"]').within(() => {
       cy.get('button[aria-label="Open full chat"]').click();
@@ -129,7 +129,7 @@ describe('Chat Widget', () => {
   });
 
   it('should display suggested prompts in the widget', () => {
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').click();
 
     cy.get('[role="dialog"]').within(() => {
       // Should show some kind of suggestions (either default or contextual)
@@ -139,13 +139,13 @@ describe('Chat Widget', () => {
 
   it('should not show the widget on the /chat page', () => {
     cy.visit('/chat');
-    cy.get('button[aria-label="Open chat"]').should('not.exist');
+    cy.get('button[aria-label="Open chat with Alti"]').should('not.exist');
   });
 
   it('should work on mobile viewport', () => {
     cy.viewport('iphone-x');
-    cy.get('button[aria-label="Open chat"]').should('be.visible');
-    cy.get('button[aria-label="Open chat"]').click();
+    cy.get('button[aria-label="Open chat with Alti"]').should('be.visible');
+    cy.get('button[aria-label="Open chat with Alti"]').click();
 
     cy.get('[role="dialog"]').should('be.visible');
     cy.get('[role="dialog"]').within(() => {
@@ -157,12 +157,12 @@ describe('Chat Widget', () => {
 describe('Chat Widget on Different Pages', () => {
   it('should be visible on the home page', () => {
     cy.visit('/');
-    cy.get('button[aria-label="Open chat"]').should('be.visible');
+    cy.get('button[aria-label="Open chat with Alti"]').should('be.visible');
   });
 
   it('should be visible on the contact page', () => {
     cy.visit('/contact');
-    cy.get('button[aria-label="Open chat"]').should('be.visible');
+    cy.get('button[aria-label="Open chat with Alti"]').should('be.visible');
   });
 
   it('should be visible on the blog page', () => {
@@ -172,11 +172,11 @@ describe('Chat Widget on Different Pages', () => {
       body: { result: { posts: [], tags: [], series: [] } },
     });
     cy.visit('/blog');
-    cy.get('button[aria-label="Open chat"]').should('be.visible');
+    cy.get('button[aria-label="Open chat with Alti"]').should('be.visible');
   });
 
   it('should not be visible on the admin page', () => {
     cy.visit('/admin');
-    cy.get('button[aria-label="Open chat"]').should('not.exist');
+    cy.get('button[aria-label="Open chat with Alti"]').should('not.exist');
   });
 });

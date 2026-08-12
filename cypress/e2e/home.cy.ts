@@ -82,7 +82,7 @@ describe('Home Page', () => {
   });
 
   it('should display the chat widget FAB', () => {
-    cy.get('button[aria-label="Open chat"]').should('be.visible');
+    cy.get('button[aria-label="Open chat with Alti"]').should('be.visible');
   });
 
   it('should be responsive on mobile viewport', () => {

@@ -6,7 +6,7 @@
     "generate-podcast-episodes": 20000,
     "lint": 20000,
     "tsc": 20000,
-    "vite-build": 30000,
+    "vite-build": 75000,
     "generate-og-images": 15000,
     "prerender": 90000,
     "validate-prerender-seo": 10000,

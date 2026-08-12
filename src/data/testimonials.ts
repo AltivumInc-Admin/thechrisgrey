@@ -17,7 +17,7 @@ export interface Testimonial {
  * reader, or event organizer. Editing this single source updates every page
  * that mounts <Testimonials> (Home, Contact, /beyond-the-assessment).
  *
- * TODO: replace with real attributed quotes before launch.
+ * TODO(#222): replace with real attributed quotes before launch.
  */
 export const TESTIMONIALS: Testimonial[] = [
   {

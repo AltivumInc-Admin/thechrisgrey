@@ -85,6 +85,6 @@ describe('Mobile Navigation', () => {
   });
 
   it('should display the chat widget on mobile', () => {
-    cy.get('button[aria-label="Open chat"]').should('be.visible');
+    cy.get('button[aria-label="Open chat with Alti"]').should('be.visible');
   });
 });
