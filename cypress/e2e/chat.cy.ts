@@ -31,10 +31,13 @@ describe('Alti Chat Page', () => {
     });
   });
 
+  // /chat no longer falls back to the generic DEFAULT_SUGGESTIONS; it renders the
+  // tool-powered starter chips declared for the route. Source of truth for this
+  // copy is the `suggestions` array on the '/chat' entry in src/routes.ts.
   it('should display suggested prompts when no user messages exist', () => {
-    cy.contains('How did he go from Green Beret to tech CEO?').should('be.visible');
-    cy.contains("What drives Altivum's mission?").should('be.visible');
-    cy.contains('Why did he write Beyond the Assessment?').should('be.visible');
+    cy.contains("Compare Christian's military and tech careers").should('be.visible');
+    cy.contains('Search the blog for posts on AI strategy').should('be.visible');
+    cy.contains('Draft a speaking inquiry for an upcoming event').should('be.visible');
   });
 
   it('should display the chat input field', () => {
@@ -82,15 +85,15 @@ describe('Alti Chat Page', () => {
     cy.get('textarea[aria-label="Type a message"]').type('Hello');
     cy.get('button[aria-label="Send message"]').click();
 
-    cy.contains('How did he go from Green Beret to tech CEO?').should('not.exist');
+    cy.contains("Compare Christian's military and tech careers").should('not.exist');
   });
 
   it('should send a message when clicking a suggested prompt', () => {
-    cy.contains('How did he go from Green Beret to tech CEO?').click();
+    cy.contains("Compare Christian's military and tech careers").click();
 
     // The suggestion text should appear as a user message
     cy.get('[role="log"]').within(() => {
-      cy.contains('How did he go from Green Beret to tech CEO?').should('be.visible');
+      cy.contains("Compare Christian's military and tech careers").should('be.visible');
     });
   });
 

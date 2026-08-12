@@ -148,6 +148,19 @@ jobs:
 
   cypress-mocked:
     runs-on: ubuntu-latest
+    env:
+      # Single source of truth for which specs this job runs. WebGL-dependent
+      # specs (home, navigation, mobile-navigation, chat-widget) are
+      # intentionally excluded — they use no intercepts and flake headless on CI.
+      #
+      # Keep this on ONE line with NO space after the commas. A YAML folded
+      # scalar (>-) joins its lines with a space, and Cypress splits --spec on
+      # "," without trimming, so " cypress/e2e/blog.cy.ts" matches no file and is
+      # dropped silently. That is not hypothetical: this list was folded, so the
+      # job ran 1 of 7 specs and still reported "All specs passed" — a green
+      # check over six specs that never executed. The verify step below turns
+      # that failure mode from silent into loud.
+      SPEC_LIST: cypress/e2e/404.cy.ts,cypress/e2e/about-pages.cy.ts,cypress/e2e/blog.cy.ts,cypress/e2e/blog-post.cy.ts,cypress/e2e/chat.cy.ts,cypress/e2e/chat-agentic.cy.ts,cypress/e2e/contact.cy.ts
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -175,6 +188,29 @@ jobs:
           VITE_KB_BUILDER_ENDPOINT: https://placeholder.example.com
           VITE_METRICS_ENDPOINT: https://placeholder.example.com
 
+      # Cypress silently ignores a --spec entry that matches no file, so a
+      # malformed list costs coverage without ever failing. Resolve every entry
+      # to a real file first and fail the job if one does not, which converts a
+      # silently-shrinking suite into an explicit error.
+      - name: Verify every configured spec resolves
+        run: |
+          IFS=',' read -ra SPECS <<< "$SPEC_LIST"
+          echo "Configured specs: ${#SPECS[@]}"
+          missing=0
+          for s in "${SPECS[@]}"; do
+            if [ -f "$s" ]; then
+              echo "  ok       $s"
+            else
+              echo "  MISSING  '$s'"
+              echo "::error::Cypress spec does not resolve: '$s'"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Cypress would skip the unresolved specs and still report success."
+            exit 1
+          fi
+
       - name: Run mock-stubbed Cypress specs
         uses: cypress-io/github-action@v7
         with:
@@ -182,17 +218,7 @@ jobs:
           start: npx vite preview --port 5173
           wait-on: 'http://localhost:5173'
           wait-on-timeout: 60
-          # WebGL-dependent specs (home, navigation, mobile-navigation,
-          # chat-widget) are intentionally excluded — they use no intercepts and
-          # flake headless on CI. Only mock-stubbed flows run here.
-          spec: >-
-            cypress/e2e/404.cy.ts,
-            cypress/e2e/about-pages.cy.ts,
-            cypress/e2e/blog.cy.ts,
-            cypress/e2e/blog-post.cy.ts,
-            cypress/e2e/chat.cy.ts,
-            cypress/e2e/chat-agentic.cy.ts,
-            cypress/e2e/contact.cy.ts
+          spec: ${{ env.SPEC_LIST }}
 
       - name: Upload Cypress screenshots on failure
         if: failure()

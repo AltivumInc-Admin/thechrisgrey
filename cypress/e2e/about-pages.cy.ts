@@ -17,7 +17,11 @@ describe('About Page - Personal Biography', () => {
   });
 
   it('should display the hero section with biography image', () => {
-    cy.get('img[alt="My Personal Biography"]').should('exist');
+    // The hero wordmark is intentionally decorative: it carries alt="" because the
+    // sr-only <h1> above it supplies the accessible name, so asserting on alt text
+    // would re-introduce a duplicate announcement. It is also rendered through
+    // <ResponsiveImage>, i.e. an <img> inside a <picture> with AVIF/WebP sources.
+    cy.get('picture img').should('be.visible');
   });
 
   it('should display biography content', () => {
@@ -56,9 +60,11 @@ describe('Altivum Inc Page', () => {
     cy.contains('Altivum').should('be.visible');
   });
 
+  // Same AEO rewrite: "The Vision" and "Building for Impact" became question-form
+  // headings.
   it('should display timeline or content sections', () => {
-    cy.contains('The Vision').should('be.visible');
-    cy.contains('Building for Impact').should('be.visible');
+    cy.contains('What is the road ahead for Altivum?').should('be.visible');
+    cy.contains('How does Altivum build for impact?').should('be.visible');
   });
 
   it('should display the navigation bar', () => {
@@ -175,16 +181,18 @@ describe('AWS Page', () => {
     cy.get('section').first().should('exist');
   });
 
+  // The AEO restructure replaced the old topical section headings ("AI & Machine
+  // Learning", "Cloud Architecture", "Community & Content") with question-form
+  // headings so the page answers queries directly. Assert the current headings.
   it('should display focus areas', () => {
-    cy.contains('AI & Machine Learning').should('be.visible');
-    cy.contains('Cloud Architecture').should('be.visible');
-    cy.contains('Community & Content').should('be.visible');
+    cy.contains('What is the AWS Community Builders program?').should('be.visible');
+    cy.contains('What AWS services does Christian work with?').should('be.visible');
+    cy.contains('What is the infrastructure stack?').should('be.visible');
   });
 
   it('should display AWS service names', () => {
     cy.contains('Amazon Bedrock').should('be.visible');
     cy.contains('Lambda').should('be.visible');
-    cy.contains('DynamoDB').should('be.visible');
   });
 
   it('should display the navigation bar', () => {
@@ -197,7 +205,7 @@ describe('AWS Page', () => {
 
   it('should be responsive on mobile viewport', () => {
     cy.viewport('iphone-x');
-    cy.contains('AI & Machine Learning').should('be.visible');
+    cy.contains('What AWS services does Christian work with?').should('be.visible');
   });
 });
 

@@ -48,8 +48,12 @@ declare namespace Cypress {
 
 // -- Navigation Verification --
 Cypress.Commands.add('verifyNavigation', () => {
-  cy.get('nav').should('be.visible');
-  cy.get('nav').within(() => {
+  // Target the primary site nav explicitly. Pages now render up to three <nav>
+  // landmarks — the header nav, the breadcrumb trail, and the "Explore more"
+  // cross-link band — so a bare cy.get('nav') resolves to multiple elements and
+  // .within() throws. data-vt-persist="navigation" is unique to the header nav.
+  cy.get('nav[data-vt-persist="navigation"]').should('be.visible');
+  cy.get('nav[data-vt-persist="navigation"]').within(() => {
     cy.get('a').contains('Home').should('exist');
   });
 });

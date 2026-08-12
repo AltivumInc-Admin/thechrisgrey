@@ -57,7 +57,19 @@ const ChatContent = () => {
   };
 
   return (
-    <div className="h-screen pt-20 flex flex-col bg-altivum-dark overflow-hidden">
+    // h-screen gives the app-like layout: header and composer are fixed chrome and
+    // the conversation scrolls between them. Only those two are non-shrinkable, so
+    // the composer stays on screen at any viewport height — see the note on the
+    // scroller below for why the capability rail is not a third fixed child.
+    //
+    // overflow-y-auto is a deliberate backstop rather than the primary mechanism.
+    // This shell was overflow-hidden, and when its children outgrew 100vh the
+    // composer was clipped past the edge with no way to scroll to it — the chat
+    // input was simply unreachable below ~972px of viewport height. Failing over to
+    // a scroll keeps that class of bug from ever making the input unreachable again.
+    // data-lenis-prevent lets it take the wheel/touch gesture natively rather than
+    // having site-wide Lenis hijack it.
+    <div className="h-screen pt-20 flex flex-col bg-altivum-dark overflow-y-auto" data-lenis-prevent>
       <SEO
         title="Alti - Altivum's AI Agent"
         description="Meet Alti, Altivum's AI agent. Have a conversation about Christian Perez's journey from Green Beret to tech founder, Altivum Inc, The Vector Podcast, and more."
@@ -105,15 +117,23 @@ const ChatContent = () => {
         </div>
       </div>
 
-      {/* Capability rail — surfaces Alti's tool-driven powers without forcing trial-and-error.
-          Initially expanded on cold start (no user messages yet) so first-time visitors
-          discover it; collapses to a one-line chip the moment they engage. */}
-      <CapabilityIntro onUseExample={handleUseExample} initiallyExpanded={showSuggestions} />
-
       {/* Messages Container — data-lenis-prevent lets this inner scroller take the
           wheel/touch natively; without it site-wide Lenis hijacks the gesture and the
-          conversation can't be scrolled (the page wrapper is overflow-hidden). */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto" data-lenis-prevent>
+          conversation can't be scrolled. min-h-0 is required: a flex child defaults to
+          min-height:auto, so without it this pane refuses to shrink below its content
+          and pushes the composer out of the shell on short viewports. */}
+      <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto" data-lenis-prevent>
+        {/* Capability rail — surfaces Alti's tool-driven powers without forcing trial-and-error.
+            Initially expanded on cold start (no user messages yet) so first-time visitors
+            discover it; collapses to a one-line chip the moment they engage.
+
+            It lives inside the scroller rather than beside it because it is content, not
+            chrome: as a fixed sibling its expanded height (~400px) combined with the header
+            and composer exceeded 100vh, which pushed the composer out of the shell entirely
+            on 1366x768 and 1280x720 laptops. Only the header and composer are chrome now, so
+            the composer stays pinned and reachable at any viewport height. */}
+        <CapabilityIntro onUseExample={handleUseExample} initiallyExpanded={showSuggestions} />
+
         <div className="max-w-4xl mx-auto px-6 py-8">
           <div className="space-y-6" role="log" aria-live="polite" aria-label="Chat messages">
             {messages.map((message) => (
