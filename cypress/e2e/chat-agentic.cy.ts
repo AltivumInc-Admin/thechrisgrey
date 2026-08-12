@@ -1,3 +1,5 @@
+import { BACKEND_POST_URL } from '../support/endpoints';
+
 /// <reference types="cypress" />
 
 const EVT = '\x00EVT\x00';
@@ -15,7 +17,7 @@ describe('Alti agent — draft actions smoke test', () => {
   });
 
   it('renders a navigation draft card when the agent emits draft_action navigate', () => {
-    cy.intercept('POST', '**lambda-url.us-east-1**', {
+    cy.intercept('POST', BACKEND_POST_URL, {
       statusCode: 200,
       headers: { 'content-type': 'text/plain' },
       body: agenticResponseBody('Here is the podcast page.', [
@@ -50,7 +52,7 @@ describe('Alti agent — draft actions smoke test', () => {
   });
 
   it('renders a contact draft card when the agent emits draft_action contact', () => {
-    cy.intercept('POST', '**lambda-url.us-east-1**', {
+    cy.intercept('POST', BACKEND_POST_URL, {
       statusCode: 200,
       headers: { 'content-type': 'text/plain' },
       body: agenticResponseBody("Here's a draft you can review.", [
@@ -74,7 +76,7 @@ describe('Alti agent — draft actions smoke test', () => {
   });
 
   it('shows the Forget me control on the chat page', () => {
-    cy.intercept('POST', '**lambda-url.us-east-1**', {
+    cy.intercept('POST', BACKEND_POST_URL, {
       statusCode: 200,
       headers: { 'content-type': 'text/plain' },
       body: 'Hello.',

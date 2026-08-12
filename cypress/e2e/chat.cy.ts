@@ -1,3 +1,5 @@
+import { BACKEND_POST_URL } from '../support/endpoints';
+
 describe('Alti Chat Page', () => {
   beforeEach(() => {
     // Clear sessionStorage before each test to start fresh
@@ -175,7 +177,7 @@ describe('Alti Chat Page - Error Handling', () => {
 
   it('should show an error message when the chat API returns an error', () => {
     // Use the exact same pattern that successfully intercepts in stubChatEndpoint
-    cy.intercept('POST', '**lambda-url.us-east-1**', {
+    cy.intercept('POST', BACKEND_POST_URL, {
       statusCode: 500,
       body: 'Internal Server Error',
     }).as('chatError');

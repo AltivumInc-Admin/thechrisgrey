@@ -5,44 +5,51 @@
 // https://on.cypress.io/custom-commands
 // ***********************************************
 
-declare namespace Cypress {
-  interface Chainable {
-    /**
-     * Verify that the main navigation bar is visible on the page.
-     */
-    verifyNavigation(): Chainable<void>;
+import { BACKEND_POST_URL } from './endpoints';
 
-    /**
-     * Verify that the footer is visible on the page.
-     */
-    verifyFooter(): Chainable<void>;
+// The import above makes this file a module, so the Cypress augmentation has to
+// be reopened inside `declare global` — a bare `declare namespace Cypress` would
+// become module-local and silently stop typing the custom commands.
+declare global {
+  namespace Cypress {
+    interface Chainable {
+      /**
+       * Verify that the main navigation bar is visible on the page.
+       */
+      verifyNavigation(): Chainable<void>;
 
-    /**
-     * Verify SEO meta tags exist on the page.
-     * @param title - Expected title text (partial match)
-     * @param description - Whether to check that meta description exists
-     */
-    verifySEO(title: string, description?: boolean): Chainable<void>;
+      /**
+       * Verify that the footer is visible on the page.
+       */
+      verifyFooter(): Chainable<void>;
 
-    /**
-     * Stub the Sanity API to return fixture data for blog listing.
-     */
-    stubSanityBlogListing(): Chainable<void>;
+      /**
+       * Verify SEO meta tags exist on the page.
+       * @param title - Expected title text (partial match)
+       * @param description - Whether to check that meta description exists
+       */
+      verifySEO(title: string, description?: boolean): Chainable<void>;
 
-    /**
-     * Stub the Sanity API to return fixture data for a single blog post.
-     */
-    stubSanityBlogPost(): Chainable<void>;
+      /**
+       * Stub the Sanity API to return fixture data for blog listing.
+       */
+      stubSanityBlogListing(): Chainable<void>;
 
-    /**
-     * Stub the chat streaming endpoint with a mock response.
-     */
-    stubChatEndpoint(): Chainable<void>;
+      /**
+       * Stub the Sanity API to return fixture data for a single blog post.
+       */
+      stubSanityBlogPost(): Chainable<void>;
 
-    /**
-     * Stub the contact form endpoint.
-     */
-    stubContactEndpoint(): Chainable<void>;
+      /**
+       * Stub the chat streaming endpoint with a mock response.
+       */
+      stubChatEndpoint(): Chainable<void>;
+
+      /**
+       * Stub the contact form endpoint.
+       */
+      stubContactEndpoint(): Chainable<void>;
+    }
   }
 }
 
@@ -111,9 +118,9 @@ Cypress.Commands.add('stubSanityBlogPost', () => {
 
 // -- Stub Chat Endpoint --
 Cypress.Commands.add('stubChatEndpoint', () => {
-  // The chat endpoint is a Lambda Function URL (*.lambda-url.us-east-1.on.aws)
-  // Intercept POST requests that contain the chat message payload
-  cy.intercept('POST', '**lambda-url.us-east-1**', {
+  // Matches the chat Function URL in local/prod builds and the CI placeholder
+  // endpoint alike — see BACKEND_POST_URL.
+  cy.intercept('POST', BACKEND_POST_URL, {
     statusCode: 200,
     headers: { 'content-type': 'text/plain' },
     body: 'Christian Perez is the Founder and CEO of Altivum Inc., a veteran-founded technology firm. He served as a Green Beret (18D) in the U.S. Army Special Forces.',
@@ -122,9 +129,9 @@ Cypress.Commands.add('stubChatEndpoint', () => {
 
 // -- Stub Contact Endpoint --
 Cypress.Commands.add('stubContactEndpoint', () => {
-  // The contact endpoint is a Lambda Function URL (*.lambda-url.*.on.aws)
-  // Intercept all POST requests to Lambda URLs
-  cy.intercept('POST', '**lambda-url**', {
+  // Matches the contact Function URL in local/prod builds and the CI placeholder
+  // endpoint alike — see BACKEND_POST_URL.
+  cy.intercept('POST', BACKEND_POST_URL, {
     statusCode: 200,
     body: { message: 'Message sent successfully' },
   }).as('contactSubmit');

@@ -1,3 +1,5 @@
+import { BACKEND_POST_URL } from '../support/endpoints';
+
 describe('Contact Page', () => {
   beforeEach(() => {
     cy.visit('/contact');
@@ -203,7 +205,7 @@ describe('Contact Page', () => {
 
   it('should show the submit button as disabled while submitting', () => {
     // Intercept with a delay to observe the loading state
-    cy.intercept('POST', '**lambda-url**', {
+    cy.intercept('POST', BACKEND_POST_URL, {
       statusCode: 200,
       body: { message: 'Message sent successfully' },
       delay: 2000,
@@ -224,7 +226,7 @@ describe('Contact Page - Network Error', () => {
     cy.visit('/contact');
 
     // Set up the network error intercept after the page loads
-    cy.intercept('POST', '**lambda-url**', {
+    cy.intercept('POST', BACKEND_POST_URL, {
       forceNetworkError: true,
     }).as('networkError');
 
