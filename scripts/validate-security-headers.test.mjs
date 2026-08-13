@@ -99,17 +99,29 @@ describe('security headers (customHttp.yml)', () => {
     });
 
     // Regression guard, and the sibling of the 'wasm-unsafe-eval' case above.
-    // alti.glb embeds its baked textures as glTF bufferViews, so three.js
-    // GLTFLoader wraps each in a Blob and loads URL.createObjectURL(blob) into
-    // an <img>. Without blob: in img-src every texture is blocked, the material
-    // falls back to its default white baseColor, and the mascot renders as an
-    // untextured grey blob -- geometry intact, colour gone, no console error
-    // naming CSP. Verified in production with a securitypolicyviolation event
-    // reporting {effectiveDirective: 'img-src', blockedURI: 'blob'}.
-    it('img-src allows blob: for GLB-embedded textures loaded via createObjectURL', () => {
-      const imgSrc = header('Content-Security-Policy').match(/img-src ([^;]*)/)?.[1];
-      expect(imgSrc, 'img-src directive must exist').toBeDefined();
-      expect(imgSrc, "img-src must allow blob: or alti.glb's baked textures are blocked").toMatch(/blob:/);
+    //
+    // alti.glb embeds its baked textures as glTF bufferViews, so three-stdlib's
+    // GLTFLoader (the fork drei's useGLTF imports) wraps each in a Blob and hands
+    // URL.createObjectURL(blob) to its texture loader. WHICH loader -- and
+    // therefore which CSP directive is consulted -- is decided at runtime in
+    // three-stdlib/loaders/GLTFLoader.js:1387:
+    //   TextureLoader      -> <img src=blob:>  -> img-src      (Safari any version,
+    //                                                           Firefox <98, or no
+    //                                                           createImageBitmap)
+    //   ImageBitmapLoader  -> fetch(blob:)     -> connect-src  (Chrome, Edge,
+    //                                                           Firefox >=98)
+    // Both tokens are required; allowing only one leaves the mascot untextured for
+    // roughly half the audience. This is asserted as two separate cases because the
+    // first fix for this bug added img-src only and shipped without repairing
+    // Chrome. Verified in production with securitypolicyviolation events reporting
+    // blockedURI 'blob' against BOTH effectiveDirectives.
+    it.each([
+      ['img-src', /img-src ([^;]*)/, 'the <img> path used by Safari and older Firefox'],
+      ['connect-src', /connect-src ([^;]*)/, 'the fetch() path used by Chrome, Edge and modern Firefox'],
+    ])('%s allows blob: for GLB-embedded textures', (name, pattern, why) => {
+      const directive = header('Content-Security-Policy').match(pattern)?.[1];
+      expect(directive, `${name} directive must exist`).toBeDefined();
+      expect(directive, `${name} must allow blob: — it governs ${why}`).toMatch(/blob:/);
     });
 
     it('CSP routes violation reports to the metrics Lambda', () => {
