@@ -103,7 +103,7 @@ jobs:
 
       - name: Upload resolved OpenAPI spec
         if: always() && steps.resolve.outputs.enabled == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: zap-api-spec-${{ matrix.service }}
           path: ${{ steps.resolve.outputs.spec }}
