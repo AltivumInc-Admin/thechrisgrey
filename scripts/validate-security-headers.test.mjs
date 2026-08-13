@@ -78,7 +78,24 @@ describe('security headers (customHttp.yml)', () => {
       const scriptSrc = csp.match(/script-src ([^;]*)/)?.[1];
       expect(scriptSrc, 'script-src directive must exist').toBeDefined();
       expect(scriptSrc).not.toMatch(/'unsafe-inline'/);
+      // Note: this must not match 'wasm-unsafe-eval', which is a distinct and far
+      // narrower token (WebAssembly compilation only, no string-to-code path).
+      // The leading quote in the pattern is what keeps the two apart.
       expect(scriptSrc).not.toMatch(/'unsafe-eval'/);
+    });
+
+    // Regression guard. The 3D mascot (public/alti.glb) declares
+    // EXT_meshopt_compression, and the meshopt decoder is WebAssembly. Chrome
+    // refuses to compile WASM unless script-src carries 'wasm-unsafe-eval', and
+    // the failure is quiet: the model downloads, GLTFLoader throws during decode,
+    // and the widget degrades to its static fallback icon with no console error
+    // that names CSP. Dropping this token silently removes the 3D mascot, so the
+    // requirement is pinned here rather than left to be rediscovered.
+    it("script-src allows WebAssembly ('wasm-unsafe-eval') for the meshopt GLB decoder", () => {
+      const scriptSrc = header('Content-Security-Policy').match(/script-src ([^;]*)/)?.[1];
+      expect(scriptSrc, "script-src must allow WASM compilation for alti.glb's meshopt decoder").toMatch(
+        /'wasm-unsafe-eval'/,
+      );
     });
 
     it('CSP routes violation reports to the metrics Lambda', () => {
