@@ -81,8 +81,21 @@ customHeaders:
       # (d1x8296f4gso9u.cloudfront.net) for the home-page hero intro video.
       # worker-src allows 'self' and blob: for Three.js/R3F GLTFLoader decode
       # workers (the alti.glb mascot uses meshopt compression).
+      # img-src MUST allow blob:. alti.glb embeds its three baked textures
+      # (baseColor / normal / metallicRoughness) as glTF bufferViews rather than
+      # external files, and three.js GLTFLoader materialises each one by wrapping
+      # the bytes in a Blob and loading URL.createObjectURL(blob) into an <img>
+      # (GLTFLoader.js, loadTextureImage). blob: is same-origin and can only be
+      # minted by script already executing on the page, so this grants no new
+      # fetch reach -- but without it every texture is blocked, the material
+      # falls back to its default white baseColor, and the mascot renders as an
+      # untextured grey blob. Same Report-Only -> enforcing regression as the
+      # 'wasm-unsafe-eval' note above: the geometry decodes, the model appears,
+      # and only the colour is missing, so it reads as a design choice rather
+      # than a failure. Confirmed in production via a securitypolicyviolation
+      # event: {effectiveDirective: 'img-src', blockedURI: 'blob'}.
       - key: 'Content-Security-Policy'
-        value: "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com https://plausible.io https://challenges.cloudflare.com https://us-assets.i.posthog.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://cdn.sanity.io https://i.ytimg.com; media-src 'self' https://d1x8296f4gso9u.cloudfront.net; connect-src 'self' https://cloudflareinsights.com https://plausible.io https://vrs4egsi745nep54y6abvwlcwq0smqak.lambda-url.us-east-2.on.aws https://sf5bejshafrb6t7zbbfw5knu7a0axlyp.lambda-url.us-east-2.on.aws https://mrrpf6f34n7vpkolurdc24c5fu0jruad.lambda-url.us-east-1.on.aws https://*.sanity.io https://*.apicdn.sanity.io https://zk46cokyuwgtdtz2ocdlhtjcji0fnidk.lambda-url.us-east-1.on.aws https://dnsio2ypcuxamxgzjpxr7knwpe0ybbuq.lambda-url.us-east-1.on.aws https://b6u7jlyktwv7wtseebhl45lv4y0byxnl.lambda-url.us-east-1.on.aws https://cognito-idp.us-east-1.amazonaws.com https://cognito-identity.us-east-1.amazonaws.com https://dataplane.rum.us-east-1.amazonaws.com https://challenges.cloudflare.com https://fx6pbx5hkhyrccf6c7pqk6x5fq0idpiv.lambda-url.us-east-1.on.aws https://us.i.posthog.com https://us-assets.i.posthog.com; frame-src https://www.youtube.com https://open.spotify.com https://www.buzzsprout.com https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; worker-src 'self' blob:; object-src 'none'; upgrade-insecure-requests; report-uri https://dnsio2ypcuxamxgzjpxr7knwpe0ybbuq.lambda-url.us-east-1.on.aws/csp-report"
+        value: "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com https://plausible.io https://challenges.cloudflare.com https://us-assets.i.posthog.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://cdn.sanity.io https://i.ytimg.com; media-src 'self' https://d1x8296f4gso9u.cloudfront.net; connect-src 'self' https://cloudflareinsights.com https://plausible.io https://vrs4egsi745nep54y6abvwlcwq0smqak.lambda-url.us-east-2.on.aws https://sf5bejshafrb6t7zbbfw5knu7a0axlyp.lambda-url.us-east-2.on.aws https://mrrpf6f34n7vpkolurdc24c5fu0jruad.lambda-url.us-east-1.on.aws https://*.sanity.io https://*.apicdn.sanity.io https://zk46cokyuwgtdtz2ocdlhtjcji0fnidk.lambda-url.us-east-1.on.aws https://dnsio2ypcuxamxgzjpxr7knwpe0ybbuq.lambda-url.us-east-1.on.aws https://b6u7jlyktwv7wtseebhl45lv4y0byxnl.lambda-url.us-east-1.on.aws https://cognito-idp.us-east-1.amazonaws.com https://cognito-identity.us-east-1.amazonaws.com https://dataplane.rum.us-east-1.amazonaws.com https://challenges.cloudflare.com https://fx6pbx5hkhyrccf6c7pqk6x5fq0idpiv.lambda-url.us-east-1.on.aws https://us.i.posthog.com https://us-assets.i.posthog.com; frame-src https://www.youtube.com https://open.spotify.com https://www.buzzsprout.com https://challenges.cloudflare.com; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; worker-src 'self' blob:; object-src 'none'; upgrade-insecure-requests; report-uri https://dnsio2ypcuxamxgzjpxr7knwpe0ybbuq.lambda-url.us-east-1.on.aws/csp-report"
   # --- Caching (also previously ignored in amplify.yml; restored here) ----------
   - pattern: '**/*.js'
     headers:

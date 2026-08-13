@@ -98,6 +98,20 @@ describe('security headers (customHttp.yml)', () => {
       );
     });
 
+    // Regression guard, and the sibling of the 'wasm-unsafe-eval' case above.
+    // alti.glb embeds its baked textures as glTF bufferViews, so three.js
+    // GLTFLoader wraps each in a Blob and loads URL.createObjectURL(blob) into
+    // an <img>. Without blob: in img-src every texture is blocked, the material
+    // falls back to its default white baseColor, and the mascot renders as an
+    // untextured grey blob -- geometry intact, colour gone, no console error
+    // naming CSP. Verified in production with a securitypolicyviolation event
+    // reporting {effectiveDirective: 'img-src', blockedURI: 'blob'}.
+    it('img-src allows blob: for GLB-embedded textures loaded via createObjectURL', () => {
+      const imgSrc = header('Content-Security-Policy').match(/img-src ([^;]*)/)?.[1];
+      expect(imgSrc, 'img-src directive must exist').toBeDefined();
+      expect(imgSrc, "img-src must allow blob: or alti.glb's baked textures are blocked").toMatch(/blob:/);
+    });
+
     it('CSP routes violation reports to the metrics Lambda', () => {
       const csp = header('Content-Security-Policy');
       expect(csp).toMatch(/report-uri\s+https:\/\/[a-z0-9]+\.lambda-url\.us-east-1\.on\.aws\/csp-report/);
