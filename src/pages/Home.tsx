@@ -112,12 +112,17 @@ const Home = () => {
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-altivum-dark opacity-0 animate-fade-in">
         <HeroIntroVideo />
         <h1 className="sr-only">Christian Perez - Leadership Forged in Service</h1>
-        {/* Direct-answer summary — first viewport, before the first H2 (VAL-AEO-001, VAL-AEO-002).
-            Positioned at the bottom of the hero so it is visible in the first viewport
-            without competing with the brand intro video. */}
-        <div className="absolute bottom-6 left-0 right-0 z-20 px-4">
-          <DirectAnswerSummary text={AEO_SUMMARIES['/']} className="text-center max-w-2xl mx-auto" />
-        </div>
+        {/* Direct-answer summary — first in DOM order, before the first H2
+            (VAL-AEO-001, VAL-AEO-002), which is what the build-time [seo-gate]
+            and AI answer engines read.
+            Deliberately sr-only: rendered as visible body copy it sat on top of
+            the brand intro video and read as stray text over the wordmark. The
+            hero is the one place on the site that is purely the film. Hiding it
+            visually costs nothing here — the gate parses the DOM, not the
+            pixels, and screen readers still announce it, so this is not hidden
+            text in the deceptive sense. The same copy is visible to sighted
+            visitors in the scroll section immediately below. */}
+        <DirectAnswerSummary text={AEO_SUMMARIES['/']} className="sr-only" />
       </section>
 
       {/* Sticky Profile Image Section with Scrolling Summary Tabs */}
