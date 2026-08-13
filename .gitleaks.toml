@@ -51,12 +51,25 @@ paths = [
   # (and never exist in a CI checkout). Scanning them only produces local noise.
   '''\.worktrees/.*''',
   '''\.claude/worktrees/.*''',
+  # Local Claude Code tooling scratch — gitignored in full, so it is never part of
+  # a CI checkout. Same rationale as the worktree entries above: local noise only.
+  '''\.claude/.*''',
 ]
+# Match these against the whole source line, not the captured secret. Gitleaks
+# defaults to matching the secret alone, so any pattern here that includes the
+# surrounding assignment (every one of them) could never match and silently did
+# nothing — an allowlist entry that looks effective but is not.
+regexTarget = "line"
 regexes = [
   '''VITE_CHAT_SIGNING_KEY.*ci-placeholder-key''',
   '''VITE_CHAT_SIGNING_KEY.*placeholder''',
   # .env.example intentionally contains placeholder values for documentation
   '''\.env\.example''',
+  # Sanity Portable Text block keys are short random hex identifiers that address a
+  # block within a document — public, non-secret, and present in any script that
+  # patches specific blocks. Their shape trips the generic-api-key rule. Scoped to
+  # the `blockKey:` assignment so surrounding content is still scanned.
+  '''blockKey:\s*['"][0-9a-fA-F]{8,}['"]''',
 ]
 stopwords = [
   "ci-placeholder-key",
