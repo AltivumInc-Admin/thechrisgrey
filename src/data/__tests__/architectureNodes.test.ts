@@ -40,7 +40,9 @@ describe('architectureNodes', () => {
     // Source of truth: GUARDRAIL_VERSION in lambda/chat-stream/index.mjs. This guards
     // against the displayed version drifting from the deployed guardrail version.
     const lambdaSource = readFileSync(resolve(HERE, '../../../lambda/chat-stream/index.mjs'), 'utf8');
-    const match = lambdaSource.match(/const GUARDRAIL_VERSION\s*=\s*["']([^"']+)["']/);
+    const match = lambdaSource.match(
+      /const GUARDRAIL_VERSION\s*=\s*(?:process\.env\.GUARDRAIL_VERSION\s*\|\|\s*)?["']([^"']+)["']/,
+    );
     expect(match).not.toBeNull();
     const liveVersion = match![1];
 
