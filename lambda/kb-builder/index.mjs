@@ -23,7 +23,7 @@ const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
 const CORS_ORIGIN = "https://thechrisgrey.com";
 
-const S3_BUCKET = "thechrisgrey-kb-source";
+const S3_BUCKET = process.env.S3_BUCKET || "thechrisgrey-kb-source";
 const S3_KEY = "knowledge-base.txt";
 
 // Startup validation — fail fast if critical env vars are missing

@@ -12,8 +12,8 @@ import { MetricsCollector } from "lambda-shared/metrics";
 import { setRequestContext, captureError, addBreadcrumb, flushSentry } from "lambda-shared/errorTracking";
 import { captureProductEvent, flushProductAnalytics } from "lambda-shared/productAnalytics";
 
-const KNOWLEDGE_BASE_ID = "ARFYABW8HP";
-const DATA_SOURCE_ID = "TXQTRAJOSD";
+const KNOWLEDGE_BASE_ID = process.env.KB_ID || "ARFYABW8HP";
+const DATA_SOURCE_ID = process.env.DATA_SOURCE_ID || "TXQTRAJOSD";
 const NAMESPACE = "TheChrisGrey/SiteMetrics";
 
 const log = createLogger(null, { service: "kb-sync" });
