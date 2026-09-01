@@ -19,27 +19,27 @@
       "Effect": "Allow",
       "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
       "Resource": [
-        "arn:aws:bedrock:us-east-1:205930636302:inference-profile/us.anthropic.claude-opus-4-6-v1",
-        "arn:aws:bedrock:us-east-1:205930636302:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0"
+        "arn:aws:bedrock:us-east-1:${ACCOUNT_ID}:inference-profile/us.anthropic.claude-opus-4-6-v1",
+        "arn:aws:bedrock:us-east-1:${ACCOUNT_ID}:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0"
       ]
     },
     {
       "Sid": "BedrockGuardrail",
       "Effect": "Allow",
       "Action": ["bedrock:ApplyGuardrail"],
-      "Resource": ["arn:aws:bedrock:us-east-1:205930636302:guardrail/5kofhp46ssob"]
+      "Resource": ["arn:aws:bedrock:us-east-1:${ACCOUNT_ID}:guardrail/${GUARDRAIL_ID}"]
     },
     {
       "Sid": "DynamoDBRateLimit",
       "Effect": "Allow",
       "Action": ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"],
-      "Resource": ["arn:aws:dynamodb:us-east-1:205930636302:table/thechrisgrey-chat-ratelimit"]
+      "Resource": ["arn:aws:dynamodb:us-east-1:${ACCOUNT_ID}:table/thechrisgrey-chat-ratelimit"]
     },
     {
       "Sid": "CloudWatchLogs",
       "Effect": "Allow",
       "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
-      "Resource": "arn:aws:logs:us-east-1:205930636302:log-group:/aws/lambda/thechrisgrey-blueprint:*"
+      "Resource": "arn:aws:logs:us-east-1:${ACCOUNT_ID}:log-group:/aws/lambda/thechrisgrey-blueprint:*"
     },
     {
       "Sid": "CloudWatchMetrics",

@@ -5,7 +5,7 @@
       "Sid": "CloudWatchLogs",
       "Effect": "Allow",
       "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
-      "Resource": "arn:aws:logs:us-east-1:205930636302:log-group:/aws/lambda/thechrisgrey-mcp-server:*"
+      "Resource": "arn:aws:logs:us-east-1:${ACCOUNT_ID}:log-group:/aws/lambda/thechrisgrey-mcp-server:*"
     },
     {
       "Sid": "CloudWatchMetrics",
@@ -25,20 +25,20 @@
       "Resource": [
         "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-*",
         "arn:aws:bedrock:*::foundation-model/us.anthropic.claude-haiku-*",
-        "arn:aws:bedrock:*:205930636302:inference-profile/us.anthropic.claude-haiku-*"
+        "arn:aws:bedrock:*:${ACCOUNT_ID}:inference-profile/us.anthropic.claude-haiku-*"
       ]
     },
     {
       "Sid": "BedrockGuardrail",
       "Effect": "Allow",
       "Action": ["bedrock:ApplyGuardrail"],
-      "Resource": ["arn:aws:bedrock:us-east-1:205930636302:guardrail/5kofhp46ssob"]
+      "Resource": ["arn:aws:bedrock:us-east-1:${ACCOUNT_ID}:guardrail/${GUARDRAIL_ID}"]
     },
     {
       "Sid": "BedrockKnowledgeBaseRetrieve",
       "Effect": "Allow",
       "Action": ["bedrock:Retrieve"],
-      "Resource": "arn:aws:bedrock:us-east-1:205930636302:knowledge-base/ARFYABW8HP"
+      "Resource": "arn:aws:bedrock:us-east-1:${ACCOUNT_ID}:knowledge-base/${KB_ID}"
     },
     {
       "Sid": "DynamoDbRateLimit",

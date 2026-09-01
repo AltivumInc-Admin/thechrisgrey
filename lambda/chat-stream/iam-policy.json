@@ -12,7 +12,7 @@
       "Effect": "Allow",
       "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
       "Resource": [
-        "arn:aws:bedrock:us-east-1:205930636302:inference-profile/us.anthropic.claude-opus-4-6-v1",
+        "arn:aws:bedrock:us-east-1:${ACCOUNT_ID}:inference-profile/us.anthropic.claude-opus-4-6-v1",
         "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-opus-4-6-v1",
         "arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-opus-4-6-v1",
         "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-opus-4-6-v1"
@@ -22,34 +22,34 @@
       "Sid": "BedrockGuardrail",
       "Effect": "Allow",
       "Action": ["bedrock:ApplyGuardrail"],
-      "Resource": ["arn:aws:bedrock:us-east-1:205930636302:guardrail/5kofhp46ssob"]
+      "Resource": ["arn:aws:bedrock:us-east-1:${ACCOUNT_ID}:guardrail/${GUARDRAIL_ID}"]
     },
     {
       "Sid": "BedrockKnowledgeBaseRetrieve",
       "Effect": "Allow",
       "Action": ["bedrock:Retrieve"],
       "Resource": [
-        "arn:aws:bedrock:us-east-1:205930636302:knowledge-base/ARFYABW8HP",
-        "arn:aws:bedrock:us-east-1:205930636302:knowledge-base/FCNAZHLCUH"
+        "arn:aws:bedrock:us-east-1:${ACCOUNT_ID}:knowledge-base/${KB_ID}",
+        "arn:aws:bedrock:us-east-1:${ACCOUNT_ID}:knowledge-base/${PODCAST_KB_ID}"
       ]
     },
     {
       "Sid": "DynamoDBRateLimit",
       "Effect": "Allow",
       "Action": ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"],
-      "Resource": ["arn:aws:dynamodb:us-east-1:205930636302:table/thechrisgrey-chat-ratelimit"]
+      "Resource": ["arn:aws:dynamodb:us-east-1:${ACCOUNT_ID}:table/thechrisgrey-chat-ratelimit"]
     },
     {
       "Sid": "DynamoDBChatMemory",
       "Effect": "Allow",
       "Action": ["dynamodb:Query", "dynamodb:PutItem", "dynamodb:BatchWriteItem"],
-      "Resource": ["arn:aws:dynamodb:us-east-1:205930636302:table/thechrisgrey-chat-memory"]
+      "Resource": ["arn:aws:dynamodb:us-east-1:${ACCOUNT_ID}:table/thechrisgrey-chat-memory"]
     },
     {
       "Sid": "CloudWatchLogs",
       "Effect": "Allow",
       "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
-      "Resource": "arn:aws:logs:us-east-1:205930636302:log-group:/aws/lambda/thechrisgrey-chat-stream:*"
+      "Resource": "arn:aws:logs:us-east-1:${ACCOUNT_ID}:log-group:/aws/lambda/thechrisgrey-chat-stream:*"
     },
     {
       "Sid": "CloudWatchMetrics",

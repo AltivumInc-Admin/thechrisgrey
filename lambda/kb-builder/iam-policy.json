@@ -9,13 +9,13 @@
     {
       "Effect": "Allow",
       "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
-      "Resource": "arn:aws:logs:us-east-1:205930636302:log-group:/aws/lambda/thechrisgrey-kb-builder:*"
+      "Resource": "arn:aws:logs:us-east-1:${ACCOUNT_ID}:log-group:/aws/lambda/thechrisgrey-kb-builder:*"
     },
     {
       "Sid": "RateLimitDynamoDB",
       "Effect": "Allow",
       "Action": "dynamodb:UpdateItem",
-      "Resource": "arn:aws:dynamodb:us-east-1:205930636302:table/thechrisgrey-chat-ratelimit"
+      "Resource": "arn:aws:dynamodb:us-east-1:${ACCOUNT_ID}:table/thechrisgrey-chat-ratelimit"
     }
   ]
 }

@@ -5,13 +5,13 @@
       "Sid": "BedrockKBSync",
       "Effect": "Allow",
       "Action": "bedrock:StartIngestionJob",
-      "Resource": "arn:aws:bedrock:us-east-1:205930636302:knowledge-base/ARFYABW8HP"
+      "Resource": "arn:aws:bedrock:us-east-1:${ACCOUNT_ID}:knowledge-base/${KB_ID}"
     },
     {
       "Sid": "CloudWatchLogs",
       "Effect": "Allow",
       "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
-      "Resource": "arn:aws:logs:us-east-1:205930636302:log-group:/aws/lambda/thechrisgrey-kb-sync:*"
+      "Resource": "arn:aws:logs:us-east-1:${ACCOUNT_ID}:log-group:/aws/lambda/thechrisgrey-kb-sync:*"
     },
     {
       "Sid": "CloudWatchMetrics",

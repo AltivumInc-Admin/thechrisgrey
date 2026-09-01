@@ -54,6 +54,34 @@ UNVERIFIED=(
   "mcp-server|UNKNOWN|UNKNOWN"
 )
 
+# Account and Bedrock resource identifiers differ per AWS account, so the
+# committed iam-policy.json files carry ${PLACEHOLDER} tokens instead of literals
+# and are expanded here before comparison. Defaults mirror the env-first pattern
+# used by the Lambda code (see 2647a8e): the value falls back to the ORIGINAL
+# account so behaviour is unchanged when nothing is exported, while checking a
+# different account is just:
+#
+#   ACCOUNT_ID=512880383078 KB_ID=PSSJPTMXHQ PODCAST_KB_ID=AFLBVXFPUZ \
+#   GUARDRAIL_ID=xiekxgo2pdoq bash scripts/iam-drift.sh
+#
+# Hardcoding these literals is what let a migration copy policies with the right
+# account number but the wrong knowledge-base and guardrail IDs -- ARNs that were
+# well-formed yet named resources that did not exist, so bedrock:Retrieve failed
+# SILENTLY while the agent answered anyway.
+ACCOUNT_ID="${ACCOUNT_ID:-205930636302}"
+KB_ID="${KB_ID:-ARFYABW8HP}"
+PODCAST_KB_ID="${PODCAST_KB_ID:-FCNAZHLCUH}"
+GUARDRAIL_ID="${GUARDRAIL_ID:-5kofhp46ssob}"
+
+# Expand ${...} placeholders on stdin. Deliberately NOT `envsubst` (not present
+# on a stock macOS) and NOT `eval` (the file is JSON, not shell).
+expand() {
+  sed -e "s/\${ACCOUNT_ID}/${ACCOUNT_ID}/g" \
+      -e "s/\${KB_ID}/${KB_ID}/g" \
+      -e "s/\${PODCAST_KB_ID}/${PODCAST_KB_ID}/g" \
+      -e "s/\${GUARDRAIL_ID}/${GUARDRAIL_ID}/g"
+}
+
 # Canonicalize a JSON document on stdin to a deterministic string so that
 # formatting / key-order differences don't register as drift. Sorts keys
 # RECURSIVELY (a top-level `JSON.stringify(o, Object.keys(o).sort())` replacer
@@ -130,8 +158,8 @@ for dir in "$ROOT"/lambda/*/; do
   # exit status on the local file: if iam-policy.json is malformed, canon emits
   # nothing and we'd otherwise report a confusing DRIFT instead of the real
   # cause, so fail with a clear "invalid local policy" error.
-  if ! desired="$(canon <"$policy_file")"; then
-    echo "ERROR  $name — iam-policy.json is not valid JSON (canonicalization failed)"
+  if ! desired="$(expand <"$policy_file" | canon)"; then
+    echo "ERROR  $name — iam-policy.json is not valid JSON after placeholder expansion (canonicalization failed)"
     DRIFT=1; continue
   fi
   livenorm="$(printf '%s' "$live" | canon)"
