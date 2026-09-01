@@ -126,7 +126,10 @@ const Navigation = () => {
         <div className="flex justify-between items-center h-20">
           {/* Logo/Name */}
           <ViewTransitionLink to="/" className="flex items-center">
-            <img src={logo} alt="TCG Logo" className="h-16 w-16" />
+            {/* Intrinsic width/height match the h-16 w-16 (64px) Tailwind box so
+                the browser reserves the logo's space before the stylesheet
+                applies, removing it as a layout-shift source on every route. */}
+            <img src={logo} alt="TCG Logo" className="h-16 w-16" width={64} height={64} />
             <div className="flex flex-col -ml-2">
               <span className="text-white tracking-tight" style={{ ...typography.cardTitleLarge, fontWeight: 700 }}>
                 CHRISTIAN <span className="text-altivum-gold">PEREZ</span>

@@ -57,6 +57,15 @@ const SanityResponsiveImage = ({
   // prerender SEO gate and accessibility tooling recognize the intent.
   const isDecorative = !alt.trim();
 
+  // Intrinsic dimensions for the fallback src, derived from the same widths[] and
+  // aspectRatio the srcSet is built from, so they can never disagree. The browser
+  // uses the ratio of these to reserve the correct box before the image loads;
+  // CSS (className) still controls the rendered size, so this changes layout for
+  // nobody and only removes a shift. Callers that already wrap in an
+  // aspect-ratio box get belt-and-braces; callers that don't now get CLS safety.
+  const intrinsicWidth = widths[widths.length - 1];
+  const intrinsicHeight = Math.round(intrinsicWidth / aspectRatio);
+
   return (
     <div
       className="relative overflow-hidden"
@@ -71,6 +80,8 @@ const SanityResponsiveImage = ({
         srcSet={srcSet}
         sizes={sizes}
         alt={alt}
+        width={intrinsicWidth}
+        height={intrinsicHeight}
         {...(isDecorative ? { role: 'presentation', 'aria-hidden': 'true' } : {})}
         loading={priority ? 'eager' : 'lazy'}
         decoding={priority ? 'sync' : 'async'}

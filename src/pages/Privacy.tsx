@@ -39,7 +39,7 @@ const Privacy = () => {
     <div className="min-h-screen pt-20">
       <SEO
         title="Privacy Policy"
-        description="Privacy policy for thechrisgrey.com - how we collect, use, and protect your personal information."
+        description="Privacy policy for thechrisgrey.com: what data is collected, how it is used and protected, the cookie-free analytics in use, and the choices available to you."
         url="https://thechrisgrey.com/privacy"
         breadcrumbs={breadcrumbs}
         structuredData={[
