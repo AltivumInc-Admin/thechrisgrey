@@ -69,27 +69,18 @@ bedrock:ApplyGuardrail on guardrail/xiekxgo2pdoq     -> AccessDenied
 
 **Why this one mattered more than it looks.** Retrieval failed _silently_: the agent logged `kb_retrieval_error` and carried on. Only the guardrail denial produced a visible error. **Had the guardrail permission been correct, chat would have returned fluent, confident, entirely ungrounded answers** — a migration that passes every smoke test while serving an Alti that knows nothing about Christian. A status-code check would have called it healthy.
 
-**Still open — the repo is the source of the drift.** `lambda/{chat-stream,mcp-server,blueprint,kb-sync}/iam-policy.json` all hardcode the source IDs. Any redeploy from them reintroduces this. They need the env-substitutable treatment commit `2647a8e` gave the Lambda code.
+**Fixed at the source too (commit `9f973d7`).** The repo's own `iam-policy.json` files hardcoded these IDs and would have reintroduced the bug on the next deploy. All seven now carry `${ACCOUNT_ID}`, `${KB_ID}`, `${PODCAST_KB_ID}` and `${GUARDRAIL_ID}` placeholders, and `scripts/iam-drift.sh` expands them before comparing — defaulting to the original account so nothing changes when no env is exported. Verified: every file expands to byte-identical canonical JSON against the previous revision, so the commit is semantically a no-op today and portable tomorrow.
 
 #### Auth model note
 
 chat-stream requires an `Authorization: Bearer <session token>`; `ALLOW_LEGACY_HMAC` is off by default. Verification temporarily enabled that flag (self-reverting, confirmed off afterwards, unsigned requests rejected again) because the session-token Lambda is Turnstile- and origin-gated and cannot be satisfied from a terminal. CORS was a red herring — it is browser-enforced and never applied to these checks; the session-token 403 came from an explicit server-side origin check.
 
-### Phase 3 — original assessment (superseded)
-
-**Passing — RAG proven with real retrieval, not a 200:**
+#### Direct retrieval scores (measured separately)
 
 - Main KB `PSSJPTMXHQ` → score **0.83**, returned Christian's actual biography (Guatemala City, Boston, Clarksville) and the AWS 10,000 AIdeas finalist record.
 - Podcast KB `AFLBVXFPUZ` → score **0.90**, returned real Vector Podcast opening copy.
 
-This is the check that would have caught an empty-KB migration, and it passes on live content.
-
-**Blocked — full chat end-to-end.** Two findings:
-
-1. **Auth model moved on.** chat-stream now requires `Authorization: Bearer <session token>`; `ALLOW_LEGACY_HMAC` defaults off, so the legacy HMAC path my suite used is correctly rejected with `missing_token`. The Lambda is behaving correctly — the _test_ was outdated.
-2. **CORS chicken-and-egg.** The target's session-token Lambda has `CORS_ORIGIN = https://thechrisgrey.com` only. That hostname currently resolves to the **source** account, so the target's chat cannot be exercised from the target's own Amplify domain before cutover.
-
-**Options:** (a) temporarily add the Amplify default domain to `CORS_ORIGIN`, verify in a browser, then revert — recommended; or (b) verify immediately post-cutover with the 60s TTL rollback armed.
+Both were run against `bedrock-agent-runtime retrieve` directly, before the IAM fix, using operator credentials rather than the Lambda role — which is precisely why they passed while the Lambda still failed. Useful as proof the _indexes_ were populated; not a substitute for the end-to-end run above.
 
 ---
 
