@@ -1,6 +1,7 @@
 import { onCLS, onINP, onFCP, onLCP, onTTFB, type Metric } from 'web-vitals';
 import { createLogger } from './logger';
 import { generateTraceId } from './traceId';
+import { joinEndpoint } from './endpoint';
 
 const log = createLogger('WebVitals');
 
@@ -28,7 +29,10 @@ const reportMetric = (metric: Metric) => {
 
   // Use sendBeacon for reliable delivery (survives page unload)
   if (navigator.sendBeacon) {
-    navigator.sendBeacon(`${METRICS_ENDPOINT}/vitals`, body);
+    // joinEndpoint, not template concatenation: a trailing slash on the env var
+    // would produce `//vitals`, which the Lambda 404s. sendBeacon is
+    // fire-and-forget, so that failure is completely silent.
+    navigator.sendBeacon(joinEndpoint(METRICS_ENDPOINT, '/vitals'), body);
   }
 };
 

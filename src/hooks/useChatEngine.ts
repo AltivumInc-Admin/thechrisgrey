@@ -6,6 +6,7 @@ import { getOrCreateDeviceId, clearDeviceId } from '../utils/deviceId';
 import { createChatStreamParser, type DraftAction, type ChatEvent } from '../utils/chatEvents';
 import { withTraceId } from '../utils/traceId';
 import { createLogger } from '../utils/logger';
+import { joinEndpoint } from '../utils/endpoint';
 import type { UiBlock } from '../utils/uiBlocks';
 
 const log = createLogger('ChatEngine');
@@ -433,7 +434,7 @@ export function useChatEngine(pageContext?: PageContext, options?: ChatEngineOpt
     }
     const requestBody = JSON.stringify({ deviceId });
     const token = await getSessionToken('chat');
-    const forgetUrl = CHAT_ENDPOINT.endsWith('/') ? `${CHAT_ENDPOINT}forget` : `${CHAT_ENDPOINT}/forget`;
+    const forgetUrl = joinEndpoint(CHAT_ENDPOINT, '/forget');
     try {
       const response = await fetch(
         forgetUrl,

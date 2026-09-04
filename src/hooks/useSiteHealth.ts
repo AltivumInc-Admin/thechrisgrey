@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { joinEndpoint } from '../utils/endpoint';
 
 const METRICS_ENDPOINT = import.meta.env.VITE_METRICS_ENDPOINT;
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -65,7 +66,7 @@ export function useSiteHealth(getAccessToken: () => Promise<string | null>, enab
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await fetch(`${METRICS_ENDPOINT}/health`, {
+      const response = await fetch(joinEndpoint(METRICS_ENDPOINT, '/health'), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
