@@ -1,0 +1,297 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  External uptime monitoring for thechrisgrey.com via a CloudWatch Synthetics
+  API canary. Created after the 2026-09 account migration, which produced two
+  failures that were invisible to everything watching at the time: KB retrieval
+  denied by IAM (the agent logged the error and answered anyway) and Web Vitals
+  posting to a 404 (sendBeacon is fire-and-forget). Both were black-box
+  detectable. Nothing was looking from outside, so nothing caught them.
+
+  Deploy:
+    aws cloudformation deploy \
+      --template-file infra/canary.yaml \
+      --stack-name thechrisgrey-canary \
+      --capabilities CAPABILITY_NAMED_IAM \
+      --region us-east-1 \
+      --profile personal-dev
+
+  Delete (removes every resource below; empty the bucket first):
+    aws s3 rm s3://<artifact-bucket> --recursive --profile personal-dev
+    aws cloudformation delete-stack --stack-name thechrisgrey-canary \
+      --region us-east-1 --profile personal-dev
+
+Parameters:
+  SiteUrl:
+    Type: String
+    Default: https://thechrisgrey.com
+    Description: Public site origin, no trailing slash.
+  TargetOriginUrl:
+    Type: String
+    Default: https://main.d3btl94rm91y13.amplifyapp.com
+    Description: >-
+      Amplify default domain of the account that SHOULD be serving. The canary
+      compares the site's homepage against this; a mismatch means traffic is no
+      longer coming from the expected account.
+  ChatEndpoint:
+    Type: String
+    Default: https://sv2sjjpcgtjxfmpms772td5jtq0jlprx.lambda-url.us-east-1.on.aws
+    Description: chat-stream Function URL, no trailing slash.
+  AlarmTopicArn:
+    Type: String
+    Default: arn:aws:sns:us-east-1:512880383078:thechrisgrey-site-alerts
+    Description: Existing SNS topic, so this joins the current alert pipeline.
+  ScheduleExpression:
+    Type: String
+    Default: rate(15 minutes)
+    Description: >-
+      Canary cadence. Runs cost roughly $0.0012 each, so 15 minutes is about
+      $3.50/month. rate(3 hours) is about $0.30/month if this is only needed
+      for a migration soak.
+  ArtifactRetentionDays:
+    Type: Number
+    Default: 30
+    Description: Days before canary artifacts expire from S3.
+
+Resources:
+  # Canaries always write screenshots, logs and HAR files somewhere. A dedicated
+  # bucket keeps them off the content buckets, and the lifecycle rule stops the
+  # run history growing without bound.
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub 'thechrisgrey-canary-artifacts-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireCanaryArtifacts
+            Status: Enabled
+            ExpirationInDays: !Ref ArtifactRetentionDays
+
+  # Permissions are exactly the set the Synthetics docs require for a basic
+  # canary with no VPC and no customer-managed KMS key. s3:ListAllMyBuckets and
+  # xray:PutTraceSegments cannot be resource-scoped; everything else is.
+  CanaryRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: thechrisgrey-canary-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: thechrisgrey-canary-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: !Sub '${ArtifactBucket.Arn}/*'
+              - Effect: Allow
+                Action: s3:GetBucketLocation
+                Resource: !GetAtt ArtifactBucket.Arn
+              - Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                  - xray:PutTraceSegments
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cwsyn-*'
+              - Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: CloudWatchSynthetics
+
+  SiteCanary:
+    Type: AWS::Synthetics::Canary
+    Properties:
+      # Canary names are limited to 21 characters, lowercase.
+      Name: tcg-site-canary
+      RuntimeVersion: syn-nodejs-5.2
+      ExecutionRoleArn: !GetAtt CanaryRole.Arn
+      ArtifactS3Location: !Sub 's3://${ArtifactBucket}/canary'
+      StartCanaryAfterCreation: true
+      RunConfig:
+        TimeoutInSeconds: 120
+        MemoryInMB: 1024
+        EnvironmentVariables:
+          SITE_URL: !Ref SiteUrl
+          TARGET_ORIGIN_URL: !Ref TargetOriginUrl
+          CHAT_ENDPOINT: !Ref ChatEndpoint
+      Schedule:
+        Expression: !Ref ScheduleExpression
+      SuccessRetentionPeriod: 7
+      FailureRetentionPeriod: 31
+      Code:
+        Handler: index.handler
+        Script: |
+          const https = require("https");
+
+          // Deliberately NOT using the Synthetics helper library. Its module
+          // name and surface differ across runtimes -- @aws/synthetics-core on
+          // syn-nodejs-5.x does not expose executeHttpStep, which lives in the
+          // Puppeteer runtime's library, and the first deploy of this canary
+          // failed on exactly that. A canary's pass/fail is determined solely
+          // by whether this handler throws, so the library is optional. Plain
+          // https keeps the script portable across runtime upgrades. The cost
+          // is per-step metrics, which nothing here consumes -- the alarm uses
+          // SuccessPercent, which the runtime emits regardless.
+          const SITE = process.env.SITE_URL;
+          const TARGET_ORIGIN = process.env.TARGET_ORIGIN_URL;
+          const CHAT = process.env.CHAT_ENDPOINT;
+
+          // Fetch a URL and resolve {status, headers, body}. Used for the checks
+          // that need to inspect more than the status code.
+          const fetchRaw = (url, opts = {}) =>
+            new Promise((resolve, reject) => {
+              const req = https.request(
+                url,
+                { method: opts.method || "GET", headers: opts.headers || {}, timeout: 20000 },
+                (res) => {
+                let body = "";
+                res.on("data", (d) => (body += d));
+                res.on("end", () => resolve({ status: res.statusCode, headers: res.headers, body }));
+              });
+              req.on("timeout", () => req.destroy(new Error("timeout " + url)));
+              req.on("error", reject);
+              if (opts.body) req.write(opts.body);
+              req.end();
+            });
+
+          // Follow redirects so a trailing-slash 301 is not read as a failure.
+          const fetchFollow = async (url, depth = 0) => {
+            const r = await fetchRaw(url);
+            if (r.status >= 300 && r.status < 400 && r.headers.location && depth < 3) {
+              const next = r.headers.location.startsWith("http")
+                ? r.headers.location
+                : SITE + r.headers.location;
+              return fetchFollow(next, depth + 1);
+            }
+            return r;
+          };
+
+          // /admin and /blueprint are deliberately excluded: they 404 by design
+          // on this site (pre-existing SPA deep-link gap), so including them
+          // would make every run fail for a known, accepted reason.
+          const ROUTES = ["/", "/about", "/altivum", "/foundation", "/podcast",
+                          "/beyond-the-assessment", "/aws", "/claude", "/blog",
+                          "/links", "/contact", "/privacy"];
+
+          exports.handler = async () => {
+            // Collect every failure rather than throwing on the first, so one
+            // run reports the full picture instead of hiding later problems
+            // behind the earliest one.
+            const failures = [];
+            const check = async (name, fn) => {
+              try { await fn(); } catch (e) { failures.push(name + ": " + e.message); }
+            };
+
+            // 1. Route health, plus the feeds.
+            for (const path of [...ROUTES, "/sitemap.xml", "/rss.xml"]) {
+              await check("route " + path, async () => {
+                const r = await fetchFollow(SITE + path);
+                if (r.status !== 200) throw new Error("status " + r.status);
+              });
+            }
+
+            // 2. Chat backend reachable. A 200 means the handler ran and made
+            //    its own auth decision. A 403 carrying x-amzn-errortype means
+            //    the Function URL itself is blocked at the service layer --
+            //    exactly the failure that took this site's backend down for 21
+            //    hours during the migration, so it is called out explicitly.
+            await check("chat backend", async () => {
+              const r = await fetchRaw(CHAT + "/", {
+                method: "POST", body: "{}", headers: { "content-type": "application/json" },
+              });
+              if (r.headers["x-amzn-errortype"]) {
+                throw new Error("Function URL blocked at service layer: " + r.headers["x-amzn-errortype"]);
+              }
+              if (r.status < 200 || r.status > 299) throw new Error("status " + r.status);
+            });
+
+            // 3. Security headers still present.
+            let home = null;
+            await check("security headers", async () => {
+              home = await fetchFollow(SITE + "/");
+              const missing = ["strict-transport-security", "content-security-policy",
+                               "x-content-type-options", "x-frame-options"]
+                .filter((h) => !home.headers[h]);
+              if (missing.length) throw new Error("missing " + missing.join(", "));
+            });
+
+            // 4. Unknown paths must return a real 404, not a soft 404 -- a 200
+            //    here would let search engines index every typo'd URL.
+            await check("real 404", async () => {
+              const r = await fetchFollow(SITE + "/nonexistent-canary-probe-xyz");
+              if (r.status !== 404) throw new Error("expected 404, got " + r.status);
+            });
+
+            // 5. Serving from the expected account. This is the check a plain
+            //    uptime monitor would miss entirely: the site can be perfectly
+            //    healthy while being served by the wrong account.
+            await check("serving from expected origin", async () => {
+              if (!home) throw new Error("homepage not fetched");
+              const target = await fetchFollow(TARGET_ORIGIN + "/");
+              if (target.status !== 200) return; // origin unreachable is inconclusive, not a failure
+              if (home.body !== target.body) {
+                throw new Error("homepage differs from the expected origin -- traffic may have moved accounts");
+              }
+            });
+
+            if (failures.length) {
+              throw new Error(failures.length + " check(s) failed -- " + failures.join(" | "));
+            }
+          };
+
+  # Two evaluation periods, so a single transient blip does not page. At a
+  # 15-minute cadence that means a real outage is reported within ~30 minutes.
+  CanaryFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: thechrisgrey-canary-failure
+      AlarmDescription: >-
+        thechrisgrey.com external canary failed. Check the canary's run
+        artifacts for which step failed and its response detail.
+      Namespace: CloudWatchSynthetics
+      MetricName: SuccessPercent
+      Dimensions:
+        - Name: CanaryName
+          Value: !Ref SiteCanary
+      Statistic: Average
+      Period: 900
+      EvaluationPeriods: 2
+      Threshold: 100
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlarmTopicArn
+      OKActions:
+        - !Ref AlarmTopicArn
+
+Outputs:
+  CanaryName:
+    Value: !Ref SiteCanary
+  ArtifactBucketName:
+    Value: !Ref ArtifactBucket
+  AlarmName:
+    Value: !Ref CanaryFailureAlarm
