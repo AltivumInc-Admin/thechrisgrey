@@ -157,17 +157,94 @@ Existence is not function. This phase proves behavior.
 
 **Gate:** all five observed working. Per the project's own hard-won rule, "tests pass" ≠ "it works" — this phase is the difference.
 
-## Phase 4 — Cutover _(requires explicit go-ahead)_
+## Phase 4 — Cutover: **COMPLETE (2026-09-03 23:43 CDT)**
 
-**Prerequisite:** Cloudflare MCP reconnected.
+**thechrisgrey.com is now served by account 512880383078.** Option A was chosen and executed.
 
-1. Attach `thechrisgrey.com` + `www` to Amplify app `d3btl94rm91y13`; complete ACM validation.
-2. Wait for `AVAILABLE` domain status.
-3. **Lower DNS TTL to 60s at least an hour beforehand** — this is what makes rollback fast.
-4. Flip the Cloudflare CNAME from `d3oenbnjnlnosx.cloudfront.net` to the target Amplify domain.
-5. Watch: 200s on all 17 routes, chat streaming, Web Vitals still reporting, CSP violations flat.
+### Timeline
 
-**Rollback:** point the CNAME back. With a 60s TTL, recovery is ~2 minutes. **This is the only step that touches live traffic** — and the only one that is genuinely irreversible in reputation terms if it goes wrong unwatched.
+| Time     | Event                                                                          |
+| -------- | ------------------------------------------------------------------------------ |
+| 23:37:40 | source domain association deleted — downtime begins                            |
+| 23:37:44 | claimed on target (4s gap)                                                     |
+| 23:37:54 | `PENDING_VERIFICATION`; required cert record **already present** in Cloudflare |
+| ~23:39   | DNS flipped to `d3cs6wvq0asy3d.cloudfront.net` while still down                |
+| 23:40:31 | **first 200 — downtime ends, 2m51s total**                                     |
+| 23:43:57 | domain `AVAILABLE`                                                             |
+
+**Downtime was 2 minutes 51 seconds**, far below the "unknown, potentially long" estimate.
+
+### Two things made it short
+
+1. **The ACM validation record was already correct.** ACM issues the _same_ validation CNAME for a given domain across certificates, so the source's existing `_a7e030c3…` record validated the target's brand-new cert with no DNS change at all. Cert issuance dropped out of the critical path entirely.
+2. **DNS was flipped while the site was already down.** Both origins were failing anyway, so moving DNS early took propagation off the critical path — the instant the target CloudFront came up, traffic was already pointed at it.
+
+### Verified after cutover
+
+- **Serving from target, proven by content hash:** `thechrisgrey.com` = `90c0203433f843d1` = target default domain; source default = `b2490cea580deb03`.
+- All routes 200; unknown paths return a real 404; blog dynamic routes 200.
+- 4/4 security headers intact (HSTS, CSP, nosniff, frame-options).
+- **session-token origin check now passes** — returns `invalid_device_id` rather than `forbidden_origin`, resolving the pre-cutover chicken-and-egg.
+
+**Not a regression:** `/admin` and `/blueprint` return 404 — but they do on _both_ apps' default domains, with identical rewrite rules. A pre-existing SPA deep-link gap worth its own look, unrelated to the migration.
+
+**Quirk:** Amplify reports apex `verified=False` while status is `AVAILABLE` and the apex serves 200 — Cloudflare flattens the apex CNAME, so Amplify's CNAME check can't see it. Cosmetic.
+
+### Rollback (still available)
+
+Point apex + `www` back to `d3oenbnjnlnosx.cloudfront.net` (60s TTL) **and** re-create the domain association on source app `d3du8eg39a9peo` (apex + `www` → branch `main`). The source app, its Lambdas, and its knowledge bases are all still intact.
+
+---
+
+## Phase 4 — original analysis (retained for the record)
+
+### Done
+
+- **Cloudflare access restored** via the `cloudflare-api` MCP (not `cloudflare-builds`, which is Workers CI/CD only). Zone `thechrisgrey.com` = `6767430a4b8706c17749f181b6e3d9a1`, active, 21 records, read/write confirmed.
+- **TTL lowered to 60s** on apex and `www` (both were "Auto" = 300s, both DNS-only/grey-cloud so DNS alone decides who serves). Verified live: apex cycles 60→40→20→60; `www` drains its old 300s window then follows. Content unchanged, no traffic moved, site still 200.
+
+### The blocker: Amplify will not share a domain across apps
+
+Attempting the domain attach returned:
+
+```
+BadRequestException: One or more domains requested are already associated
+with another Amplify app: thechrisgrey.com, www.thechrisgrey.com
+```
+
+Source app `d3du8eg39a9peo` holds it (`AVAILABLE`, subdomain `www`). **The restriction holds across AWS accounts** — the target cannot claim the domain until the source releases it. The original plan assumed the target could be fully staged before the DNS flip. It cannot.
+
+This inverts the risk profile. The sequence is forced to be:
+
+1. **Delete** the domain association on source → the live site's custom domain stops resolving to a working origin
+2. Create the association on target
+3. Amplify provisions a **new ACM cert** → add its validation CNAME
+4. Wait for `AVAILABLE`
+5. Flip DNS
+
+**Downtime runs from step 1 to step 5**, and DNS TTL does not help — the bottleneck is Amplify provisioning, not propagation. The target has **no pre-validated cert** for the apex or `www` (only `mcp.thechrisgrey.com` is ISSUED), so certificate issuance sits inside the window. AWS documentation does not give a reliable activation figure and none was found; treat the duration as **unknown and potentially long**.
+
+### Option A — accept a maintenance window
+
+Run the sequence above at the lowest-traffic hour, with every command staged in advance so the gap is provisioning time and nothing else.
+
+- **Honest:** simple, no architectural change, well-understood rollback (re-associate on source).
+- **Cost:** the site is down for an unknown period, plausibly tens of minutes.
+
+### Option B — Cloudflare proxy + Origin Rule (no downtime)
+
+Proxy apex/`www` through Cloudflare (orange cloud) and add an Origin Rule overriding the `Host` header and resolved origin to `main.d3btl94rm91y13.amplifyapp.com`. The target then serves the custom domain **without any Amplify domain association**, so the source never has to release it first and there is no gap.
+
+- **Honest:** no downtime, and reversible by disabling one rule.
+- **Cost:** genuinely changes the architecture. Cloudflare moves from DNS-only to in-path proxy, which touches TLS mode, the CSP/analytics assumptions, and caching behaviour. Origin Rules also _require_ proxying. This is a bigger change than the migration set out to make, and it deserves testing on a subdomain before the apex.
+
+### Recommendation
+
+**Option A, scheduled**, unless the downtime is unacceptable. It keeps the architecture unchanged and matches what has already been verified. Option B is worth prototyping on `mcp.thechrisgrey.com` first if a zero-downtime cutover is a hard requirement.
+
+Either way, once traffic is on target: verify 200s across all 17 routes, chat streaming, Web Vitals reporting, CSP violations flat.
+
+**Rollback:** re-point the CNAME (60s TTL, ~2 minutes) and, under Option A, re-associate the domain on source. **This is the only step that touches live traffic.**
 
 **Do not proceed to Phase 5 for at least 48 hours.**
 
