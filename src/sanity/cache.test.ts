@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getBlogListingCache, setBlogListingCache } from './cache';
+import { getBlogListingCache, setBlogListingCache, clearBlogListingCache } from './cache';
 import type { BlogListingResult } from './types';
 
 describe('cache', () => {
@@ -14,15 +14,13 @@ describe('cache', () => {
         publishedAt: '2026-01-01',
       },
     ],
-    tags: [{ _id: 'tag-1', title: 'Tech', slug: { current: 'tech' } }],
-    series: [{ _id: 'series-1', title: 'Test Series', slug: { current: 'test-series' } }],
   };
 
   beforeEach(() => {
+    // The cache is module-scoped and shared across tests in this file; without
+    // this reset, "returns null when empty" would pass only by running first.
+    clearBlogListingCache();
     vi.useFakeTimers();
-    // Reset the module-level cache by importing fresh
-    // Since cache is module-scoped, we set it via setBlogListingCache
-    // and read via getBlogListingCache. We need to clear it between tests.
   });
 
   afterEach(() => {
@@ -31,8 +29,13 @@ describe('cache', () => {
   });
 
   it('should return null when cache is empty', () => {
-    // On first import with no data set, cache should be null
-    // We rely on module reset or test isolation
+    expect(getBlogListingCache()).toBeNull();
+  });
+
+  it('should return null when cache is empty even after another test populated it', () => {
+    // Ordering guard: this test only means anything because beforeEach clears.
+    setBlogListingCache(mockData);
+    clearBlogListingCache();
     expect(getBlogListingCache()).toBeNull();
   });
 
@@ -47,8 +50,6 @@ describe('cache', () => {
     const result = getBlogListingCache();
     expect(result?.posts).toHaveLength(1);
     expect(result?.posts[0].title).toBe('Test Post');
-    expect(result?.tags).toHaveLength(1);
-    expect(result?.series).toHaveLength(1);
   });
 
   it('should return null after TTL (5 minutes) expires', () => {
@@ -85,8 +86,6 @@ describe('cache', () => {
           publishedAt: '2026-02-01',
         },
       ],
-      tags: [],
-      series: [],
     };
 
     setBlogListingCache(mockData);
@@ -122,5 +121,22 @@ describe('cache', () => {
     expect(getBlogListingCache()).toBeNull();
     // Second read should also be null
     expect(getBlogListingCache()).toBeNull();
+  });
+
+  it('should reject a malformed listing on write, so no caller can poison the cache', () => {
+    // A post missing its required core: the guard must stop this at the cache,
+    // not rely on every call site remembering to validate first.
+    const drifted = { posts: [{ _id: 'only-an-id' }] } as unknown as BlogListingResult;
+
+    expect(setBlogListingCache(drifted)).toBe(false);
+    expect(getBlogListingCache()).toBeNull();
+  });
+
+  it('should leave a previously cached listing untouched when a malformed write is rejected', () => {
+    setBlogListingCache(mockData);
+
+    setBlogListingCache({ posts: 'not-an-array' } as unknown as BlogListingResult);
+
+    expect(getBlogListingCache()).toEqual(mockData);
   });
 });

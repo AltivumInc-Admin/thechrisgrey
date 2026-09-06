@@ -1,25 +1,52 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
+/**
+ * Decorative reading-progress rule for long-form articles.
+ *
+ * Deliberately aria-hidden rather than role="progressbar": the value changed on
+ * essentially every scroll frame, and screen readers that report progressbar
+ * updates (NVDA beeps, JAWS speaks the percentage) would fire for the whole
+ * length of an article to convey something assistive tech already reports.
+ *
+ * The bar is full width and scaled with a transform instead of resized: width
+ * is a layout property, so `willChange: 'width'` could never composite it and
+ * every frame cost layout + paint. scaleX stays on the compositor, and the
+ * handler writes it straight to the node, so scrolling never re-renders React.
+ */
 const ReadingProgressBar = () => {
-  const [progress, setProgress] = useState(0);
+  const barRef = useRef<HTMLDivElement>(null);
+  const scrollableRef = useRef(0);
 
   useEffect(() => {
-    const updateProgress = () => {
-      const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const scrollPercent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-      setProgress(Math.min(100, Math.max(0, scrollPercent)));
+    // scrollHeight is a layout read; taking it inside the scroll frame forced a
+    // reflow against the previous frame's style write. Measure only when the
+    // page geometry actually changes.
+    const measure = () => {
+      scrollableRef.current = document.documentElement.scrollHeight - window.innerHeight;
     };
 
-    // Initial calculation
-    updateProgress();
+    const paint = () => {
+      const scrollable = scrollableRef.current;
+      const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+      const bar = barRef.current;
+      if (bar) {
+        bar.style.transform = `scaleX(${Math.min(1, Math.max(0, ratio))})`;
+      }
+    };
+
+    const remeasure = () => {
+      measure();
+      paint();
+    };
+
+    remeasure();
 
     // Throttle scroll events with requestAnimationFrame
     let ticking = false;
     const handleScroll = () => {
       if (!ticking) {
         requestAnimationFrame(() => {
-          updateProgress();
+          paint();
           ticking = false;
         });
         ticking = true;
@@ -27,26 +54,36 @@ const ReadingProgressBar = () => {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', updateProgress, { passive: true });
+    window.addEventListener('resize', remeasure, { passive: true });
+
+    // An article grows after mount — images decode, code blocks get highlighted
+    // — and none of that fires `resize`. Without this the cached height goes
+    // stale and the bar never reaches the end of the post. Guarded because
+    // jsdom has no ResizeObserver.
+    const observer =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            remeasure();
+          })
+        : null;
+    observer?.observe(document.documentElement);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', updateProgress);
+      window.removeEventListener('resize', remeasure);
+      observer?.disconnect();
     };
   }, []);
 
   return (
     <div
-      className="fixed top-20 left-0 h-[3px] bg-altivum-gold z-40 transition-none"
+      ref={barRef}
+      className="fixed top-20 left-0 w-full h-[3px] bg-altivum-gold origin-left z-40 transition-none"
       style={{
-        width: `${progress}%`,
-        willChange: 'width',
+        transform: 'scaleX(0)',
+        willChange: 'transform',
       }}
-      role="progressbar"
-      aria-valuenow={Math.round(progress)}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-label="Reading progress"
+      aria-hidden="true"
     />
   );
 };

@@ -4,7 +4,10 @@ import {
   isRenderableImageSource,
   isSanityPost,
   isSanityPostPreview,
+  isSanityTag,
+  isSanitySeries,
   isBlogListingResult,
+  filterValidPostPreviews,
   isPodcastGuest,
   isPodcastGuestArray,
 } from './guards';
@@ -20,6 +23,9 @@ const validPreview = {
   category: 'Technology',
   publishedAt: '2026-01-15',
 };
+
+const validTag = { _id: 'tag-1', title: 'AI', slug: { current: 'ai' } };
+const validSeries = { _id: 'series-1', title: 'Cloud', slug: { current: 'cloud' } };
 
 const validGuest = { _id: 'g1', name: 'Jane', role: 'Founder', order: 1 };
 
@@ -47,6 +53,25 @@ describe('isRenderableImageSource (permissive)', () => {
     expect(isRenderableImageSource({})).toBe(false);
     expect(isRenderableImageSource(undefined)).toBe(false);
   });
+  it('rejects a present-but-malformed _ref that would throw inside urlFor', () => {
+    // `@sanity/image-url` throws `Malformed asset _ref 'x'`, and urlFor is called
+    // with no try/catch — an accepted bad ref takes the whole article down.
+    expect(isRenderableImageSource({ asset: { _ref: 'x' } })).toBe(false);
+    expect(isRenderableImageSource({ asset: { _ref: 'image-abc-jpg' } })).toBe(false);
+    expect(isRenderableImageSource({ asset: { _ref: 'file-abc-1200x800-pdf' } })).toBe(false);
+  });
+});
+
+describe('isSanityTag / isSanitySeries', () => {
+  it('accepts well-formed dereferenced documents', () => {
+    expect(isSanityTag(validTag)).toBe(true);
+    expect(isSanitySeries({ ...validSeries, description: 'x' })).toBe(true);
+  });
+  it('rejects a null element or a missing slug', () => {
+    expect(isSanityTag(null)).toBe(false);
+    expect(isSanityTag({ _id: 't', title: 'AI' })).toBe(false);
+    expect(isSanitySeries({ _id: 's', title: 'Cloud', slug: {} })).toBe(false);
+  });
 });
 
 describe('isSanityPostPreview / isSanityPost', () => {
@@ -62,18 +87,47 @@ describe('isSanityPostPreview / isSanityPost', () => {
   it('rejects when slug.current is missing', () => {
     expect(isSanityPost({ ...validPreview, slug: {} })).toBe(false);
   });
+  it('accepts absent tags/series (GROQ returns null for an unset reference)', () => {
+    expect(isSanityPostPreview({ ...validPreview, tags: [], series: null })).toBe(true);
+    expect(isSanityPostPreview({ ...validPreview, tags: [validTag], series: validSeries })).toBe(true);
+  });
+  it('rejects a post whose tag dereference stopped resolving', () => {
+    // Blog.tsx renders `tag.slug.current` inside a .map with no null check.
+    expect(isSanityPostPreview({ ...validPreview, tags: [null] })).toBe(false);
+    expect(isSanityPostPreview({ ...validPreview, tags: [{ _id: 't', title: 'AI' }] })).toBe(false);
+    expect(isSanityPostPreview({ ...validPreview, tags: 'ai' })).toBe(false);
+  });
+  it('rejects a post whose series dereference stopped resolving', () => {
+    expect(isSanityPostPreview({ ...validPreview, series: { _id: 's', title: 'Cloud' } })).toBe(false);
+  });
 });
 
 describe('isBlogListingResult', () => {
   it('accepts a well-formed listing (incl. empty posts)', () => {
-    expect(isBlogListingResult({ posts: [validPreview], tags: [], series: [] })).toBe(true);
-    expect(isBlogListingResult({ posts: [], tags: [], series: [] })).toBe(true);
+    expect(isBlogListingResult({ posts: [validPreview] })).toBe(true);
+    expect(isBlogListingResult({ posts: [] })).toBe(true);
   });
-  it('rejects when an array is missing', () => {
-    expect(isBlogListingResult({ posts: [], tags: [] })).toBe(false);
+  it('rejects when posts is missing or not an array', () => {
+    expect(isBlogListingResult({})).toBe(false);
+    expect(isBlogListingResult({ posts: 'nope' })).toBe(false);
   });
   it('rejects when a post is malformed', () => {
-    expect(isBlogListingResult({ posts: [{ _id: 'x' }], tags: [], series: [] })).toBe(false);
+    expect(isBlogListingResult({ posts: [{ _id: 'x' }] })).toBe(false);
+  });
+  it('ignores extra top-level keys (the query no longer projects tags/series)', () => {
+    expect(isBlogListingResult({ posts: [validPreview], tags: [], series: [] })).toBe(true);
+  });
+});
+
+describe('filterValidPostPreviews', () => {
+  it('keeps the good posts and drops only the drifted ones', () => {
+    const second = { ...validPreview, _id: 'post-2', slug: { current: 'b-post' } };
+    const kept = filterValidPostPreviews([validPreview, { _id: 'drifted' }, second]);
+
+    expect(kept.map((p) => p._id)).toEqual(['post-1', 'post-2']);
+  });
+  it('returns an empty array when nothing survives', () => {
+    expect(filterValidPostPreviews([{ _id: 'drifted' }, null])).toEqual([]);
   });
 });
 

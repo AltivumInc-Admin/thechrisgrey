@@ -1,43 +1,19 @@
 import { PortableTextComponents } from '@portabletext/react';
 import type { CodeBlock, Callout, YouTube, Divider, PullQuote, BookReference } from './types';
 import { isRenderableImageSource } from './guards';
+// Authored-href policy (scheme allowlist + internal-path resolution) now lives
+// in its own module so BlogPost's `pdfUrl` — the third CMS-supplied href — is
+// held to the same standard as the link mark and the bookReference card.
+import { isAllowedHref, resolveInternalPath } from './href';
+import { imageAspectRatio } from './imageMeta';
 import YouTubeFacade from '../components/YouTubeFacade';
 import HighlightedCodeBlock from '../components/HighlightedCodeBlock';
 import SanityResponsiveImage from '../components/SanityResponsiveImage';
 import ViewTransitionLink from '../components/ViewTransitionLink';
 import { getYouTubeId } from '../utils/youtube';
+import { typography } from '../utils/typography';
 import { slugify, textFromChildren } from '../utils/slugify';
 import Icon from '../components/icons/Icon';
-
-const SITE_ORIGIN = 'https://thechrisgrey.com';
-
-/**
- * Resolve a Portable Text `link` mark `href` to an internal route path when it
- * points at this site, or return `null` when it is an external URL.
- *
- *   - Relative paths (`/blog/foo`) are internal — returned as-is.
- *   - Same-origin absolute URLs (`https://thechrisgrey.com/blog/foo`) are
- *     internal — the pathname is returned (`/blog/foo`).
- *   - Anything else (`https://example.com/...`, `mailto:`, etc.) is external
- *     and returns `null` so the caller keeps the plain `<a>` rendering.
- *
- * Internal links render as `ViewTransitionLink` so in-blog cross-links perform
- * an SPA transition (preserving chat state and avoiding a full reload); external
- * links keep their existing plain-anchor `target`/`rel` behavior.
- */
-const resolveInternalPath = (href: string): string | null => {
-  if (!href) return null;
-  if (!href.startsWith('http')) return href;
-  try {
-    const parsed = new URL(href);
-    if (parsed.origin === SITE_ORIGIN || parsed.origin === 'http://thechrisgrey.com') {
-      return parsed.pathname || '/';
-    }
-  } catch {
-    // Malformed absolute URL — treat as external so we don't silently misroute.
-  }
-  return null;
-};
 
 // Callout icons and styles based on type
 const calloutStyles = {
@@ -74,13 +50,20 @@ export const portableTextComponents: PortableTextComponents = {
       // Validate the asset is actually renderable before handing it to urlFor —
       // a malformed/un-dereferenced image would otherwise throw in the builder.
       if (!isRenderableImageSource(value)) return null;
+      // Reserve a box shaped like the ACTUAL image. The hardcoded 4:3 still
+      // protected against CLS, but `object-cover` then cropped everything that
+      // did not fit it: a 953x1000 portrait screenshot lost ~28% of its height
+      // and a 1708x450 banner ~65% of its width, silently and with no author
+      // control. `metadata.dimensions` rides along in the same GROQ response, so
+      // the ratio is known before the raster loads and the CLS guarantee holds.
+      const ratio = imageAspectRatio(value) ?? 4 / 3;
       return (
         <figure className="my-8">
-          <div className="relative w-full rounded-lg" style={{ aspectRatio: '4 / 3' }}>
+          <div className="relative w-full rounded-lg" style={{ aspectRatio: `${ratio}` }}>
             <SanityResponsiveImage
               source={value}
               alt={value.alt || ''}
-              aspectRatio={4 / 3}
+              aspectRatio={ratio}
               widths={[480, 640, 800]}
               sizes="(max-width: 768px) 100vw, 800px"
               className="w-full h-full object-cover rounded-lg"
@@ -191,7 +174,8 @@ export const portableTextComponents: PortableTextComponents = {
         </div>
       );
 
-      if (value.link) {
+      // Same scheme allowlist as the link mark — this href is author-supplied too.
+      if (value.link && isAllowedHref(value.link)) {
         return (
           <a href={value.link} target="_blank" rel="noopener noreferrer" className="block no-underline">
             {content}
@@ -207,19 +191,39 @@ export const portableTextComponents: PortableTextComponents = {
     // Headings — each gets a stable slug-form id for fragment linking (VAL-AEO-005).
     // The id is derived from the heading text via slugify, so it is stable across
     // builds unless the heading text changes.
+    //
+    // Sizing/weight come from typography.ts, not ad-hoc Tailwind classes. With the
+    // inert `prose` wrapper gone these classes were the ONLY body styling left, and
+    // they rendered the article in the browser default stack at font-semibold —
+    // beside a page whose own H1 and section headings are SF Pro Display at weight
+    // 200. The article body was the one part of a post that did not look like the
+    // site. (h4 rides `subtitle`: the scale has no fourth display step, and it
+    // still separates from h3 where a fourth heading level realistically appears.)
     h2: ({ children }) => (
-      <h2 id={slugify(textFromChildren(children))} className="text-2xl font-semibold text-white mt-10 mb-4">
+      <h2 id={slugify(textFromChildren(children))} className="text-white mt-10 mb-4" style={typography.cardTitleLarge}>
         {children}
       </h2>
     ),
     h3: ({ children }) => (
-      <h3 id={slugify(textFromChildren(children))} className="text-xl font-semibold text-white mt-8 mb-3">
+      <h3 id={slugify(textFromChildren(children))} className="text-white mt-8 mb-3" style={typography.cardTitleSmall}>
         {children}
       </h3>
     ),
-    h4: ({ children }) => <h4 className="text-lg font-semibold text-white mt-6 mb-2">{children}</h4>,
-    // Normal paragraph
-    normal: ({ children }) => <p className="text-altivum-silver mb-6 leading-relaxed font-light">{children}</p>,
+    h4: ({ children }) => (
+      <h4 className="text-white mt-6 mb-2" style={typography.subtitle}>
+        {children}
+      </h4>
+    ),
+    // Normal paragraph. `lineHeight` is the one deliberate departure from the
+    // token: bodyText is tuned at 1.5 for short UI copy, and running article prose
+    // wants the 1.625 `leading-relaxed` gave it. It is set inline rather than left
+    // as a class because an inline style would silently win over the class and
+    // leave the class as decoration.
+    normal: ({ children }) => (
+      <p className="text-altivum-silver mb-6" style={{ ...typography.bodyText, lineHeight: 1.625 }}>
+        {children}
+      </p>
+    ),
     // Blockquote
     blockquote: ({ children }) => (
       <blockquote className="border-l-4 border-altivum-gold pl-6 my-6 italic text-altivum-silver/90">
@@ -242,6 +246,11 @@ export const portableTextComponents: PortableTextComponents = {
     // Links
     link: ({ children, value }) => {
       const href = value?.href || '';
+      // A scheme outside the allowlist never becomes a live anchor — render the
+      // text and drop the href rather than emitting `javascript:`/`data:` into
+      // the DOM.
+      if (!isAllowedHref(href)) return <>{children}</>;
+
       const internalPath = resolveInternalPath(href);
       const isExternal = internalPath === null;
       // Authors can force a new tab on internal links (rare); external links

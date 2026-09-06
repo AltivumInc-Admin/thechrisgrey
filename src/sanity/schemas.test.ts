@@ -12,6 +12,7 @@ import {
   CATEGORY_DOCUMENT_SCHEMA,
 } from './schemas';
 import { BLOG_LISTING_QUERY, POST_BY_SLUG_QUERY, PODCAST_GUESTS_QUERY } from './queries';
+import { isSanityPostPreview } from './guards';
 import { client, podcastClient } from './client';
 
 /** Extract every `_type == "X"` reference from a GROQ query string. */
@@ -33,6 +34,76 @@ function declaredFieldNames(schema: { fields: { name: string }[] }): Set<string>
   return new Set(schema.fields.map((f) => f.name));
 }
 
+/** Sanity system fields, present on every document and never declared in a schema. */
+const SYSTEM_FIELDS = new Set(['_id', '_type', '_key', '_ref', '_rev', '_createdAt', '_updatedAt']);
+
+/**
+ * Aliases computed by the query rather than stored on the document, so they have
+ * no schema field to match. `seriesPosts` is a `select()` subquery over sibling
+ * posts.
+ */
+const COMPUTED_PROJECTIONS = new Set(['seriesPosts']);
+
+/** The `{...}` projection body that follows `marker`, with balanced braces. */
+function projectionAfter(query: string, marker: string): string {
+  const start = query.indexOf(marker);
+  if (start === -1) throw new Error(`projection marker not found: ${marker}`);
+  const open = query.indexOf('{', start + marker.length);
+  if (open === -1) throw new Error(`no projection block after: ${marker}`);
+  let depth = 0;
+  for (let i = open; i < query.length; i += 1) {
+    if (query[i] === '{') depth += 1;
+    else if (query[i] === '}') {
+      depth -= 1;
+      if (depth === 0) return query.slice(open + 1, i);
+    }
+  }
+  throw new Error(`unbalanced projection after: ${marker}`);
+}
+
+/**
+ * Field names projected at the TOP level of a projection body, derived from the
+ * query text rather than hand-listed. Nested sub-projections (an image asset's
+ * `metadata`, a dereferenced tag's `slug`) describe other types and are skipped,
+ * so what comes back is exactly the field set of the document being projected.
+ *
+ * The hand-maintained literal arrays this replaces could not detect the failure
+ * the schema file claims to prevent: adding a field to a GROQ projection and
+ * forgetting to declare it passed every test.
+ */
+function projectedFieldsInQuery(query: string, marker: string): string[] {
+  const body = projectionAfter(query, marker);
+  const segments: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of body) {
+    if (ch === '{' || ch === '(' || ch === '[') depth += 1;
+    else if (ch === '}' || ch === ')' || ch === ']') depth -= 1;
+    if (ch === ',' && depth === 0) {
+      segments.push(current);
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  segments.push(current);
+
+  const fields = new Set<string>();
+  for (const segment of segments) {
+    const trimmed = segment.trim();
+    if (!trimmed) continue;
+    // `"alias": expression` or a bare field name.
+    const match = trimmed.match(/^"([a-zA-Z_][a-zA-Z0-9_]*)"\s*:/) ?? trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_]*)/);
+    if (match && !SYSTEM_FIELDS.has(match[1]) && !COMPUTED_PROJECTIONS.has(match[1])) fields.add(match[1]);
+  }
+  return [...fields];
+}
+
+/** Where each query's document-level projection begins. */
+const LISTING_POSTS_MARKER = '| order(isFeatured desc, publishedAt desc)';
+const POST_DETAIL_MARKER = '][0]';
+const PODCAST_GUESTS_MARKER = '| order(order asc)';
+
 describe('Sanity schema well-formedness', () => {
   for (const schema of ALL_SANITY_TYPE_SCHEMAS) {
     describe(`${schema.type} "${schema.name}"`, () => {
@@ -49,11 +120,9 @@ describe('Sanity schema well-formedness', () => {
         expect(new Set(names).size).toBe(names.length);
       });
 
-      it('declares required fields as required', () => {
+      it('marks a field required only with an explicit boolean true', () => {
         for (const field of schema.fields) {
-          if (field.required) {
-            expect(field.required).toBe(true);
-          }
+          expect(['boolean', 'undefined']).toContain(typeof field.required);
         }
       });
     });
@@ -72,11 +141,11 @@ describe('Sanity schema covers every _type queried by GROQ', () => {
     }
   });
 
-  it('BLOG_LISTING_QUERY references post, tag, and series', () => {
+  it('BLOG_LISTING_QUERY filters on post only (tags/series ride along as dereferences)', () => {
     const types = documentTypesInQuery(BLOG_LISTING_QUERY);
     expect(types).toContain('post');
-    expect(types).toContain('tag');
-    expect(types).toContain('series');
+    // The whole-collection scans were removed: nothing read them.
+    expect(types).not.toContain('tag');
   });
 
   it('POST_BY_SLUG_QUERY references post', () => {
@@ -89,49 +158,38 @@ describe('Sanity schema covers every _type queried by GROQ', () => {
 });
 
 describe('Sanity schema declares every field projected by GROQ', () => {
-  it('POST schema declares all fields projected in BLOG_LISTING_QUERY', () => {
+  // Derived from the query text, not from a literal list typed into this file:
+  // add a field to a projection without declaring it and these fail.
+  it('POST schema declares every field BLOG_LISTING_QUERY projects', () => {
     const fields = declaredFieldNames(POST_DOCUMENT_SCHEMA);
-    // Every stored field the listing projects must be declared. `_id` is system
-    // and excluded from the schema (it is implicit on every Sanity document).
-    for (const field of [
-      'title',
-      'slug',
-      'excerpt',
-      'category',
-      'publishedAt',
-      'readingTime',
-      'isFeatured',
-      'image',
-      'tags',
-      'series',
-      'seriesOrder',
-    ]) {
+    const projected = projectedFieldsInQuery(BLOG_LISTING_QUERY, LISTING_POSTS_MARKER);
+
+    expect(projected.length, 'listing projection must parse to at least one field').toBeGreaterThan(5);
+    for (const field of projected) {
       expect(fields.has(field), `post schema must declare "${field}"`).toBe(true);
     }
   });
 
-  it('POST schema declares all fields projected in POST_BY_SLUG_QUERY', () => {
+  it('POST schema declares every field POST_BY_SLUG_QUERY projects', () => {
     const fields = declaredFieldNames(POST_DOCUMENT_SCHEMA);
-    for (const field of [
-      'title',
-      'slug',
-      'excerpt',
-      'category',
-      'publishedAt',
-      'readingTime',
-      'isFeatured',
-      'pdfUrl',
-      'seoTitle',
-      'seoDescription',
-      'image',
-      'body',
-      'tags',
-      'series',
-      'seriesOrder',
-      'relatedPosts',
-    ]) {
+    const projected = projectedFieldsInQuery(POST_BY_SLUG_QUERY, POST_DETAIL_MARKER);
+
+    expect(projected).toContain('body');
+    for (const field of projected) {
       expect(fields.has(field), `post schema must declare "${field}"`).toBe(true);
     }
+  });
+
+  it('the derived parser actually sees the projected fields (guards the guard)', () => {
+    // Without this, a parser that silently returned [] would make the two checks
+    // above vacuously green.
+    const listing = projectedFieldsInQuery(BLOG_LISTING_QUERY, LISTING_POSTS_MARKER);
+    expect(listing).toEqual(
+      expect.arrayContaining(['title', 'slug', 'excerpt', 'category', 'publishedAt', 'image', 'tags', 'series']),
+    );
+    // Nested sub-projections belong to other types and must not leak in.
+    expect(listing).not.toContain('lqip');
+    expect(listing).not.toContain('alt');
   });
 
   it('TAG schema declares fields projected in BLOG_LISTING_QUERY', () => {
@@ -148,20 +206,12 @@ describe('Sanity schema declares every field projected by GROQ', () => {
     }
   });
 
-  it('PODCAST_GUEST schema declares every field projected in PODCAST_GUESTS_QUERY', () => {
+  it('PODCAST_GUEST schema declares every field PODCAST_GUESTS_QUERY projects', () => {
     const fields = declaredFieldNames(PODCAST_GUEST_DOCUMENT_SCHEMA);
-    for (const field of [
-      'name',
-      'role',
-      'branch',
-      'episodeUrl',
-      'image',
-      'linkedinUrl',
-      'instagramUrl',
-      'websiteUrl',
-      'websiteLabel',
-      'order',
-    ]) {
+    const projected = projectedFieldsInQuery(PODCAST_GUESTS_QUERY, PODCAST_GUESTS_MARKER);
+
+    expect(projected).toContain('name');
+    for (const field of projected) {
       expect(fields.has(field), `podcastGuest schema must declare "${field}"`).toBe(true);
     }
   });
@@ -236,6 +286,33 @@ describe('Sanity schema cross-checks with TypeScript result types', () => {
       'relatedPosts',
     ]) {
       expect(fields.has(field), `post schema must declare TS interface field "${field}"`).toBe(true);
+    }
+  });
+
+  it('every field the runtime guard demands is one the schema marks required', () => {
+    // guards.ts and schemas.ts previously contradicted each other in silence:
+    // the guard hard-required excerpt and category while the schema declared
+    // neither, so one post without an excerpt would have blanked the whole blog
+    // index for a field this file said was optional. Probing the guard rather
+    // than restating its field list keeps the two from drifting apart again.
+    const validPreview: Record<string, unknown> = {
+      _id: 'post-1',
+      title: 'A Post',
+      slug: { current: 'a-post' },
+      excerpt: 'An excerpt',
+      category: 'Technology',
+      publishedAt: '2026-01-15',
+    };
+    expect(isSanityPostPreview(validPreview), 'the probe fixture must itself be valid').toBe(true);
+
+    for (const field of POST_DOCUMENT_SCHEMA.fields) {
+      const withoutField = { ...validPreview };
+      delete withoutField[field.name];
+      const guardDemandsIt = !isSanityPostPreview(withoutField);
+      expect(
+        guardDemandsIt,
+        `"${field.name}": guard demands=${guardDemandsIt}, schema required=${Boolean(field.required)}`,
+      ).toBe(Boolean(field.required));
     }
   });
 

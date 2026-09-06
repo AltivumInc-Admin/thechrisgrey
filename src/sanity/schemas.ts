@@ -123,11 +123,17 @@ export const POST_DOCUMENT_SCHEMA: SanityTypeSchema = {
       required: true,
       description: 'URL slug; `defined(slug.current)` is the listing filter.',
     },
-    { name: 'excerpt', type: 'string', description: 'Short summary for listings and SEO.' },
+    {
+      name: 'excerpt',
+      type: 'text',
+      required: true,
+      description: 'Short summary (max 300 chars) for listings and SEO.',
+    },
     {
       name: 'category',
       type: 'reference',
       references: 'category',
+      required: true,
       description: 'Category reference; GROQ coalesces `category->title` with a bare string.',
     },
     {

@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BLOG_LISTING_QUERY, POST_BY_SLUG_QUERY, PODCAST_GUESTS_QUERY } from './queries';
-import { client, podcastClient } from './client';
 
 // N+1 query detection for the frontend's Sanity CMS data access.
 //
@@ -12,28 +11,18 @@ import { client, podcastClient } from './client';
 // queries that dereference ALL related data in-query (via the `->` and `[]`
 // operators), so each view requires exactly ONE client.fetch call.
 //
-// These tests assert that contract four ways:
+// These tests assert that contract three ways:
 //   1. Structurally - each query dereferences related references in-query.
 //   2. No bare refs - no reference array is projected without `->`.
-//   3. Instrumented count - a counting client sees exactly one fetch per view
-//      and the count does not scale with the number of posts (O(1), not O(N)).
-//   4. Call sites - every page fetch passes a known batched query constant,
+//   3. Call sites - every page fetch passes a known batched query constant,
 //      never an ad-hoc per-item query.
 //
-// Mirrors the Lambda N+1 tests (rateLimit.noNPlusOne, memory.noNPlusOne) which
-// instrument the DB client and assert sub-linear call counts. These fail if
-// someone refactors a query to return bare references (forcing N follow-up
-// fetches) or introduces a per-item fetch loop in a page component.
-
-/** Counting stub that records every fetch call without touching the network. */
-function countingFetch() {
-  const calls: { query: string; params?: unknown }[] = [];
-  const stub = async (query: string, params?: unknown) => {
-    calls.push({ query, params });
-    return {};
-  };
-  return { calls, stub };
-}
+// A fourth way used to be advertised - "an instrumented client sees exactly one
+// fetch per view" - but nothing was instrumented: the helper built a local stub,
+// the test called it once, and asserted it had been called once. It would have
+// stayed green through the very refactor it claimed to catch. The real per-render
+// fetch count belongs in the page integration test, where an actual component is
+// rendered; see Blog.integration.test.tsx.
 
 /** The three batched query constants the pages must fetch through. */
 const BATCHED_QUERIES = new Set(['BLOG_LISTING_QUERY', 'POST_BY_SLUG_QUERY', 'PODCAST_GUESTS_QUERY']);
@@ -53,9 +42,6 @@ describe('frontend Sanity N+1 detection - each view is a single batched GROQ que
     expect(BLOG_LISTING_QUERY).toContain('tags[]->');
     expect(BLOG_LISTING_QUERY).toContain('series->');
     expect(BLOG_LISTING_QUERY).toContain('category->title');
-    // The listing also fetches all tags and series in the same query round-trip.
-    expect(BLOG_LISTING_QUERY).toContain('_type == "tag"');
-    expect(BLOG_LISTING_QUERY).toContain('_type == "series"');
   });
 
   it('POST_BY_SLUG_QUERY joins body + tags + series + relatedPosts + seriesPosts in one query', () => {
@@ -97,47 +83,6 @@ describe('frontend Sanity N+1 detection - no query returns bare references', () 
     expect(BLOG_LISTING_QUERY).toMatch(/tags\[\]->\{[^}]*_id/);
     expect(BLOG_LISTING_QUERY).toMatch(/series->\{[^}]*_id/);
     expect(POST_BY_SLUG_QUERY).toMatch(/relatedPosts\[\]->\{[^}]*_id/);
-  });
-});
-
-describe('frontend Sanity N+1 detection - counting client: one fetch per view (O(1), not O(N))', () => {
-  it('blog listing = 1 fetch', async () => {
-    const { calls, stub } = countingFetch();
-    await stub(BLOG_LISTING_QUERY);
-    expect(calls.length).toBe(1);
-    expect(calls[0].query).toBe(BLOG_LISTING_QUERY);
-  });
-
-  it('blog post detail = 1 fetch (relatedPosts/seriesPosts joined in-query)', async () => {
-    const { calls, stub } = countingFetch();
-    await stub(POST_BY_SLUG_QUERY, { slug: 'example-post' });
-    expect(calls.length).toBe(1);
-    expect(calls[0].query).toBe(POST_BY_SLUG_QUERY);
-  });
-
-  it('podcast guests = 1 fetch', async () => {
-    const { calls, stub } = countingFetch();
-    await stub(PODCAST_GUESTS_QUERY);
-    expect(calls.length).toBe(1);
-    expect(calls[0].query).toBe(PODCAST_GUESTS_QUERY);
-  });
-
-  it('fetch count does not scale with the number of posts returned (O(1) per view)', async () => {
-    // The join is in-query, so returning 1 vs 100 posts is still one fetch.
-    // If someone moved the tags/series join into a per-post follow-up, this
-    // would become O(N) and the per-iteration count would exceed 1.
-    for (const postCount of [1, 10, 100, 1000]) {
-      const { calls, stub } = countingFetch();
-      await stub(BLOG_LISTING_QUERY);
-      expect(calls.length, `postCount=${postCount} must still be 1 fetch, got ${calls.length}`).toBe(1);
-    }
-  });
-});
-
-describe('frontend Sanity N+1 detection - real clients expose a single fetch entry point', () => {
-  it('client and podcastClient expose one fetch method each', () => {
-    expect(typeof client.fetch).toBe('function');
-    expect(typeof podcastClient.fetch).toBe('function');
   });
 });
 
