@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BLOG_SEARCH_QUERY, SITE_ORIGIN, normalizeQuery, isMeaningful } from "lambda-shared/sanityQueries";
 import { emitEvent, EVENT_KINDS } from "../events.mjs";
 import { createLogger } from "lambda-shared/logger";
+import { recordToolFailure } from "./toolMetrics.mjs";
 
 const _tool = /** @type {any} */ (tool);
 
@@ -31,15 +32,19 @@ export function buildSearchBlogTool({ sanityClient, responseStream, metrics, req
         return { ok: false, error: "Query must contain a meaningful keyword." };
       }
 
+      // ToolCall_ counts ATTEMPTS, matching navigate/draft_*. Recording it after
+      // the fetch resolved meant a failed search emitted ToolFailure_ and no
+      // ToolCall_, so any failure-rate ratio over this namespace was wrong. It
+      // sits after the stop-word gate because that path already has its own
+      // ToolRejection_ metric, exactly as navigate does.
+      metrics?.record("ToolCall_SearchBlog");
       const startedAt = Date.now();
       try {
         const results = await sanityClient.fetch(BLOG_SEARCH_QUERY, {
           q: normalized,
           limit,
         });
-        const latencyMs = Date.now() - startedAt;
-        metrics?.record("ToolCall_SearchBlog");
-        metrics?.record("ToolLatency_SearchBlog", latencyMs, "Milliseconds");
+        metrics?.record("ToolLatency_SearchBlog", Date.now() - startedAt, "Milliseconds");
 
         const safeResults = Array.isArray(results) ? results : [];
         const normalizedResults = safeResults
@@ -73,7 +78,7 @@ export function buildSearchBlogTool({ sanityClient, responseStream, metrics, req
           results: normalizedResults,
         };
       } catch (error) {
-        metrics?.record("ToolFailure_SearchBlog");
+        recordToolFailure(metrics, "SearchBlog");
         log.error("tool_error", {
           tool: "search_blog",
           error: error instanceof Error ? error.name : String(error),

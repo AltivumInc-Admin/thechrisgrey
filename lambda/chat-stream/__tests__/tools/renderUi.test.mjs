@@ -64,6 +64,60 @@ test("UiBlockSchema rejects a link_grid with an external path", () => {
   assert.equal(UiBlockSchema.safeParse(block).success, false);
 });
 
+// The path allowlist is a SCHEMA control: the Strands SDK validates inputSchema
+// before the callback runs, and the client is no backstop — GenerativeBlocks.tsx
+// renders anything starting with "/" as a live link.
+
+test("UiBlockSchema rejects a link_grid path that is merely path-shaped", () => {
+  // /vector-podcast passes the regex and dead-ends on the 404 route. isLinkablePath
+  // (validation.mjs) is what catches it, and it is the same predicate navigate_to
+  // enforces, so the two link surfaces cannot drift.
+  const block = {
+    type: "link_grid",
+    links: [
+      { label: "Podcast", path: "/vector-podcast", blurb: "not a real route" },
+      { label: "Blog", path: "/blog", blurb: "posts" },
+    ],
+  };
+  assert.equal(UiBlockSchema.safeParse(block).success, false);
+});
+
+test("UiBlockSchema rejects a link_grid pointing at the Cognito-gated /admin", () => {
+  const block = {
+    type: "link_grid",
+    links: [
+      { label: "Admin", path: "/admin", blurb: "console" },
+      { label: "Blog", path: "/blog", blurb: "posts" },
+    ],
+  };
+  assert.equal(UiBlockSchema.safeParse(block).success, false);
+});
+
+test("UiBlockSchema accepts a link_grid with a real blog slug", () => {
+  const block = {
+    type: "link_grid",
+    links: [
+      { label: "A post", path: "/blog/some-post", blurb: "a real slug" },
+      { label: "Blog", path: "/blog", blurb: "posts" },
+    ],
+  };
+  assert.equal(UiBlockSchema.safeParse(block).success, true);
+});
+
+test("UiBlockSchema rejects a profile_mini ctaPath of /admin", () => {
+  // Second path-carrying field in the vocabulary; it must share the link policy
+  // rather than only the regex.
+  const block = {
+    type: "profile_mini",
+    name: "Christian Perez",
+    role: "Founder & CEO, Altivum Inc.",
+    blurb: "Former Green Beret turned applied AI engineer, building at Altivum.",
+    ctaPath: "/admin",
+  };
+  assert.equal(UiBlockSchema.safeParse(block).success, false);
+  assert.equal(UiBlockSchema.safeParse({ ...block, ctaPath: "/about" }).success, true);
+});
+
 test("UiBlockSchema enforces stat_row min/max counts", () => {
   assert.equal(
     UiBlockSchema.safeParse({ type: "stat_row", stats: [{ value: "9", label: "Episodes" }] }).success,

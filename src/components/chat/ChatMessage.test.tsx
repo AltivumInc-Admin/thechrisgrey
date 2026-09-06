@@ -1,7 +1,11 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ChatMessage from './ChatMessage';
+import type { DraftAction } from '../../utils/chatEvents';
 import type { UiBlock } from '../../utils/uiBlocks';
 
 // Icons render as inline SVG via <Icon>, which exposes the glyph name on a
@@ -274,6 +278,98 @@ describe('ChatMessage', () => {
 
       await waitFor(() => expect(iconByName('content_copy')).toBeInTheDocument());
       expect(iconByName('error_outline')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('tool activity labels', () => {
+    const TOOLS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../../lambda/chat-stream/tools');
+
+    /** Every `name: "..."` a tool builder registers with the Strands agent. */
+    function registeredToolNames(): string[] {
+      const names = new Set<string>();
+      for (const file of readdirSync(TOOLS_DIR)) {
+        if (!file.endsWith('.mjs') || file === 'index.mjs') continue;
+        const src = readFileSync(resolve(TOOLS_DIR, file), 'utf-8');
+        for (const match of src.matchAll(/^\s*name:\s*"([a-z_]+)",/gm)) names.add(match[1]);
+      }
+      return [...names];
+    }
+
+    it('has a human label for every tool the chat Lambda registers', () => {
+      // toolLabel() falls back to `tool.replace(/_/g, ' ')`, so a missing entry
+      // ships the raw identifier to screen AND to a screen reader ("Alti is
+      // render ui…") with nothing failing first. Drift guard, same discipline as
+      // routes.test.ts — asserted through the rendered string rather than the
+      // map, which stays private to keep react-refresh happy.
+      const names = registeredToolNames();
+      expect(names.length).toBeGreaterThanOrEqual(8);
+
+      const unlabelled = names.filter((tool) => {
+        const view = render(<ChatMessage role="assistant" content="" toolActivity={[{ tool, status: 'invoked' }]} />);
+        const showsRawIdentifier = view.queryByText(`Alti is ${tool.replace(/_/g, ' ')}…`) !== null;
+        view.unmount();
+        return showsRawIdentifier;
+      });
+      expect(unlabelled).toEqual([]);
+    });
+
+    it('renders the human label for a generative-UI invocation', () => {
+      render(<ChatMessage role="assistant" content="" toolActivity={[{ tool: 'render_ui', status: 'invoked' }]} />);
+      expect(screen.getByText('Alti is composing a view…')).toBeInTheDocument();
+      expect(screen.queryByText(/render ui/)).not.toBeInTheDocument();
+    });
+
+    it('renders the human label for a blog search invocation', () => {
+      render(<ChatMessage role="assistant" content="" toolActivity={[{ tool: 'search_blog', status: 'invoked' }]} />);
+      expect(screen.getByText('Alti is searching the blog…')).toBeInTheDocument();
+    });
+  });
+
+  describe('streaming bubbles', () => {
+    it('marks the bubble aria-busy while it streams so the log announces it once', () => {
+      const { container, rerender } = render(<ChatMessage role="assistant" content="Half an ans" isStreaming />);
+      expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+
+      rerender(<ChatMessage role="assistant" content="Half an answer." />);
+      expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+    });
+
+    it('defers auto-linking until the answer settles', () => {
+      // Linkifying mid-stream re-scans the whole accumulated answer on every
+      // token, and a keyword straddling a chunk boundary cannot match anyway.
+      const { rerender } = render(<ChatMessage role="assistant" content="He founded Altivum" isStreaming />);
+      expect(screen.queryAllByRole('link')).toHaveLength(0);
+
+      rerender(<ChatMessage role="assistant" content="He founded Altivum Inc." />);
+      expect(screen.getByRole('link', { name: 'Altivum Inc' })).toHaveAttribute('href', 'https://altivum.ai');
+    });
+  });
+
+  describe('draft card resilience', () => {
+    it('renders nothing instead of throwing when a draft card is malformed', () => {
+      // Drafts are built from unvalidated stream output and each ToolDraftCard
+      // branch dereferences its own fields (here `action.results.length`). The
+      // widget renders on every page, so an unguarded throw escaping to the
+      // app-level boundary would take the whole page down.
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const malformed = { kind: 'draft_action', action: 'blog_search_results', query: 'ai' };
+
+      expect(() =>
+        render(
+          <MemoryRouter>
+            <ChatMessage
+              role="assistant"
+              content="Here is what I found."
+              drafts={[malformed as unknown as DraftAction]}
+            />
+          </MemoryRouter>,
+        ),
+      ).not.toThrow();
+
+      // The answer itself survives; only the bad card is dropped.
+      expect(screen.getByText('Here is what I found.')).toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: /blog search results/i })).not.toBeInTheDocument();
+      errorSpy.mockRestore();
     });
   });
 

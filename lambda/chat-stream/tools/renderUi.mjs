@@ -1,7 +1,8 @@
 import { tool } from "@strands-agents/sdk";
-import { RenderUiInputSchema } from "../uiBlocks.mjs";
+import { RenderUiInputSchema, LINK_PATH_GUIDANCE } from "../uiBlocks.mjs";
 import { emitEvent, EVENT_KINDS } from "../events.mjs";
 import { createLogger } from "lambda-shared/logger";
+import { recordToolFailure } from "./toolMetrics.mjs";
 
 const _tool = /** @type {any} */ (tool);
 
@@ -27,7 +28,10 @@ export function buildRenderUiTool({ responseStream, metrics, requestId }) {
       "a row of stats, a mini profile, a short explainer, or a grid of internal links. " +
       "Use SPARINGLY — only when structure genuinely helps (a sequence, a comparison, a set of links). " +
       "Most answers need none; one block is plenty, three is the maximum. " +
-      "ALWAYS also write a short text reply — the block supplements your words, it never replaces them.",
+      "ALWAYS also write a short text reply — the block supplements your words, it never replaces them. " +
+      // The schema refuses an unknown or restricted path outright; naming the real
+      // routes here steers the model first, the way navigate_to's description does.
+      LINK_PATH_GUIDANCE,
     inputSchema: RenderUiInputSchema,
     callback: async (/** @type {{ blocks: any[] }} */ { blocks }) => {
       try {
@@ -41,7 +45,7 @@ export function buildRenderUiTool({ responseStream, metrics, requestId }) {
         metrics?.record("RenderUiBlocks", blocks.length);
         return { ok: true, rendered: blocks.map((/** @type {any} */ b) => b.type) };
       } catch (error) {
-        metrics?.record("ToolFailure_RenderUi");
+        recordToolFailure(metrics, "RenderUi");
         log.error("tool_error", {
           tool: "render_ui",
           error: error instanceof Error ? error.name : String(error),

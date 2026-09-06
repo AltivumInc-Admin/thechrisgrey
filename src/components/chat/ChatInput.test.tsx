@@ -62,13 +62,24 @@ describe('ChatInput', () => {
 
     it('should have send button disabled when disabled prop is true', async () => {
       render(<ChatInput onSend={mockOnSend} disabled={true} />);
-      const textarea = screen.getByPlaceholderText('Ask me anything...');
-
-      // Even though the textarea is disabled, type into it won't work
-      // but we check the button is disabled regardless
-      expect(textarea).toBeDisabled();
       const button = screen.getByRole('button', { name: /send message/i });
       expect(button).toBeDisabled();
+    });
+
+    it('keeps the composer itself enabled while a response is in flight', () => {
+      // The disabled state belongs on the submit control ONLY. Disabling the
+      // textarea makes the browser blur it, dropping focus to document.body for
+      // the rest of the turn, which also disarms the widget's container-scoped
+      // focus trap and Escape handler. aria-busy is what announces the wait.
+      render(<ChatInput onSend={mockOnSend} disabled={true} />);
+      const textarea = screen.getByPlaceholderText('Ask me anything...');
+      expect(textarea).not.toBeDisabled();
+      expect(textarea).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('does not mark the composer busy when idle', () => {
+      render(<ChatInput onSend={mockOnSend} />);
+      expect(screen.getByPlaceholderText('Ask me anything...')).toHaveAttribute('aria-busy', 'false');
     });
   });
 
@@ -151,6 +162,20 @@ describe('ChatInput', () => {
       await user.type(textarea, 'Hello{Enter}');
 
       expect(mockOnSend).toHaveBeenCalledWith('Hello');
+    });
+
+    it('lets the visitor keep composing while disabled, but Enter does not send', async () => {
+      const user = userEvent.setup();
+      render(<ChatInput onSend={mockOnSend} disabled={true} />);
+      const textarea = screen.getByPlaceholderText('Ask me anything...') as HTMLTextAreaElement;
+
+      await user.type(textarea, 'next question{Enter}');
+
+      expect(mockOnSend).not.toHaveBeenCalled();
+      // The draft survives the turn...
+      expect(textarea.value).toBe('next question');
+      // ...and the swallowed Enter leaves no stray newline behind.
+      expect(textarea.value).not.toContain('\n');
     });
 
     it('should not submit on Shift+Enter (allows newline)', async () => {

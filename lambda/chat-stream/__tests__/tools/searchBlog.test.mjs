@@ -108,7 +108,11 @@ test("search_blog rejects stop-word-only queries with ToolRejection metric", asy
   assert.equal(result.ok, false);
   assert.match(result.error, /meaningful keyword/i);
   assert.equal(sanityClient.calls.length, 0, "should not call Sanity for stop-word query");
-  assert.ok(metrics.records.map((r) => r.name).includes("ToolRejection_SearchBlog"));
+  const rejectedNames = metrics.records.map((r) => r.name);
+  assert.ok(rejectedNames.includes("ToolRejection_SearchBlog"));
+  // A query rejected before any I/O is a rejection, not an attempt — same shape
+  // as navigate_to, which records ToolRejection_ and returns without ToolCall_.
+  assert.ok(!rejectedNames.includes("ToolCall_SearchBlog"));
 });
 
 test("search_blog handles Sanity errors gracefully", async () => {
@@ -126,7 +130,11 @@ test("search_blog handles Sanity errors gracefully", async () => {
 
   assert.equal(result.ok, false);
   assert.match(result.error, /Unable to search/i);
-  assert.ok(metrics.records.map((r) => r.name).includes("ToolFailure_SearchBlog"));
+  const failedNames = metrics.records.map((r) => r.name);
+  assert.ok(failedNames.includes("ToolFailure_SearchBlog"));
+  // ToolCall_ counts attempts, not successes: a thrown fetch must still register
+  // the attempt, or ToolFailure_/ToolCall_ is not a failure rate.
+  assert.ok(failedNames.includes("ToolCall_SearchBlog"));
 });
 
 test("search_blog filters malformed rows defensively", async () => {

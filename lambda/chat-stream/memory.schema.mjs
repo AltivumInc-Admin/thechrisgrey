@@ -21,9 +21,10 @@
  * Visitor memory table for the Alti chat agent. One row per remembered fact,
  * partitioned by device hash. 90-day TTL. PII is rejected before write
  * (`memory.mjs` `sanitizeFactContent`); emails and phone-shaped digit runs
- * never reach this table.
+ * never reach this table. `getFacts` re-runs the same gate on read, so a row
+ * written under an older, looser rule is filtered rather than waiting out its TTL.
  *
- * @type {import("../shared/dynamoDbSchemas.mjs").DynamoDbTableSchema}
+ * @type {import("lambda-shared/dynamoDbSchemas").DynamoDbTableSchema}
  */
 export const CHAT_MEMORY_TABLE_SCHEMA = {
   tableName: "thechrisgrey-chat-memory",

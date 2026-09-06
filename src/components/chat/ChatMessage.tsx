@@ -4,6 +4,7 @@ import type { DraftAction } from '../../utils/chatEvents';
 import type { UiBlock } from '../../utils/uiBlocks';
 import ToolDraftCard from './ToolDraftCard';
 import GenerativeBlocks from './GenerativeBlocks';
+import ErrorBoundary from '../ErrorBoundary';
 import Icon from '../icons/Icon';
 
 interface MemoryEventRecord {
@@ -24,12 +25,18 @@ interface ChatMessageProps {
   surface?: 'page' | 'widget';
 }
 
+// Every tool registered by lambda/chat-stream/tools/index.mjs needs an entry:
+// the fallback below silently ships the raw identifier to screen ("Alti is
+// render ui"), so a missing label is invisible until a visitor sees it.
+// ChatMessage.test.tsx pair-checks this map against the Lambda's tool list.
 const TOOL_LABELS: Record<string, string> = {
   navigate_to: 'navigating',
   draft_message: 'drafting a message',
   draft_newsletter_subscription: 'preparing a subscription',
   cite_blog_passage: 'looking up a blog post',
+  search_blog: 'searching the blog',
   search_podcast: 'searching the podcast',
+  render_ui: 'composing a view',
   remember_fact: 'saving that detail',
 };
 
@@ -113,6 +120,17 @@ const linkMap: { keyword: string; url: string; wholeWord?: boolean }[] = [
   { keyword: 'Elo', url: 'https://elo.altivum.ai', wholeWord: true },
 ];
 
+// Lowercased needles and compiled word-boundary patterns, built once. The scan
+// below walks every entry on every iteration of its while loop, so doing this
+// work inline re-lowered each keyword and recompiled the RegExp thousands of
+// times for a single answer.
+const linkMatchers = linkMap.map(({ keyword, url, wholeWord }) => ({
+  keyword,
+  url,
+  lower: keyword.toLowerCase(),
+  pattern: wholeWord ? new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`) : null,
+}));
+
 /**
  * Process text content and replace keywords with hyperlinks
  */
@@ -124,16 +142,16 @@ function processContentWithLinks(content: string): ReactNode[] {
   while (remainingText.length > 0) {
     // Find the earliest match among all keywords
     let earliestMatch: { index: number; keyword: string; url: string } | null = null;
+    const remainingLower = remainingText.toLowerCase();
 
-    for (const { keyword, url, wholeWord } of linkMap) {
+    for (const { keyword, url, lower, pattern } of linkMatchers) {
       let index: number;
-      if (wholeWord) {
+      if (pattern) {
         // Case-sensitive, boundary-anchored match (e.g. "Elo" must not match "developed").
-        const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const match = new RegExp(`\\b${escaped}\\b`).exec(remainingText);
+        const match = pattern.exec(remainingText);
         index = match ? match.index : -1;
       } else {
-        index = remainingText.toLowerCase().indexOf(keyword.toLowerCase());
+        index = remainingLower.indexOf(lower);
       }
       if (index !== -1 && (earliestMatch === null || index < earliestMatch.index)) {
         // Get the actual text from the content (preserves original casing)
@@ -187,9 +205,14 @@ const ChatMessage = memo(
   }: ChatMessageProps) => {
     const isUser = role === 'user';
 
+    // Linkification is skipped while the bubble streams: `content` grows with
+    // every decoded token, so the pass would re-scan the whole accumulated answer
+    // from scratch on each one. It is also the more correct reading — a keyword
+    // straddling a chunk boundary cannot be matched mid-stream anyway — and the
+    // links appear the moment isStreaming flips false.
     const displayContent = useMemo(
-      () => (isUser || isSystem ? content : processContentWithLinks(content)),
-      [content, isUser, isSystem],
+      () => (isUser || isSystem || isStreaming ? content : processContentWithLinks(content)),
+      [content, isUser, isSystem, isStreaming],
     );
 
     if (isSystem) {
@@ -224,7 +247,12 @@ const ChatMessage = memo(
           ) : null}
 
           {content || (!isUser && isStreaming) ? (
+            /* aria-busy while the answer streams. Both surfaces wrap the thread in
+               role="log" aria-live="polite", and the text node under it is mutated
+               on every decoded chunk — without this the partially-built answer is
+               re-announced continuously instead of once, when it settles. */
             <div
+              aria-busy={isStreaming}
               className={`max-w-[90%] md:max-w-[80%] px-5 py-4 ${
                 isUser
                   ? 'bg-white/5 border border-white/30 rounded-2xl rounded-br-sm'
@@ -266,9 +294,20 @@ const ChatMessage = memo(
               ))
             : null}
 
-          {!isUser && drafts && drafts.length > 0
-            ? drafts.map((d, idx) => <ToolDraftCard key={`draft-${idx}`} action={d} />)
-            : null}
+          {/* Same empty-fragment fallback GenerativeBlocks uses: a draft card is
+              built from unvalidated stream output and each variant dereferences
+              its own fields, so a malformed one must render nothing rather than
+              throw. Without this the throw escapes to the app-level boundary and
+              takes down the page the widget is floating on. showHomeButton is
+              deliberately not passed: `fallback` short-circuits before that prop
+              is read. */}
+          {!isUser && drafts && drafts.length > 0 ? (
+            <ErrorBoundary fallback={<></>} pageName="Chat draft card">
+              {drafts.map((d, idx) => (
+                <ToolDraftCard key={`draft-${idx}`} action={d} />
+              ))}
+            </ErrorBoundary>
+          ) : null}
         </div>
       </div>
     );

@@ -1,11 +1,15 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useFocusTrap, useChatEngine, usePageContext } from '../../hooks';
+import { useViewTransitionNavigate } from '../../hooks/useViewTransitionNavigate';
+// Imported from the hook module rather than the barrel: the confirmation copy
+// lives beside the forget implementation so both surfaces prompt with one string.
+import { FORGET_CONFIRMATION } from '../../hooks/useChatEngine';
 import { typography } from '../../utils/typography';
 import { getSuggestionsForPage } from '../../utils/pageContext';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import ChatSuggestions from './ChatSuggestions';
+import ForgetStatusBanner, { type ForgetStatus } from './ForgetStatusBanner';
 import TypingIndicator from './TypingIndicator';
 import Icon from '../icons/Icon';
 
@@ -20,10 +24,11 @@ interface ChatWidgetPanelProps {
 // prompt; after /forget it reports no stored facts.
 const MEMORY_INSPECTION_PROMPT = 'What do you know about me?';
 
-type ForgetStatus = { ok: boolean; message: string } | null;
-
 const ChatWidgetPanel = ({ onClose }: ChatWidgetPanelProps) => {
-  const navigate = useNavigate();
+  // useViewTransitionNavigate, not raw useNavigate: expanding into /chat is the
+  // one navigation this panel owns, and it should crossfade like every other
+  // route change on the site instead of hard-cutting.
+  const navigate = useViewTransitionNavigate();
   const { containerRef, handleKeyDown } = useFocusTrap(true);
   const pageContext = usePageContext();
   const contextualSuggestions = getSuggestionsForPage(pageContext.currentPage);
@@ -32,6 +37,7 @@ const ChatWidgetPanel = ({ onClose }: ChatWidgetPanelProps) => {
     messages,
     isTyping,
     isStreaming,
+    isForgetting,
     streamingMessageId,
     messagesContainerRef,
     hasUserMessages,
@@ -46,7 +52,7 @@ const ChatWidgetPanel = ({ onClose }: ChatWidgetPanelProps) => {
   // from the clear/reset control's behavior: clear only drops the local
   // transcript; forget-me wipes server-side facts AND client identifiers and
   // surfaces its own confirmation banner so the visitor knows memory is gone.
-  const [forgetStatus, setForgetStatus] = useState<ForgetStatus>(null);
+  const [forgetStatus, setForgetStatus] = useState<ForgetStatus | null>(null);
 
   const handleExpand = () => {
     onClose();
@@ -62,10 +68,7 @@ const ChatWidgetPanel = ({ onClose }: ChatWidgetPanelProps) => {
   };
 
   const onForgetMe = async () => {
-    const confirmed = window.confirm(
-      'Forget everything you told Alti? This deletes your saved facts and cannot be undone.',
-    );
-    if (!confirmed) return;
+    if (!window.confirm(FORGET_CONFIRMATION)) return;
     setForgetStatus({ ok: true, message: 'Clearing your saved facts…' });
     const result = await handleForgetMemory();
     if (result.ok) {
@@ -106,10 +109,13 @@ const ChatWidgetPanel = ({ onClose }: ChatWidgetPanelProps) => {
                 forget-me wipes server-side facts AND client identifiers and
                 surfaces its own confirmation banner. A returning visitor can
                 forget without first sending a message, so it is not gated on
-                hasUserMessages. */}
+                hasUserMessages. Disabled while the delete is in flight so
+                impatient repeat clicks cannot stack concurrent /forget requests
+                against the same partition. */}
             <button
               onClick={onForgetMe}
-              className="p-1.5 text-altivum-silver hover:text-white rounded-sm transition-colors duration-200"
+              disabled={isForgetting}
+              className="p-1.5 text-altivum-silver hover:text-white rounded-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-altivum-silver"
               aria-label="Forget me"
               title="Forget me — delete everything Alti has saved about you"
             >
@@ -142,33 +148,10 @@ const ChatWidgetPanel = ({ onClose }: ChatWidgetPanelProps) => {
         </div>
 
         {/* Forget-me confirmation banner — distinct from the clear/reset control
-            and its behavior. Shown only after a /forget attempt. */}
-        {forgetStatus ? (
-          <div
-            className="px-4 py-2 border-b border-white/10 bg-altivum-dark/60 backdrop-blur-xs shrink-0"
-            role="status"
-            aria-live="polite"
-          >
-            <p
-              className={`flex items-start gap-2 text-xs ${forgetStatus.ok ? 'text-altivum-silver' : 'text-red-300'}`}
-              style={typography.smallText}
-            >
-              <Icon
-                name={forgetStatus.ok ? 'check' : 'error_outline'}
-                className="text-sm mt-0.5 shrink-0"
-                aria-hidden="true"
-              />
-              <span>{forgetStatus.message}</span>
-              <button
-                onClick={() => setForgetStatus(null)}
-                className="ml-auto -mt-0.5 p-0.5 text-altivum-silver/60 hover:text-white rounded-sm transition-colors duration-200"
-                aria-label="Dismiss notice"
-              >
-                <Icon name="close" className="text-sm" />
-              </button>
-            </p>
-          </div>
-        ) : null}
+            and its behavior. Shown only after a /forget attempt. Shared with
+            /chat so a privacy action reports identically on both surfaces;
+            shrink-0 keeps it out of this panel's flex-column shrink budget. */}
+        <ForgetStatusBanner status={forgetStatus} onDismiss={() => setForgetStatus(null)} className="shrink-0" />
 
         {/* Messages */}
         <div ref={messagesContainerRef} className="flex-1 overflow-y-auto" data-lenis-prevent>

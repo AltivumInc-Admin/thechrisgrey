@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect, useImperativeHandle, KeyboardEvent, FormEvent, Ref } from 'react';
 import Icon from '../icons/Icon';
 
+/**
+ * The composer. Silver text here never goes below /80 — same floor CapabilityIntro
+ * documents: on this surface altivum-silver/80 clears 4.5:1 while /70 lands near
+ * 4.3:1 and /50 near 2.8:1, and both the placeholder and the character counter are
+ * smallText. The disabled send icon is exempt (WCAG excuses inactive controls).
+ */
+
 export interface ChatInputHandle {
   /** Fill the input with the given text, focus it, and place the caret at the end. Does not send. */
   prefill: (value: string) => void;
@@ -60,6 +67,8 @@ const ChatInput = ({ onSend, disabled = false, ref }: ChatInputProps) => {
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
+      // preventDefault even while disabled: handleSubmit no-ops, and swallowing
+      // the key stops a stray newline landing in the draft mid-answer.
       e.preventDefault();
       handleSubmit();
     }
@@ -71,6 +80,15 @@ const ChatInput = ({ onSend, disabled = false, ref }: ChatInputProps) => {
     <div className="border-t border-white/10 bg-altivum-navy/50 backdrop-blur-xs p-4">
       <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
         <div className="relative">
+          {/* The composer is deliberately NOT `disabled` while a response is in
+              flight. A browser blurs an element the instant it becomes disabled,
+              so every turn dropped focus to document.body and nothing put it
+              back — which also disarmed the widget: ChatWidgetPanel's Escape
+              handler and useFocusTrap's Tab wrap are container-scoped React
+              onKeyDown handlers that never fire once focus is outside the
+              dialog. Submission is gated in handleSubmit/handleKeyDown and on
+              the send button instead; aria-busy is what tells assistive tech a
+              response is still coming. */}
           <textarea
             ref={textareaRef}
             value={value}
@@ -79,10 +97,10 @@ const ChatInput = ({ onSend, disabled = false, ref }: ChatInputProps) => {
             placeholder="Ask me anything..."
             aria-label="Type a message"
             data-autofocus
-            disabled={disabled}
+            aria-busy={disabled}
             rows={1}
             maxLength={4000}
-            className="w-full pl-4 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-altivum-silver/50 focus:outline-hidden focus:border-altivum-gold transition-colors duration-200 resize-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] scrollbar-none"
+            className="w-full pl-4 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-altivum-silver/80 focus:outline-hidden focus:border-altivum-gold transition-colors duration-200 resize-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] scrollbar-none"
             style={{
               minHeight: '48px',
               maxHeight: '200px',
@@ -103,7 +121,7 @@ const ChatInput = ({ onSend, disabled = false, ref }: ChatInputProps) => {
           <div className="mt-1 text-right pr-1">
             <span
               className={`text-xs tabular-nums transition-colors duration-200 ${
-                value.length > 3600 ? 'text-altivum-gold' : 'text-altivum-silver/70'
+                value.length > 3600 ? 'text-altivum-gold' : 'text-altivum-silver/80'
               }`}
             >
               {value.length}/4,000

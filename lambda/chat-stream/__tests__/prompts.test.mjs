@@ -84,6 +84,23 @@ test("buildSystemPrompt: render_ui guidance is omitted on the floating widget su
   assert.doesNotMatch(widget, /render_ui/);
 });
 
+test("buildSystemPrompt: podcast guidance appears only when a podcast KB is configured", () => {
+  // Mirrors the search_podcast registration in tools/index.mjs. Advertised
+  // unconditionally, the prompt told the model to call a tool it had not been
+  // given whenever PODCAST_KB_ID was unset — and nothing surfaced the mismatch,
+  // because every Podcast* metric is downstream of the registration.
+  const enabled = buildSystemPrompt(null, null, [], "widget", false, true);
+  assert.match(enabled, /search_podcast/);
+  assert.match(enabled, /The Vector Podcast is Christian's show/);
+
+  const disabled = buildSystemPrompt(null, null, [], "widget", false, false);
+  assert.doesNotMatch(disabled, /search_podcast/);
+
+  // Default OFF: a caller that forgets the flag gets the safe shape, not a
+  // phantom tool.
+  assert.doesNotMatch(buildSystemPrompt(null, null, [], "widget"), /search_podcast/);
+});
+
 test("BASE_SYSTEM_PROMPT includes tool etiquette for each tool", () => {
   assert.match(BASE_SYSTEM_PROMPT, /TOOL ETIQUETTE/);
   assert.match(BASE_SYSTEM_PROMPT, /navigate_to/);

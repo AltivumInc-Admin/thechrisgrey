@@ -1,15 +1,19 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { SEO } from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { typography } from '../utils/typography';
 import ChatMessage from '../components/chat/ChatMessage';
 import ChatInput, { type ChatInputHandle } from '../components/chat/ChatInput';
 import ChatSuggestions from '../components/chat/ChatSuggestions';
+import ForgetStatusBanner, { type ForgetStatus } from '../components/chat/ForgetStatusBanner';
 import CapabilityIntro from '../components/chat/CapabilityIntro';
 import TypingIndicator from '../components/chat/TypingIndicator';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { ChatErrorFallback } from '../components/ErrorFallbacks';
 import { useChatEngine, usePageContext, CHAT_STORAGE_KEY } from '../hooks';
+// Imported from the hook module rather than the barrel: the confirmation copy
+// lives beside the forget implementation so both surfaces prompt with one string.
+import { FORGET_CONFIRMATION } from '../hooks/useChatEngine';
 import { getSuggestionsForPage } from '../utils/pageContext';
 import Icon from '../components/icons/Icon';
 
@@ -28,6 +32,7 @@ const ChatContent = () => {
     messages,
     isTyping,
     isStreaming,
+    isForgetting,
     streamingMessageId,
     messagesContainerRef,
     hasUserMessages,
@@ -43,16 +48,26 @@ const ChatContent = () => {
     chatInputRef.current?.prefill(example);
   }, []);
 
+  // Outcome goes to the in-page banner, not window.alert: a privacy action gets
+  // the same designed, dismissible report on both surfaces (see the widget's
+  // header banner), and a thread-blocking browser dialog never sits over the
+  // conversation. The confirm prompt stays native — it is the destructive gate.
+  const [forgetStatus, setForgetStatus] = useState<ForgetStatus | null>(null);
+
   const onForget = async () => {
-    const confirmed = window.confirm(
-      'Forget everything you told Alti? This deletes your saved facts and cannot be undone.',
-    );
-    if (!confirmed) return;
+    if (!window.confirm(FORGET_CONFIRMATION)) return;
+    setForgetStatus({ ok: true, message: 'Clearing your saved facts…' });
     const result = await handleForgetMemory();
     if (result.ok) {
-      window.alert(`Cleared. ${result.deleted ?? 0} saved item(s) removed.`);
+      setForgetStatus({
+        ok: true,
+        message: `Done — I've forgotten ${result.deleted ?? 0} saved item(s). Next time we talk, I'll start fresh.`,
+      });
     } else {
-      window.alert(`Unable to clear right now: ${result.error || 'Unknown error.'}`);
+      setForgetStatus({
+        ok: false,
+        message: `Unable to clear right now: ${result.error || 'Unknown error.'} Please try again.`,
+      });
     }
   };
 
@@ -105,9 +120,12 @@ const ChatContent = () => {
                 <span className="hidden sm:inline">Clear</span>
               </button>
             )}
+            {/* Disabled while the delete is in flight so impatient repeat clicks
+                cannot stack concurrent /forget requests against the partition. */}
             <button
               onClick={onForget}
-              className="flex items-center gap-2 px-4 py-2 text-altivum-silver hover:text-white border border-white/20 hover:border-white/40 rounded-sm transition-colors duration-200 text-sm"
+              disabled={isForgetting}
+              className="flex items-center gap-2 px-4 py-2 text-altivum-silver hover:text-white border border-white/20 hover:border-white/40 rounded-sm transition-colors duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-altivum-silver"
               aria-label="Forget what I told Alti"
             >
               <Icon name="delete_sweep" className="text-base" />
@@ -116,6 +134,8 @@ const ChatContent = () => {
           </div>
         </div>
       </div>
+
+      <ForgetStatusBanner status={forgetStatus} onDismiss={() => setForgetStatus(null)} />
 
       {/* Messages Container — data-lenis-prevent lets this inner scroller take the
           wheel/touch natively; without it site-wide Lenis hijacks the gesture and the
@@ -172,16 +192,17 @@ const ChatContent = () => {
 const handleChatErrorReset = () => {
   if (typeof window !== 'undefined') {
     window.sessionStorage.removeItem(CHAT_STORAGE_KEY);
-    window.sessionStorage.removeItem('chat-typing');
   }
 };
 
 const Chat = () => {
   return (
+    // showHomeButton is deliberately NOT passed: ErrorBoundary returns `fallback`
+    // before it ever consults that prop, so passing it reads as configuration
+    // that does nothing. ChatErrorFallback owns its own affordances.
     <ErrorBoundary
       fallback={<ChatErrorFallback onRetry={handleChatErrorReset} />}
       onReset={handleChatErrorReset}
-      showHomeButton={false}
       pageName="Chat"
     >
       <ChatContent />

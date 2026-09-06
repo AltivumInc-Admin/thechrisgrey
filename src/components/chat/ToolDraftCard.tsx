@@ -1,6 +1,7 @@
 import { memo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { typography } from '../../utils/typography';
+import { useViewTransitionNavigate } from '../../hooks/useViewTransitionNavigate';
+import { isInternalPath, isSafeBlogSlug, isTrustedVideoUrl } from '../../utils/chatLinks';
 import type { DraftAction } from '../../utils/chatEvents';
 import NewsletterForm from '../NewsletterForm';
 import Icon from '../icons/Icon';
@@ -44,7 +45,10 @@ function IconButton({
 }
 
 const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept }: ToolDraftCardProps) {
-  const navigate = useNavigate();
+  // useViewTransitionNavigate, not raw useNavigate: agent-driven navigations
+  // crossfade like every ViewTransitionLink on the site, and the hook already
+  // handles reduced-motion and browsers without startViewTransition.
+  const navigate = useViewTransitionNavigate();
   const [dismissed, setDismissed] = useState(false);
 
   if (dismissed) return null;
@@ -60,6 +64,10 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
   };
 
   if (action.action === 'navigate') {
+    // Targets arrive over the stream as unchecked model output. When one fails
+    // the guard the card still explains itself, minus the control that would
+    // act on it — see src/utils/chatLinks.ts.
+    const canOpen = isInternalPath(action.path);
     return (
       <div
         className="max-w-[90%] md:max-w-[80%] px-5 py-4 bg-white/5 border border-altivum-gold/30 rounded-2xl animate-fade-in"
@@ -77,14 +85,16 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
           {action.reason}
         </p>
         <div className="flex gap-2">
-          <IconButton
-            icon="arrow_forward"
-            label="Take me there"
-            onClick={() => {
-              navigate(action.path);
-              accepted();
-            }}
-          />
+          {canOpen ? (
+            <IconButton
+              icon="arrow_forward"
+              label="Take me there"
+              onClick={() => {
+                navigate(action.path);
+                accepted();
+              }}
+            />
+          ) : null}
           <IconButton icon="close" label="Dismiss" variant="ghost" onClick={dismiss} />
         </div>
       </div>
@@ -125,7 +135,7 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
         <p className="text-altivum-silver/80 mb-3 whitespace-pre-wrap" style={typography.smallText}>
           {action.body}
         </p>
-        <p className="text-altivum-silver/60 mb-3" style={typography.smallText}>
+        <p className="text-altivum-silver/80 mb-3" style={typography.smallText}>
           You'll be sent to the contact form to review and send.
         </p>
         <div className="flex gap-2">
@@ -162,6 +172,7 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
   }
 
   if (action.action === 'citation') {
+    const canOpen = isSafeBlogSlug(action.slug);
     const openPost = () => {
       navigate(`/blog/${action.slug}`);
       accepted();
@@ -185,7 +196,7 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
           </p>
         ) : null}
         <div className="flex gap-2">
-          <IconButton icon="open_in_new" label="Read the post" onClick={openPost} />
+          {canOpen ? <IconButton icon="open_in_new" label="Read the post" onClick={openPost} /> : null}
           <IconButton icon="close" label="Dismiss" variant="ghost" onClick={dismiss} />
         </div>
       </div>
@@ -193,6 +204,10 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
   }
 
   if (action.action === 'podcast_citation') {
+    // searchPodcast.mjs builds this URL from a hardcoded youtube.com prefix; the
+    // parse keeps that a server DETAIL rather than the only thing standing
+    // between a model-authored string and window.open().
+    const canPlay = isTrustedVideoUrl(action.url);
     const playAtTimestamp = () => {
       window.open(action.url, '_blank', 'noopener,noreferrer');
       accepted();
@@ -216,14 +231,16 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
           </p>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={playAtTimestamp}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm min-h-[36px] transition-all active:scale-[0.98] bg-altivum-gold/10 text-altivum-gold border border-altivum-gold/40 hover:bg-altivum-gold/20 hover:shadow-[0_0_20px_rgba(197,165,114,0.3)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-altivum-gold focus-visible:outline-offset-2"
-          >
-            <Icon name="play_circle" className="text-base leading-none" />
-            <span>Play at {action.timestampLabel}</span>
-          </button>
+          {canPlay ? (
+            <button
+              type="button"
+              onClick={playAtTimestamp}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm min-h-[36px] transition-all active:scale-[0.98] bg-altivum-gold/10 text-altivum-gold border border-altivum-gold/40 hover:bg-altivum-gold/20 hover:shadow-[0_0_20px_rgba(197,165,114,0.3)] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-altivum-gold focus-visible:outline-offset-2"
+            >
+              <Icon name="play_circle" className="text-base leading-none" />
+              <span>Play at {action.timestampLabel}</span>
+            </button>
+          ) : null}
           <IconButton icon="close" label="Dismiss" variant="ghost" onClick={dismiss} />
         </div>
       </div>
@@ -231,7 +248,8 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
   }
 
   if (action.action === 'blog_search_results') {
-    if (action.results.length === 0) return null;
+    const results = action.results.filter((r) => isSafeBlogSlug(r.slug));
+    if (results.length === 0) return null;
     const openPost = (slug: string) => {
       navigate(`/blog/${slug}`);
       accepted();
@@ -249,7 +267,7 @@ const ToolDraftCard = memo(function ToolDraftCard({ action, onDismiss, onAccept 
           </span>
         </p>
         <ul className="space-y-3 mb-3">
-          {action.results.map((result) => (
+          {results.map((result) => (
             <li key={result.slug} className="border-l-2 border-altivum-gold/40 pl-3">
               <p className="text-altivum-gold" style={typography.bodyText}>
                 {result.title}

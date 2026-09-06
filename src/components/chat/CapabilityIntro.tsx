@@ -11,6 +11,11 @@ import Icon from '../icons/Icon';
  * Each capability tile is a button: clicking it PREFILLS the chat input via
  * the parent's handler — it does NOT auto-send. The visitor reads what they
  * are about to ask, edits if they want, then sends.
+ *
+ * Silver text here never goes below /80. On altivum-dark, altivum-silver/80 is
+ * about 5.4:1 but /70 is about 4.3:1 and /50 about 2.8:1 — under the 4.5:1 AA
+ * floor these smallText sizes need. The tint is the whole cause; full-strength
+ * silver is about 7.8:1.
  */
 
 interface Capability {
@@ -86,7 +91,7 @@ const CapabilityIntro = memo(function CapabilityIntro({
             <span className="text-white" style={typography.bodyText}>
               What Alti can do
             </span>
-            <span className="text-altivum-silver/50 hidden sm:inline" style={typography.smallText}>
+            <span className="text-altivum-silver/80 hidden sm:inline" style={typography.smallText}>
               &middot; search, draft, navigate, remember
             </span>
           </span>
@@ -131,7 +136,7 @@ const CapabilityIntro = memo(function CapabilityIntro({
                         {cap.title}
                       </span>
                     </div>
-                    <p className="text-altivum-silver/70 mb-2.5" style={typography.smallText}>
+                    <p className="text-altivum-silver/80 mb-2.5" style={typography.smallText}>
                       {cap.description}
                     </p>
                     <p
@@ -144,7 +149,7 @@ const CapabilityIntro = memo(function CapabilityIntro({
                   </button>
                 ))}
               </div>
-              <p className="text-altivum-silver/50 mt-4 text-center" style={typography.smallText}>
+              <p className="text-altivum-silver/80 mt-4 text-center" style={typography.smallText}>
                 Tap a card to drop it into your message. Results deep-link to the page, post, or moment &mdash; and you
                 can ask Alti to forget you anytime.
               </p>

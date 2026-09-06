@@ -12,9 +12,17 @@ interface SafeCanvasProps {
    *
    * NOTE: an error boundary cannot catch errors thrown from the rAF loop
    * (useFrame) or from webglcontextlost DOM events — only render/lifecycle/
-   * Suspense errors. Gate the mount with checkWebGLSupport() to avoid those.
+   * Suspense errors. Gate the mount with checkWebGLSupport() for the
+   * never-had-WebGL case, and listen for webglcontextlost inside the canvas
+   * for the lost-after-mount case.
    */
   fallback?: ReactNode;
+  /**
+   * Names the surface in the RUM/Sentry report, matching every other
+   * custom-fallback boundary in the app. Without it a failed canvas is filed
+   * under pageName 'unknown'.
+   */
+  pageName?: string;
 }
 
 /**
@@ -22,9 +30,14 @@ interface SafeCanvasProps {
  * useGLTF) + ErrorBoundary (for mount-time throws), both resolving to the same
  * fallback so a failed 3D mount degrades gracefully instead of unmounting the
  * surrounding tree.
+ *
+ * showHomeButton is deliberately NOT passed: `fallback` is always present in
+ * props here (it defaults to null), and ErrorBoundary short-circuits to the
+ * fallback whenever that key exists, so the default error page the flag gates
+ * is unreachable from this component.
  */
-const SafeCanvas = ({ children, fallback = null }: SafeCanvasProps) => (
-  <ErrorBoundary fallback={fallback} showHomeButton={false}>
+const SafeCanvas = ({ children, fallback = null, pageName }: SafeCanvasProps) => (
+  <ErrorBoundary fallback={fallback} pageName={pageName}>
     <Suspense fallback={fallback}>{children}</Suspense>
   </ErrorBoundary>
 );

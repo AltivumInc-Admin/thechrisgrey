@@ -12,6 +12,22 @@
  */
 
 import { z } from "zod";
+import { isLinkablePath, VALID_PATHS } from "./validation.mjs";
+
+// Every path a block links to must be a REAL route, not merely path-shaped.
+// isLinkablePath (validation.mjs) is the single definition of that policy, which
+// the sibling link-emitting tool (tools/navigate.mjs) enforces too, so the two
+// cannot drift. Without it the model can emit /vector-podcast (dead-ends on the
+// 404 route) or /admin (the Cognito-gated console) and the client renders it as a
+// live link -- GenerativeBlocks.tsx only checks the leading slash.
+const LINK_PATH_HINT = "must be a real internal route (e.g. /about, /podcast, /blog/<slug>) and never /admin or /chat";
+
+// Spelled out for the model the way navigate.mjs does its own list: steering the
+// model beats only rejecting it. Derived from the allowlist rather than retyped,
+// so the prose in the tool description can never drift from the check above.
+export const LINK_PATH_GUIDANCE =
+  `Link paths must be real routes: ${[...VALID_PATHS].filter(isLinkablePath).join(", ")}, /blog/<slug>. ` +
+  "Never link to /admin or /chat.";
 
 const TimelineBlock = z.object({
   type: z.literal("timeline"),
@@ -64,6 +80,7 @@ const ProfileMiniBlock = z.object({
     .string()
     .regex(/^\/[a-z0-9/-]*$/, "ctaPath must be an internal path like /about")
     .max(80)
+    .refine(isLinkablePath, `ctaPath ${LINK_PATH_HINT}`)
     .optional()
     .describe("Optional internal link, e.g. '/about'"),
 });
@@ -86,6 +103,7 @@ const LinkGridBlock = z.object({
           .string()
           .regex(/^\/[a-z0-9/-]*$/, "path must be an internal path like /podcast")
           .max(80)
+          .refine(isLinkablePath, `path ${LINK_PATH_HINT}`)
           .describe("Internal destination path"),
         blurb: z.string().min(2).max(120).describe("One-line description"),
       }),
@@ -114,6 +132,9 @@ export const RenderUiInputSchema = z.object({
     .describe("One to three blocks to render below the text answer. Most answers need none."),
 });
 
-export const UI_BLOCK_TYPES = ["timeline", "comparison", "stat_row", "profile_mini", "explainer", "link_grid"];
+// Derived from the union rather than hand-listed: a block type added above can
+// never leave this list stale, and the frontend mirror (src/utils/uiBlocks.ts)
+// has one authoritative list to be checked against.
+export const UI_BLOCK_TYPES = UiBlockSchema.options.map((/** @type {any} */ option) => option.shape.type.value);
 
-export default { UiBlockSchema, RenderUiInputSchema, UI_BLOCK_TYPES };
+export default { UiBlockSchema, RenderUiInputSchema, UI_BLOCK_TYPES, LINK_PATH_GUIDANCE };
