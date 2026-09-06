@@ -18,6 +18,10 @@ export { createLogger, redact, LEVELS } from "./logger.mjs";
 export { withTimeout } from "./timeout.mjs";
 export { isSentryInitialized, setRequestContext, captureError, addBreadcrumb, flushSentry } from "./errorTracking.mjs";
 export { isProductAnalyticsInitialized, captureProductEvent, flushProductAnalytics } from "./productAnalytics.mjs";
+export { DEVICE_ID_PATTERN, validateDeviceId, hashDeviceId } from "./deviceId.mjs";
+export { EMAIL_PATTERN_SOURCE, PHONE_PATTERN_SOURCE } from "./pii.mjs";
+export { runRetrieve } from "./bedrockRetrieve.mjs";
+export { RATE_LIMIT_TABLE_SCHEMA, SHARED_DYNAMODB_TABLE_SCHEMAS } from "./dynamoDbSchemas.mjs";
 export {
   SITE_ORIGIN,
   BLOG_SEARCH_QUERY,

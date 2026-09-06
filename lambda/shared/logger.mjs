@@ -19,18 +19,21 @@
  *   log.error("handler_error", { error: err.name, message: err.message });
  */
 
+import { EMAIL_PATTERN_SOURCE, PHONE_PATTERN_SOURCE } from "./pii.mjs";
+
 const LEVELS = { debug: 10, info: 20, warn: 30, error: 40 };
 
 const LOG_LEVEL = process.env.LOG_LEVEL?.toLowerCase() ?? "";
 /** @type {number} */
 const DEFAULT_LEVEL = LEVELS[/** @type {keyof typeof LEVELS} */ (LOG_LEVEL)] || LEVELS.info;
 
-// PII redaction patterns (mirrors memory.mjs sanitizeFactContent guards).
-// Email: token with '@' and a dotted domain. The '.' after '@' prevents
-// false-positives on bare social handles like "@thechrisgrey".
-const EMAIL_RE = /[^\s@]+@[^\s@]+\.[^\s@]+/g;
-// Phone / long digit run: 10+ digits joined only by phone-ish separators.
-const PHONE_RE = /(?:\+?\d[\s().-]*){10,}/g;
+// PII redaction. The pattern text is single-sourced in ./pii.mjs, which
+// chat-stream/memory.mjs also reads for its write-time gate — the two used to
+// keep hand-mirrored copies with a comment asking the next editor to tighten
+// both. The /g instances are built HERE because `.replace` needs the flag and a
+// shared global regex would carry lastIndex between the two call sites.
+const EMAIL_RE = new RegExp(EMAIL_PATTERN_SOURCE, "g");
+const PHONE_RE = new RegExp(PHONE_PATTERN_SOURCE, "g");
 
 const REDACTED = "[REDACTED]";
 

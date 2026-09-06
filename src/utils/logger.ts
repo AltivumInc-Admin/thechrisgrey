@@ -85,6 +85,12 @@ type Extra = Record<string, unknown>;
 function emit(levelNum: Level, levelName: LevelName, ctx: LogContext, event: string, extra?: Extra): void {
   if (levelNum < DEFAULT_LEVEL) return;
 
+  // Hold the caller's own `error` value before redact() runs. redact() rebuilds
+  // every object as a plain record and an Error's own properties (message,
+  // stack) are non-enumerable, so `sanitized.error` is always an empty `{}` —
+  // testing `instanceof Error` against it can never be true. The Sentry capture
+  // below therefore has to test the pre-redaction reference.
+  const rawError = extra?.error;
   const sanitized = extra ? (redact(extra) as Extra) : undefined;
   const ts = new Date().toISOString();
 
@@ -125,9 +131,14 @@ function emit(levelNum: Level, levelName: LevelName, ctx: LogContext, event: str
       addSentryBreadcrumb(breadcrumbType, `${ctx.scope}: ${event}`, sanitized);
     }
 
-    // Capture actual Error objects at error level in Sentry.
-    if (levelNum >= LEVELS.error && sanitized?.error instanceof Error) {
-      captureSentryError(sanitized.error as Error, { scope: ctx.scope, event, ...ctx.context });
+    // Capture actual Error objects at error level in Sentry. The Error goes in
+    // raw (Sentry needs the real instance to read message/stack and group the
+    // issue); everything else the caller passed goes in redacted, minus the
+    // `error` key itself, whose redacted form is the empty clone described above.
+    if (levelNum >= LEVELS.error && rawError instanceof Error) {
+      const redactedExtra: Extra = { ...sanitized };
+      delete redactedExtra.error;
+      captureSentryError(rawError, { scope: ctx.scope, event, ...ctx.context, ...redactedExtra });
     }
   }
 }

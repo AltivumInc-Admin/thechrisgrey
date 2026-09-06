@@ -1,9 +1,16 @@
 /**
- * @file Canonical DynamoDB table schema definitions for the thechrisgrey
- * Lambda fleet. Single source of truth for the key schema, attributes, TTL,
- * and ownership of every DynamoDB table the services read or write. Agents
- * and tooling can import these structured definitions to understand the data
- * model without grepping handler code or prose docs.
+ * @file Canonical DynamoDB table schema definitions for the tables lambda-shared
+ * itself owns — today that is the fleet-wide rate-limit table, which every HTTP
+ * Lambda writes to through `rateLimit.checkRateLimit`. Single source of truth
+ * for its key schema, attributes, TTL, and owning services, so agents and
+ * tooling can read the data model without grepping handler code.
+ *
+ * A table owned by ONE service keeps its schema next to that service's code and
+ * imports the `DynamoDbTableSchema` typedef from here — see
+ * `chat-stream/memory.schema.mjs`, whose test cross-checks the definition
+ * against `memory.mjs` itself. SHARED_DYNAMODB_TABLE_SCHEMAS is therefore the
+ * shared-owned registry, not a fleet-wide index; do not read an absence here as
+ * "no such table".
  *
  * DynamoDB is schemaless at the service level, so these definitions describe
  * the logical schema each handler assumes (key attributes, item shape, TTL).
