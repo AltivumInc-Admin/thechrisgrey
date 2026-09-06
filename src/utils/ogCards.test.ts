@@ -59,8 +59,16 @@ describe('OG cards — drift detector', () => {
 describe('slugForOgPath', () => {
   it('maps / to home-hero (the committed photographic card)', () => expect(slugForOgPath('/')).toBe('home-hero'));
   it('strips the leading slash', () => expect(slugForOgPath('/aws')).toBe('aws'));
-  it('keeps multi-word slugs intact', () =>
-    expect(slugForOgPath('/beyond-the-assessment')).toBe('beyond-the-assessment'));
+  it('maps the two photographic sub-page cards to their -hero slugs', () => {
+    expect(slugForOgPath('/podcast')).toBe('podcast-hero');
+    expect(slugForOgPath('/beyond-the-assessment')).toBe('beyond-the-assessment-hero');
+  });
+  // The override above consumed the only multi-word route in the table, so the
+  // general rule is pinned on an unmapped path: hyphens survive, slashes fold.
+  it('keeps multi-word slugs intact for unmapped paths', () => {
+    expect(slugForOgPath('/some-multi-word')).toBe('some-multi-word');
+    expect(slugForOgPath('/a/b')).toBe('a-b');
+  });
 });
 
 describe('ogImageForUrl', () => {

@@ -41,6 +41,9 @@ export function slugForOgPath(path: string): string {
   // asset, and the changed filename forces X to re-scrape past its stale
   // imageless cache of /og/home.png (see generate-og-images.mjs).
   if (path === '/') return 'home-hero';
+  // Same committed-asset + fresh-URL treatment as home (see generate-og-images.mjs).
+  if (path === '/podcast') return 'podcast-hero';
+  if (path === '/beyond-the-assessment') return 'beyond-the-assessment-hero';
   return path.replace(/^\//, '').replace(/\//g, '-');
 }
 

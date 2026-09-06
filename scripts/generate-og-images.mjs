@@ -64,11 +64,12 @@ export const OG_CARDS = {
   '/about': { eyebrow: 'ABOUT', title: 'From Special Forces medic to AI engineer.' },
   '/altivum': { eyebrow: 'ALTIVUM INC', title: 'Mission-driven technology, built to serve.' },
   '/foundation': { eyebrow: 'THE ALTIVUM FOUNDATION', title: 'Veteran scholarships in cloud, AI & robotics.' },
-  '/podcast': { eyebrow: 'THE VECTOR PODCAST', title: 'Conversations on service, leadership & technology.' },
-  '/beyond-the-assessment': {
-    eyebrow: 'BEYOND THE ASSESSMENT',
-    title: 'What it really takes to earn the Green Beret.',
-  },
+  // Photographic cards, like '/' above: these two are the pages people share
+  // standalone, and both carry a real brand mark (tvp.png / bta.png) composited
+  // at full fidelity rather than re-drawn. New slugs for the same reason home
+  // used one - a changed URL is what makes X re-scrape a cached card.
+  '/podcast': { asset: 'podcast-hero.png' },
+  '/beyond-the-assessment': { asset: 'beyond-the-assessment-hero.png' },
   '/aws': { eyebrow: 'AMAZON WEB SERVICES', title: 'AWS Community Builder in AI Engineering.' },
   '/claude': { eyebrow: 'CLAUDE', title: 'Applied AI engineering with Anthropic’s Claude.' },
   '/blog': { eyebrow: 'BLOG', title: 'Field notes on AI, cloud, and leadership.' },
@@ -80,6 +81,8 @@ export const OG_CARDS = {
 /** Route path -> output slug. '/' -> 'home-hero' (see OG_CARDS['/']); '/aws' -> 'aws'. */
 export function slugForPath(path) {
   if (path === '/') return 'home-hero';
+  if (path === '/podcast') return 'podcast-hero';
+  if (path === '/beyond-the-assessment') return 'beyond-the-assessment-hero';
   return path.replace(/^\//, '').replace(/\//g, '-');
 }
 
