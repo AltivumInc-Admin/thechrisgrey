@@ -25,20 +25,15 @@ import { createServer } from 'http';
 import { createReadStream, readFileSync, existsSync, mkdirSync, writeFileSync, statSync } from 'fs';
 import { resolve, dirname, join, extname, sep } from 'path';
 import { fileURLToPath } from 'url';
-import { createClient } from '@sanity/client';
 import { STATIC_ROUTES, BLOG_SLUGS_QUERY } from './generate-sitemap.js';
+import { createBuildClient } from './lib/sanity-build-client.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST = resolve(__dirname, '../dist');
 
-// Sanity: SAME config as generate-sitemap.js / generate-rss.js.
-const client = createClient({
-  projectId: 'k5950b3w',
-  dataset: 'production',
-  apiVersion: '2024-01-01',
-  useCdn: false,
-  timeout: 15000,
-});
+// Sanity: the shared build-time config, so this crawl can never read a
+// different project/dataset than the sitemap it derives its route set from.
+const client = createBuildClient();
 
 async function fetchBlogRoutes() {
   // BLOG_SLUGS_QUERY is shared with generate-sitemap.js; we only read .slug.
@@ -134,6 +129,12 @@ function outPathsFor(route) {
   const rel = route.replace(/^\//, '');
   return [join(DIST, `${rel}.html`), join(DIST, rel, 'index.html')];
 }
+
+// SEO.tsx emits `<meta name="robots" content="noindex, nofollow">` (name before
+// content) and BlogPost only asks for it on its "Article Not Found" / error
+// path. Matching the whole tag rather than the bare word keeps a post that
+// *discusses* noindex in its prose from tripping the guard in crawl().
+const NOINDEX_ROBOTS_META = /<meta[^>]*\bname="robots"[^>]*\bcontent="noindex/i;
 
 // --- Sanity CORS proxy via request interception ------------------------------
 //
@@ -319,6 +320,15 @@ async function crawl() {
           // Wait for React commit + react-helmet-async flush (deterministic signal).
           await page.waitForFunction('window.__PRERENDER_READY__ === true', { timeout: 15000 });
           const html = await page.content();
+          // A blog slug is never legitimately noindex, so this snapshot is the
+          // degraded "Article Not Found" shell rather than the post — the Sanity
+          // fetch failed inside the headless browser. Throw into the catch below
+          // so the route is counted failed and NO file is written: a CSR
+          // fallback still renders the real article, whereas a prerendered
+          // noindex page is what a crawler would cache.
+          if (route.startsWith('/blog/') && NOINDEX_ROBOTS_META.test(html)) {
+            throw new Error('prerendered snapshot carries a robots noindex meta (degraded BlogPost render)');
+          }
           // Write the file form AND the directory form (see outPathsFor) so the
           // canonical bare URL returns 200 directly while the trailing-slash URL
           // keeps resolving — no 301 on the URL that crawlers actually index.

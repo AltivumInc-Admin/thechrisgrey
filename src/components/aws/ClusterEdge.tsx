@@ -2,7 +2,7 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Line, PointMaterial } from '@react-three/drei';
 import * as THREE from 'three';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 interface ClusterEdgeProps {
   start: [number, number, number];
@@ -14,7 +14,7 @@ const PARTICLE_COUNT = 10;
 export function ClusterEdge({ start, end }: ClusterEdgeProps) {
   const pointsRef = useRef<THREE.Points>(null);
   // Reactive — re-renders if the visitor toggles the OS reduced-motion setting.
-  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const reducedMotion = useReducedMotion();
 
   // Each particle gets a phase offset so they spread along the line
   const phases = useMemo(() => Array.from({ length: PARTICLE_COUNT }, (_, i) => i / PARTICLE_COUNT), []);
@@ -34,8 +34,9 @@ export function ClusterEdge({ start, end }: ClusterEdgeProps) {
   useFrame(({ clock }) => {
     // No animation under reduced motion — particles stay at evenly-spaced static positions
     if (reducedMotion) return;
-    // Skip updates when tab is not visible
-    if (document.hidden) return;
+    // No `document.hidden` check: TopologyScene drops the canvas to
+    // frameloop='never' on visibilitychange, so this callback does not run in a
+    // background tab at all and the per-frame read would be dead cost.
     if (!pointsRef.current) return;
 
     const posAttr = pointsRef.current.geometry.getAttribute('position') as THREE.BufferAttribute;

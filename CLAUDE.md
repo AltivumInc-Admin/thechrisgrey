@@ -134,7 +134,7 @@ Full-viewport chat at `/chat` + floating 3D widget on all other pages. Powered b
 - Server-side 20-msg sliding window; client mirrors
 - Guardrail `5kofhp46ssob` v5: filters PROMPT_ATTACK/HATE/INSULTS/SEXUAL(HIGH), VIOLENCE/MISCONDUCT(MED)
 - PageContext hardening: whitelisted paths, regex blog slugs, SAFE_TEXT_PATTERN
-- Timeouts: 25s agent, 10s Bedrock invocation, 30s client fetch
+- Timeouts: 25s agent, 10s Bedrock invocation, 20s client token handshake + 45s client stream budget (armed after the session-token round trip), 10s client `/forget`. The old single 30s client cap started before the Turnstile/issuer handshake, so it raced the server's own 25s agent budget plus up to 4s of KB retrieval.
 
 **Agentic UI** (`ToolDraftCard.tsx`): 5 variants (navigate, contact, newsletter, citation, blog_search_results). ChatMessage shows tool activity, memory badges, draft cards.
 
@@ -224,7 +224,9 @@ Seven services under `lambda/`. All ESM `.mjs`, all on AWS SDK v3 (current `^3.1
 
 **Amplify (us-east-2):** `VITE_CONTACT_ENDPOINT`, `VITE_NEWSLETTER_ENDPOINT`, `VITE_CHAT_ENDPOINT`, `VITE_CHAT_SIGNING_KEY`, `YOUTUBE_API_KEY` (build-only), `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_CLIENT_ID`, `VITE_KB_BUILDER_ENDPOINT`, `VITE_METRICS_ENDPOINT`
 
-**Chat-stream Lambda:** `CHAT_SIGNING_KEY`, `CHAT_RATE_LIMIT_TABLE` (thechrisgrey-chat-ratelimit), `CHAT_MEMORY_TABLE` (thechrisgrey-chat-memory), `KB_ID`, `KB_DATA_SOURCE_ID`, `GUARDRAIL_ID`, `GUARDRAIL_VERSION`, `SANITY_PROJECT_ID`, `SANITY_DATASET` (optional, enables cite tool)
+**Chat-stream Lambda:** `CHAT_SIGNING_KEY`, `SESSION_TOKEN_KEY`, `CHAT_RATE_LIMIT_TABLE` (thechrisgrey-chat-ratelimit), `CHAT_MEMORY_TABLE` (thechrisgrey-chat-memory), `KB_ID`, `PODCAST_KB_ID` (unset disables the `search_podcast` tool), `GUARDRAIL_ID`, `GUARDRAIL_VERSION`, `BEDROCK_MODEL_ID`, `SANITY_PROJECT_ID`, `SANITY_DATASET` (optional, enables cite tool). `BEDROCK_MODEL_ID` and the region are env-first but default in code to the current live values (Haiku 4.5 / us-east-1), so no deploy change was needed to introduce them — `AWS_REGION` is a Lambda-reserved variable the runtime supplies, not one to set on the function. No `KB_DATA_SOURCE_ID` here: chat-stream only retrieves, so the data-source id belongs to kb-sync.
+
+**KB-sync Lambda:** `KB_ID` (default `ARFYABW8HP`), `KB_DATA_SOURCE_ID` (default `TXQTRAJOSD`; the legacy `DATA_SOURCE_ID` name is still honoured as a fallback). A retryable `StartIngestionJob` failure is re-thrown so the S3 async invoke retries instead of dropping the sync, and the role needs `bedrock:GetIngestionJob` (it polls the job to settle) alongside `bedrock:StartIngestionJob`.
 
 **Important:** Local `.env.local` not synced to prod. Add via: `aws amplify update-branch --app-id d3du8eg39a9peo --branch-name main --environment-variables "VAR=value" --region us-east-2`
 

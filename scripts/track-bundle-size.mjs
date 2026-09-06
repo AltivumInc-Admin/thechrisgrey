@@ -10,6 +10,13 @@
  * bundled frontend: a dependency that bloats a chunk past its budget fails the
  * check, and the CI job reports per-chunk deltas vs the previous run.
  *
+ * The optional `assets` block in the budgets file covers unhashed binaries that
+ * ship from the dist ROOT rather than dist/assets (public/alti.glb, ~1.1 MB, is
+ * the largest single byte cost on the site). The chunk scan cannot see them:
+ * they are neither under dist/assets nor .js/.css, so a model re-exported
+ * without its meshopt/WebP compression would double the per-page transfer with
+ * every budget still green. Each entry is `{ path (relative to dist/), maxBytes }`.
+ *
  * Usage:
  *   node scripts/track-bundle-size.mjs                      # measure + budget check
  *   node scripts/track-bundle-size.mjs --output report.json # also write report
@@ -20,13 +27,14 @@
  * non-zero when any chunk or total exceeds its budget.
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { gzipSync } from 'zlib';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const DIST_ASSETS = join(repoRoot, 'dist', 'assets');
+const DIST = join(repoRoot, 'dist');
+const DIST_ASSETS = join(DIST, 'assets');
 const DEFAULT_BUDGETS_PATH = join(repoRoot, 'bundle-size-budgets.json');
 
 function parseArgs() {
@@ -90,6 +98,30 @@ function measure() {
     totalCss: { rawBytes: totalCssRaw, gzipBytes: totalCssGzip },
     files: perFile,
   };
+}
+
+/**
+ * Measure the non-JS/CSS assets named in the budgets file. Budgeted on RAW
+ * bytes: these are already-compressed binaries (glb/webp/woff2), so their gzip
+ * size is not what the ceiling is about.
+ */
+function measureAssets(budgets) {
+  if (!budgets?.assets) return [];
+  return Object.entries(budgets.assets).map(([label, def]) => {
+    const rel = def.path ?? label;
+    const file = join(DIST, rel);
+    const missing = !existsSync(file);
+    const rawBytes = missing ? 0 : statSync(file).size;
+    const budgetBytes = typeof def.maxBytes === 'number' ? def.maxBytes : null;
+    return {
+      label,
+      path: rel,
+      rawBytes,
+      budgetBytes,
+      overBudget: budgetBytes !== null && rawBytes > budgetBytes,
+      missing,
+    };
+  });
 }
 
 function aggregateChunks(report, budgets) {
@@ -157,6 +189,21 @@ function generateMarkdown(report, chunks, budgets, previous) {
     );
   }
 
+  if (report.assets?.length) {
+    const prevAssets = new Map((previous?.assets ?? []).map((a) => [a.label, a]));
+    lines.push('');
+    lines.push('| Asset | Size | Budget | Delta vs prev | Status |');
+    lines.push('|-------|------|--------|---------------|--------|');
+    for (const a of report.assets) {
+      const budget = a.budgetBytes !== null ? formatKB(a.budgetBytes) : '-';
+      const delta = deltaCell(a.rawBytes, prevAssets.get(a.label)?.rawBytes);
+      let status = 'ok';
+      if (a.missing) status = 'MISSING';
+      else if (a.overBudget) status = 'OVER BUDGET';
+      lines.push(`| ${a.path} | ${formatKB(a.rawBytes)} | ${budget} | ${delta} | ${status} |`);
+    }
+  }
+
   lines.push('');
   lines.push(`**Total JS delta vs prev:** ${deltaCell(report.totalJs.gzipBytes, prevTotals.js)}`);
 
@@ -185,6 +232,8 @@ const budgets = readJson(opts.budgets);
 const report = measure();
 const chunks = aggregateChunks(report, budgets);
 report.chunks = chunks;
+const assets = measureAssets(budgets);
+report.assets = assets;
 
 const previous = readJson(opts.previous);
 const markdown = generateMarkdown(report, chunks, budgets, previous);
@@ -204,8 +253,12 @@ if (opts.output) {
 const problems = [];
 const overBudgetChunks = chunks.filter((c) => c.overBudget);
 const missingChunks = chunks.filter((c) => c.missing);
+const overBudgetAssets = assets.filter((a) => a.overBudget);
+const missingAssets = assets.filter((a) => a.missing);
 if (overBudgetChunks.length > 0) problems.push(`${overBudgetChunks.length} chunk(s) over budget`);
 if (missingChunks.length > 0) problems.push(`${missingChunks.length} expected chunk(s) missing`);
+if (overBudgetAssets.length > 0) problems.push(`${overBudgetAssets.length} asset(s) over budget`);
+if (missingAssets.length > 0) problems.push(`${missingAssets.length} budgeted asset(s) missing from dist`);
 if (budgets && report.totalJs.gzipBytes > budgets.totalJsGzipKB * 1024) problems.push('total JS over budget');
 if (budgets && report.totalCss.gzipBytes > budgets.totalCssGzipKB * 1024) problems.push('total CSS over budget');
 

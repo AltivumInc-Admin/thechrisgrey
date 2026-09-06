@@ -47,6 +47,17 @@ const PageLoadingFallback = () => (
   </div>
 );
 
+/** Lowercase hex SHA-256, matching the backend's hashDeviceId digest exactly. */
+async function sha256Hex(value: string): Promise<string | null> {
+  if (typeof crypto === 'undefined' || !crypto.subtle) return null;
+  try {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+    return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return null;
+  }
+}
+
 function App() {
   const location = useLocation();
   const isFullscreenPage = location.pathname === '/chat' || location.pathname === '/admin';
@@ -66,13 +77,29 @@ function App() {
   // Set anonymous user context (device hash) for error tracking correlation.
   // No PII — only the SHA-256 hash of the localStorage device ID.
   // Forwarded to both RUM and Sentry for cross-service correlation.
+  //
+  // The raw device ID is the partition key for the visitor's stored chat memory
+  // (lambda/chat-stream/memory.mjs hashes it into deviceHash), so it is a bearer
+  // value and must not leave the browser. Hashing it here with the same SHA-256
+  // yields the identical correlation ID the backend stores, so cross-service
+  // lookups are unchanged. Without crypto.subtle (a non-secure context) there is
+  // no correlation ID and we set none rather than falling back to the raw value.
   useEffect(() => {
     const deviceId = getOrCreateDeviceId();
-    if (deviceId) {
-      const ctx = { deviceId, sessionStart: new Date().toISOString() };
+    if (!deviceId) return;
+
+    let cancelled = false;
+    void (async () => {
+      const deviceHash = await sha256Hex(deviceId);
+      if (!deviceHash || cancelled) return;
+      const ctx = { deviceId: deviceHash, sessionStart: new Date().toISOString() };
       setUserContext(ctx);
       setSentryUserContext(ctx);
-    }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // SPA pageview + breadcrumb tracking. Skip the first run (the entry pageview

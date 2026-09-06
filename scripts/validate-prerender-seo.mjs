@@ -26,7 +26,7 @@
  * crawl/validation never blocks the Amplify deploy. The route set is the SAME
  * SSOT as the sitemap/prerender (STATIC_ROUTES) so it can never drift.
  */
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { STATIC_ROUTES } from './generate-sitemap.js';
@@ -167,6 +167,13 @@ export function schemaViolations(html, route) {
   }
 
   return violations;
+}
+
+// A prerendered blog POST, not the /blog listing. Blog posts are the only
+// checked routes that are articles rather than pages, so several assertions
+// (og:type, JSON-LD @type) branch on this.
+function isBlogPostRoute(route) {
+  return route.startsWith('/blog/');
 }
 
 // File form written by prerender.js (outPathsFor): '/' -> dist/index.html,
@@ -503,15 +510,19 @@ function imageAltViolations(html) {
   return violations;
 }
 
-// --- VAL-SEO-007: og:type must be "website" for static (non-article) routes ---
-// Blog posts (og:type=article) are not in STATIC_ROUTES, so every route the
-// validator checks must emit og:type=website. Catches the prior /about (profile),
-// /beyond-the-assessment (book), and /blog (article) misconfigurations.
-function ogTypeViolations(html) {
+// --- VAL-SEO-007: og:type matches the route's kind ---
+// Static routes must emit og:type=website — this catches the prior /about
+// (profile), /beyond-the-assessment (book), and /blog (article)
+// misconfigurations. A prerendered blog POST is the one route kind that is
+// genuinely an article, and those are now part of the checked set (see
+// prerenderedBlogRoutes), so they are held to og:type=article instead.
+function ogTypeViolations(html, route) {
   const violations = [];
   const m = html.match(/<meta[^>]*property="og:type"[^>]*content="([^"]*)"/i);
-  if (m && m[1] !== 'website') {
-    violations.push(`og:type is "${m[1]}"; expected "website" for a non-article route (VAL-SEO-007)`);
+  if (!m) return violations; // missing og:type is flagged by metaTagViolations
+  const expected = isBlogPostRoute(route) ? 'article' : 'website';
+  if (m[1] !== expected) {
+    violations.push(`og:type is "${m[1]}"; expected "${expected}" for ${route} (VAL-SEO-007)`);
   }
   return violations;
 }
@@ -524,7 +535,11 @@ function schemaImageMatchViolations(html) {
   const violations = [];
   const ogMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"/i);
   if (!ogMatch) return violations; // missing og:image is flagged elsewhere
-  const ogImage = ogMatch[1];
+  // The attribute value is raw serialized HTML; the JSON-LD side came out of
+  // JSON.parse with entities already resolved. Decoding here is what makes the
+  // two comparable for any image URL carrying a query string (`?w=1200&h=630`
+  // serializes as `&amp;`) — every Sanity-hosted blog og:image does.
+  const ogImage = decodeEntities(ogMatch[1]);
   const graph = graphFromHtml(html);
   if (graph.length === 0) return violations;
   const person = graph.find((n) => n['@type'] === 'Person');
@@ -552,7 +567,7 @@ export function seoMetaViolations(html, route) {
     ...metaTagViolations(html, OG_TAGS, 'property', 'VAL-SEO-007'),
     ...metaTagViolations(html, TWITTER_TAGS, 'name', 'VAL-SEO-008'),
     ...twitterCardViolations(html),
-    ...ogTypeViolations(html),
+    ...ogTypeViolations(html, route),
     ...robotsMetaViolations(html, route),
     ...hreflangAndLocaleViolations(html),
     ...rssLinkViolations(html, route),
@@ -632,13 +647,40 @@ function validateRoute(route) {
   return { route, degraded: false, violations };
 }
 
+/**
+ * Prerendered blog-post routes, enumerated from dist/ rather than re-queried
+ * from Sanity: this gate runs offline, after prerender.js, and must check
+ * exactly the snapshots that shipped — including any post prerender.js wrote
+ * that the sitemap no longer lists.
+ *
+ * `dist/blog/index.html` is the DIRECTORY form of the /blog listing (see
+ * outPathsFor in prerender.js), not a post, so it is excluded — /blog is
+ * already covered as a STATIC_ROUTE via dist/blog.html.
+ *
+ * The point of including these at all: a post whose Sanity fetch degraded
+ * renders BlogPost's "Article Not Found" shell, which carries a robots
+ * noindex meta. robotsMetaViolations() flags that (the route is not in
+ * NOINDEX_ROUTES), so a degraded post snapshot now fails the gate instead of
+ * shipping a de-indexed article.
+ */
+function prerenderedBlogRoutes() {
+  const blogDir = join(DIST, 'blog');
+  if (!existsSync(blogDir)) return [];
+  return readdirSync(blogDir)
+    .filter((f) => f.endsWith('.html') && f !== 'index.html')
+    .map((f) => `/blog/${f.slice(0, -'.html'.length)}`)
+    .sort();
+}
+
 function main() {
   if (!existsSync(join(DIST, 'index.html'))) {
     console.warn('[seo-gate] dist/index.html not found — skipping (run the build first). Non-fatal.');
     process.exit(0);
   }
 
-  const results = STATIC_ROUTES.map(validateRoute);
+  const blogRoutes = prerenderedBlogRoutes();
+  const routes = [...STATIC_ROUTES, ...blogRoutes];
+  const results = routes.map(validateRoute);
   const degraded = results.filter((r) => r.degraded).map((r) => r.route);
   const withViolations = results.filter((r) => r.violations.length > 0);
   const totalViolations = withViolations.reduce((n, r) => n + r.violations.length, 0);
@@ -686,41 +728,15 @@ function main() {
     }
   }
 
-  // --- VAL-SEO-009 / VAL-CROSS-005: RSS items match sitemap blog set ---
-  let rssViolation = null;
-  const rssFile = join(DIST, 'rss.xml');
-  const sitemapFile = join(DIST, 'sitemap.xml');
-  if (existsSync(rssFile) && existsSync(sitemapFile)) {
-    try {
-      const rssXml = readFileSync(rssFile, 'utf-8');
-      const sitemapXml = readFileSync(sitemapFile, 'utf-8');
-      // Extract blog slugs from RSS items
-      const rssLinks = [...rssXml.matchAll(/<link>([^<]+)<\/link>/g)].map((m) => m[1].trim());
-      const rssBlogSlugs = new Set(
-        rssLinks
-          .filter((l) => l.includes('/blog/'))
-          .map((l) => l.replace(/^https?:\/\/[^/]+\/blog\//, '').replace(/\/$/, '')),
-      );
-      // Extract blog slugs from sitemap
-      const sitemapLocs = [...sitemapXml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim());
-      const sitemapBlogSlugs = new Set(
-        sitemapLocs
-          .filter((l) => l.includes('/blog/'))
-          .map((l) => l.replace(/^https?:\/\/[^/]+\/blog\//, '').replace(/\/$/, '')),
-      );
-      // Check set equality (RSS items should match the sitemap blog set)
-      const inRssNotSitemap = [...rssBlogSlugs].filter((s) => !sitemapBlogSlugs.has(s));
-      const inSitemapNotRss = [...sitemapBlogSlugs].filter((s) => !rssBlogSlugs.has(s));
-      if (inRssNotSitemap.length > 0 || inSitemapNotRss.length > 0) {
-        rssViolation = `RSS/sitemap blog set mismatch: in RSS not sitemap: [${inRssNotSitemap.join(', ')}]; in sitemap not RSS: [${inSitemapNotRss.join(', ')}]`;
-      }
-    } catch {
-      // Non-fatal — RSS/sitemap consistency check is best-effort
-    }
-  }
+  // VAL-SEO-009 / VAL-CROSS-005 (RSS items match the sitemap's blog set) is NOT
+  // checked here. This step runs BEFORE generate-sitemap.js and generate-rss.js
+  // on a dist/ vite has just emptied, so the check that used to live here was
+  // guarded by an existsSync() that was false on every build: it reported clean
+  // having compared nothing. It now runs inside scripts/generate-rss.js, the
+  // last build step, where both artifacts exist and a mismatch is fatal.
 
   console.log(
-    `[seo-gate] ${STATIC_ROUTES.length} static routes checked; ` +
+    `[seo-gate] ${STATIC_ROUTES.length} static routes + ${blogRoutes.length} prerendered blog posts checked; ` +
       `${totalViolations} violation(s); ${degraded.length} degraded to CSR` +
       (degraded.length ? `: ${degraded.join(', ')}` : ''),
   );
@@ -733,11 +749,8 @@ function main() {
   for (const dup of duplicateDescs) {
     console.error(`  [seo-gate] DUPLICATE DESCRIPTION "${dup.desc}" on: ${dup.routes.join(', ')} (VAL-SEO-006)`);
   }
-  if (rssViolation) {
-    console.error(`  [seo-gate] ${rssViolation} (VAL-SEO-009)`);
-  }
 
-  const crossRouteViolations = duplicateTitles.length + duplicateDescs.length + (rssViolation ? 1 : 0);
+  const crossRouteViolations = duplicateTitles.length + duplicateDescs.length;
   const strict = process.env.STRICT_PRERENDER === 'true' || process.env.STRICT_SEO_VALIDATION === 'true';
   if (strict && (totalViolations > 0 || crossRouteViolations > 0)) {
     console.error(

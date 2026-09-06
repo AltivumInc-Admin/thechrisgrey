@@ -164,11 +164,18 @@ async function handleHealth(authHeader, log) {
   ]);
   const [lcp, cls, inp, fcp, ttfb] = vitalsResults.map((r) => settledValue(r, { average: null, count: 0 }, log));
 
+  // Sums first, then averages. SUM_COUNT is the boundary the fallback below
+  // keys on: a sum degrades to 0, an average to { average: null, count: 0 }.
+  // Keep the two groups contiguous and this constant in step with them.
+  const SUM_COUNT = 12;
   const metricResults = await Promise.allSettled([
     getMetricSum("CSPViolation"),
     getMetricSum("KBRetrievalFailure"),
     getMetricSum("KBRetrievalSuccess"),
+    getMetricSum("KBRetrievalEmpty"),
+    getMetricSum("KBRetrievalUnparseable"),
     getMetricSum("GuardrailInterventionStream"),
+    getMetricSum("GuardrailInterventionMidStream"),
     getMetricSum("GuardrailInterventionPreStream"),
     getMetricSum("RateLimitRejection"),
     getMetricSum("BedrockInputTokens"),
@@ -182,7 +189,10 @@ async function handleHealth(authHeader, log) {
     cspViolations,
     kbFailures,
     kbSuccesses,
+    kbEmpties,
+    kbUnparseables,
     guardrailStream,
+    guardrailMidStream,
     guardrailPreStream,
     rateLimits,
     inputTokens,
@@ -191,10 +201,19 @@ async function handleHealth(authHeader, log) {
     kbLatency,
     bedrockLatency,
     totalLatency,
-  ] = metricResults.map((r, i) => settledValue(r, i >= 9 ? { average: null, count: 0 } : 0, log));
-  const guardrails = guardrailStream + guardrailPreStream;
+  ] = metricResults.map((r, i) => settledValue(r, i >= SUM_COUNT ? { average: null, count: 0 } : 0, log));
+  // A turn blocked after text had already streamed is still an intervention; it
+  // is counted under its own name so the two remediation shapes stay separable
+  // in CloudWatch, but the panel wants the total.
+  const guardrails = guardrailStream + guardrailMidStream + guardrailPreStream;
 
-  const kbTotal = kbSuccesses + kbFailures;
+  // Every retrieval outcome, not just the two extremes. A KB that answers but
+  // matches nothing (Empty) or answers in a shape we cannot read (Unparseable)
+  // grounds the turn no better than a failure does, yet with only
+  // successes/(successes+failures) an emptied vector index reported a green 100%
+  // — or "--", if it emptied completely — which is the exact incident this panel
+  // exists to catch.
+  const kbTotal = kbSuccesses + kbFailures + kbEmpties + kbUnparseables;
   const kbSuccessRate = kbTotal > 0 ? ((kbSuccesses / kbTotal) * 100).toFixed(1) : null;
 
   return respond(200, {
@@ -203,6 +222,8 @@ async function handleHealth(authHeader, log) {
       kbSuccessRate,
       kbFailures,
       kbSuccesses,
+      kbEmpties,
+      kbUnparseables,
       guardrailInterventions: guardrails,
       rateLimitRejections: rateLimits,
     },

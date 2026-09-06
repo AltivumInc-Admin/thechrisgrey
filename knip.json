@@ -1,34 +1,39 @@
 {
   "workspaces": {
+    ".": {
+      "entry": [
+        "vite.config.ts",
+        "src/main.tsx",
+        "src/**/*.test.{ts,tsx}",
+        "scripts/validate-env.js",
+        "scripts/generate-sitemap.js",
+        "scripts/generate-rss.js",
+        "scripts/generate-podcast-episodes.js",
+        "scripts/generate-og-images.mjs",
+        "scripts/generate-blog-previews.js",
+        "scripts/prerender.js",
+        "scripts/validate-prerender-seo.mjs",
+        "scripts/deploy-lambda.sh",
+        "scripts/post-deploy-check.sh",
+        "scripts/setup-alarms.sh",
+        "scripts/detect-flaky-tests.mjs",
+        "scripts/code-quality-report.mjs",
+        "scripts/check-lambda-coverage.mjs",
+        "scripts/check-file-sizes.mjs",
+        "scripts/upload-sourcemaps.mjs",
+        "scripts/smoke-test-lambdas.mjs",
+        "scripts/iam-drift.sh",
+        "scripts/validate-agents-md.mjs",
+        "scripts/ingest-podcast-transcripts.mjs",
+        "scripts/rewrite-blog-headings.mjs",
+        "scripts/transcribe-podcast.mjs",
+        "scripts/transcribe-youtube.mjs"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{js,mjs}", "vite-plugins/**/*.ts"],
+      "ignore": ["public/plausible-init.js"]
+    },
     "lambda/*": {}
   },
-  "entry": [
-    "src/main.tsx",
-    "src/**/*.test.{ts,tsx}",
-    "lambda/**/__tests__/*.test.mjs",
-    "scripts/validate-env.js",
-    "scripts/generate-sitemap.js",
-    "scripts/generate-rss.js",
-    "scripts/generate-podcast-episodes.js",
-    "scripts/generate-og-images.mjs",
-    "scripts/prerender.js",
-    "scripts/validate-prerender-seo.mjs",
-    "scripts/deploy-lambda.sh",
-    "scripts/post-deploy-check.sh",
-    "scripts/setup-alarms.sh",
-    "scripts/detect-flaky-tests.mjs",
-    "scripts/code-quality-report.mjs",
-    "scripts/check-lambda-coverage.mjs",
-    "scripts/check-file-sizes.mjs",
-    "scripts/upload-sourcemaps.mjs",
-    "scripts/smoke-test-lambdas.mjs",
-    "scripts/iam-drift.sh",
-    "scripts/validate-agents-md.mjs",
-    "scripts/ingest-podcast-transcripts.mjs",
-    "scripts/transcribe-podcast.mjs",
-    "scripts/transcribe-youtube.mjs"
-  ],
-  "project": ["src/**/*.{ts,tsx}", "lambda/**/*.mjs", "scripts/**/*.{js,mjs}"],
-  "ignore": ["public/plausible-init.js"],
-  "ignoreDependencies": ["@aws-sdk/lib-dynamodb", "three-stdlib", "@shikijs/themes", "@shikijs/langs"]
+  "ignoreDependencies": ["@aws-sdk/lib-dynamodb", "three-stdlib", "@shikijs/themes", "@shikijs/langs", "tailwindcss"],
+  "ignoreBinaries": ["yt-dlp"]
 }

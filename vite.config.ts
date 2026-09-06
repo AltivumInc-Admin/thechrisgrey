@@ -112,6 +112,13 @@ export default defineConfig({
             },
             { name: 'cognito', test: /[\\/]@aws-sdk[\\/]client-cognito-identity-provider[\\/]/, priority: 20 },
             { name: 'three-vendor', test: /[\\/]three[\\/]/, priority: 20 },
+            // React Three Fiber + drei. Without a group these land in an
+            // unnamed chunk whose filename prefix is derived from whichever
+            // module rolldown happens to pick (it was `constants-<hash>.js`),
+            // so it moves on any dependency change and cannot be budgeted.
+            // Disjoint from three-vendor: `[\\/]three[\\/]` needs a whole
+            // `three` path segment, which `@react-three/...` is not.
+            { name: 'r3f-vendor', test: /[\\/]@react-three[\\/]/, priority: 20 },
             { name: 'gsap-vendor', test: /[\\/]gsap[\\/]/, priority: 20 },
           ],
         },

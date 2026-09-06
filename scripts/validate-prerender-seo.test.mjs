@@ -519,4 +519,50 @@ describe('seoMetaViolations', () => {
     const v = seoMetaViolations(html, '/about');
     expect(v.filter((x) => x.includes('VAL-SD-010'))).toEqual([]);
   });
+
+  // The prerendered blog posts are part of the checked route set, and they are
+  // the one route kind that is genuinely an article.
+  it('accepts og:type="article" on a blog post route (VAL-SEO-007)', () => {
+    const html = seoFixture().replace('content="website"', 'content="article"');
+    const v = seoMetaViolations(html, '/blog/some-post');
+    expect(v.filter((x) => x.includes('og:type'))).toEqual([]);
+  });
+
+  it('flags og:type="website" on a blog post route (VAL-SEO-007)', () => {
+    const v = seoMetaViolations(seoFixture(), '/blog/some-post');
+    expect(v.some((x) => x.includes('og:type is "website"') && x.includes('expected "article"'))).toBe(true);
+  });
+
+  // A blog post only renders a noindex robots meta from BlogPost's
+  // "Article Not Found" path, so on a post URL it means a degraded snapshot.
+  it('flags a robots noindex meta on a blog post route (VAL-SEO-010)', () => {
+    const html = seoFixture({ robotsMeta: 'noindex, nofollow' }).replace('content="website"', 'content="article"');
+    const v = seoMetaViolations(html, '/blog/some-post');
+    expect(v.some((x) => x.includes('noindex') && x.includes('VAL-SEO-010'))).toBe(true);
+  });
+
+  // Sanity og:image URLs carry a query string, so the serialized attribute has
+  // `&amp;` where the JSON-LD value (already JSON-parsed) has a bare `&`.
+  // Comparing them raw reported every blog post as a mismatch.
+  it('does not flag an og:image whose only difference is HTML entity encoding (VAL-SD-010)', () => {
+    const imageUrl = 'https://cdn.sanity.io/images/k5950b3w/production/abc-1200x675.png?w=1200&h=630&q=85';
+    const graph = {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Person',
+          '@id': 'https://thechrisgrey.com/#person',
+          name: 'Christian Perez',
+          image: imageUrl,
+        },
+      ],
+    };
+    const html =
+      seoFixture().replace(
+        '<meta property="og:image" content="https://thechrisgrey.com/og/about.png" />',
+        `<meta property="og:image" content="${imageUrl.replace(/&/g, '&amp;')}" />`,
+      ) + `<script type="application/ld+json">${JSON.stringify(graph)}</script>`;
+    const v = seoMetaViolations(html, '/blog/some-post');
+    expect(v.filter((x) => x.includes('VAL-SD-010'))).toEqual([]);
+  });
 });

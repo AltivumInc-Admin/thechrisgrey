@@ -1,12 +1,13 @@
 import { useCallback } from 'react';
 import { useNavigate, type NavigateOptions } from 'react-router-dom';
+import { REDUCED_MOTION_QUERY } from '../utils/motion';
 
 function supportsViewTransitions(): boolean {
   return 'startViewTransition' in document;
 }
 
 function prefersReducedMotion(): boolean {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
 }
 
 export function useViewTransitionNavigate() {

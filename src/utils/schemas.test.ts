@@ -29,6 +29,7 @@ import {
   awsFAQs,
   claudeFAQs,
   linksFAQs,
+  serializeJsonLd,
 } from './schemas';
 import { CREDENTIALS } from '../data/credentials';
 
@@ -613,5 +614,43 @@ describe('schemas', () => {
       );
       buildAltivumServicesSchemas().forEach((s) => assertRequiredFields(s));
     });
+  });
+});
+
+describe('serializeJsonLd', () => {
+  // The sink these guard is src/components/SEO.tsx, which embeds the result as
+  // the raw-text child of <script type="application/ld+json"> and lets
+  // scripts/prerender.js write it into the shipped static HTML.
+  const HOSTILE_TITLE = '</script><img src=x onerror=alert(1)>';
+
+  it('escapes every < so a CMS string can never terminate the script element', () => {
+    const json = serializeJsonLd({ headline: HOSTILE_TITLE });
+    expect(json).not.toContain('</script');
+    expect(json).not.toContain('<');
+    expect(json).toContain('\\u003c');
+  });
+
+  it('escapes < in nested graph nodes, not just top-level values', () => {
+    const json = serializeJsonLd({
+      '@graph': [{ '@type': 'Article', author: { name: HOSTILE_TITLE } }],
+    });
+    expect(json).not.toContain('<');
+  });
+
+  it('round-trips to identical data, so schema consumers see no difference', () => {
+    const graph = {
+      '@context': 'https://schema.org',
+      '@graph': [{ '@type': 'Article', headline: HOSTILE_TITLE, keywords: 'a < b, c & d' }],
+    };
+    expect(JSON.parse(serializeJsonLd(graph))).toEqual(graph);
+  });
+
+  it('leaves markup-free payloads byte-identical to JSON.stringify', () => {
+    const graph = buildPersonSchema();
+    expect(serializeJsonLd(graph)).toBe(JSON.stringify(graph));
+  });
+
+  it('escapes the <!-- sequence, which also switches the HTML tokenizer out of script data', () => {
+    expect(serializeJsonLd({ description: 'a <!-- b' })).not.toContain('<!--');
   });
 });

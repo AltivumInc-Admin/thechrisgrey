@@ -23,13 +23,14 @@
  * through this handler.
  */
 
-import { createHash, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { CloudWatchClient } from "@aws-sdk/client-cloudwatch";
 import { createClient as createSanityClient } from "@sanity/client";
 import { checkRateLimit } from "lambda-shared/rateLimit";
+import { validateDeviceId, hashDeviceId } from "lambda-shared/deviceId";
 
 import { authenticateRequest } from "lambda-shared/requestAuth";
 import { MetricsCollector } from "lambda-shared/metrics";
@@ -48,7 +49,6 @@ const RATE_LIMIT_TABLE =
   process.env.BLUEPRINT_RATE_LIMIT_TABLE || process.env.CHAT_RATE_LIMIT_TABLE || "thechrisgrey-chat-ratelimit";
 const RATE_LIMIT_MAX = 1;
 const RATE_LIMIT_WINDOW_SECONDS = 30 * 24 * 60 * 60; // 30 days
-const DEVICE_ID_PATTERN = /^[a-zA-Z0-9_-]{8,64}$/;
 // Max raw body size accepted before JSON parsing. Guards against oversized spec
 // payloads that would otherwise consume Bedrock Opus budget / trigger deep
 // validation on adversarial input. Default 1 MiB; override via env for tuning.
@@ -88,18 +88,6 @@ function corsHeaders() {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Max-Age": "3600",
   };
-}
-
-/** @param {any} raw @returns {string|null} */
-function validateDeviceId(raw) {
-  if (typeof raw !== "string") return null;
-  if (!DEVICE_ID_PATTERN.test(raw)) return null;
-  return raw;
-}
-
-/** @param {string} deviceId @returns {string} */
-function hashDeviceId(deviceId) {
-  return createHash("sha256").update(deviceId).digest("hex");
 }
 
 /** @param {string|null} requestId @param {string} event @param {any} [extra] */

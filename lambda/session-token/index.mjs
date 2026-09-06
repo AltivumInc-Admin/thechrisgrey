@@ -15,11 +15,12 @@
  * network. The default `handler` wires the real clients and env config.
  */
 
-import { createHash, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { CloudWatchClient } from "@aws-sdk/client-cloudwatch";
 import { checkRateLimit } from "lambda-shared/rateLimit";
+import { DEVICE_ID_PATTERN, hashDeviceId } from "lambda-shared/deviceId";
 import { issueSessionToken } from "lambda-shared/sessionToken";
 import { createLogger } from "lambda-shared/logger";
 import { withTimeout } from "lambda-shared/timeout";
@@ -28,7 +29,6 @@ import { setRequestContext, captureError, addBreadcrumb, flushSentry } from "lam
 import { captureProductEvent, flushProductAnalytics } from "lambda-shared/productAnalytics";
 
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
-const DEVICE_ID_PATTERN = /^[a-zA-Z0-9_-]{8,64}$/;
 
 /**
  * Verify a Cloudflare Turnstile token against the siteverify endpoint.
@@ -61,11 +61,6 @@ export async function verifyTurnstile(token, secret, remoteip, fetchImpl = fetch
   } catch {
     return false;
   }
-}
-
-/** @param {string} deviceId @returns {string} */
-function hashDeviceId(deviceId) {
-  return createHash("sha256").update(deviceId).digest("hex");
 }
 
 /**

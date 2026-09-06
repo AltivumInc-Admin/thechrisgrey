@@ -861,3 +861,21 @@ export const buildBlogCollectionPageSchema = (options: {
       }
     : {}),
 });
+
+/**
+ * Serialise a JSON-LD graph for embedding in `<script type="application/ld+json">`.
+ *
+ * `JSON.stringify` leaves `<` alone, and a script element's children are HTML
+ * raw text, so a `</script` or `<!--` sequence inside any CMS-authored string
+ * (a post title, an excerpt, a tag) ends or re-states the script element and
+ * everything after it is parsed as markup. That is not theoretical here:
+ * scripts/prerender.js snapshots the live DOM with `page.content()` and writes
+ * that serialisation into the shipped static HTML, so one such character in
+ * Sanity would corrupt the prerendered document from that point onward.
+ *
+ * `<` is valid JSON that parses back to `<`, so schema consumers (Google's
+ * rich-results parser included) see byte-identical structured data while no `<`
+ * ever reaches the HTML tokenizer. Escaping `<` alone is sufficient: script
+ * raw text only leaves the script-data state on a `<`-led sequence.
+ */
+export const serializeJsonLd = (data: unknown): string => JSON.stringify(data).replace(/</g, '\\u003c');

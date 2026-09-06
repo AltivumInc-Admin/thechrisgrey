@@ -67,6 +67,11 @@
         "stacked": false,
         "metrics": [
           ["TheChrisGrey/SiteMetrics", "KBRetrievalFailure"],
+          ["TheChrisGrey/SiteMetrics", "KBRetrievalEmpty"],
+          ["TheChrisGrey/SiteMetrics", "KBRetrievalUnparseable"],
+          ["TheChrisGrey/SiteMetrics", "PodcastKBRetrievalFailure"],
+          ["TheChrisGrey/SiteMetrics", "PodcastKBRetrievalUnparseable"],
+          ["TheChrisGrey/SiteMetrics", "ToolFailure_SearchPodcast"],
           ["TheChrisGrey/SiteMetrics", "RateLimitRejection"],
           ["TheChrisGrey/SiteMetrics", "GuardrailInterventionStream"],
           ["TheChrisGrey/SiteMetrics", "AgentTimeout"]
@@ -164,6 +169,7 @@
         "metrics": [
           ["TheChrisGrey/SiteMetrics", "CSPViolation"],
           ["TheChrisGrey/SiteMetrics", "KBSyncFailure"],
+          ["TheChrisGrey/SiteMetrics", "KBSyncOutcomeUnknown"],
           ["TheChrisGrey/SiteMetrics", "KBSyncTriggered"],
           ["TheChrisGrey/KBBuilder", "KbBuilderError"]
         ],

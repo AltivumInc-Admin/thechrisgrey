@@ -26,8 +26,14 @@ paths:
       description: |
         Invoked automatically by S3 event notifications when objects are
         created or deleted in the `thechrisgrey-kb-source` bucket. The handler
-        calls `StartIngestionJob` on the Bedrock Knowledge Base (ID
-        `ARFYABW8HP`, DataSource `TXQTRAJOSD`) with a 15s timeout.
+        calls `StartIngestionJob` on the Bedrock Knowledge Base (IDs come from
+        `KB_ID` / `KB_DATA_SOURCE_ID`, defaulting to `ARFYABW8HP` /
+        `TXQTRAJOSD`), then polls `GetIngestionJob` until the job reaches a
+        terminal state or the invocation budget runs out.
+
+        A retryable start failure (ConflictException, ThrottlingException, 5xx)
+        is re-thrown so Lambda re-invokes the async event instead of dropping
+        the S3 write; terminal errors resolve with a 500 body.
       requestBody:
         required: true
         content:
@@ -61,7 +67,9 @@ paths:
                                 example: knowledge-base.txt
       responses:
         '200':
-          description: Ingestion job started successfully
+          description: |
+            Ingestion job completed, or was accepted but did not settle within
+            the invocation budget (`status` carries the last state observed).
           content:
             application/json:
               schema:
@@ -73,6 +81,10 @@ paths:
                   ingestionJobId:
                     type: string
                     example: job-abc123
+                  status:
+                    type: [string, 'null']
+                    description: Last observed ingestion job status.
+                    example: COMPLETE
                   triggeredBy:
                     type: array
                     items:
@@ -85,7 +97,10 @@ paths:
                         bucket:
                           type: string
         '500':
-          description: Failed to trigger ingestion job
+          description: |
+            The ingestion job could not be started for a terminal reason, or it
+            reached a terminal state without indexing the change (FAILED,
+            STOPPED, or COMPLETE with `numberOfDocumentsFailed > 0`).
           content:
             application/json:
               schema:
@@ -96,6 +111,11 @@ paths:
                     example: Failed to trigger Knowledge Base sync
                   error:
                     type: string
+                  ingestionJobId:
+                    type: string
+                  status:
+                    type: string
+                    example: FAILED
   /health:
     post:
       tags: [health]
@@ -135,7 +155,9 @@ paths:
                     example: '1.0.0'
                   knowledgeBaseId:
                     type: string
+                    description: Resolved from `KB_ID`.
                     example: ARFYABW8HP
                   dataSourceId:
                     type: string
+                    description: Resolved from `KB_DATA_SOURCE_ID` (or the legacy `DATA_SOURCE_ID`).
                     example: TXQTRAJOSD

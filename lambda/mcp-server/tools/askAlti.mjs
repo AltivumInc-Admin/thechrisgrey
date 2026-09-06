@@ -1,5 +1,6 @@
 import { buildAskAltiSystemPrompt } from "../prompts.mjs";
 import { createLogger } from "lambda-shared/logger";
+import { runRetrieve } from "lambda-shared/bedrockRetrieve";
 
 const INPUT_SCHEMA = {
   type: "object",
@@ -29,10 +30,17 @@ function cacheKey(question) {
 }
 
 /**
+ * Cache lookup around the shared Bedrock Retrieve transport
+ * (lambda-shared/bedrockRetrieve). This used to be a third hand-written copy of
+ * that routine and had drifted from the other two in the way that matters most:
+ * it recorded McpKbTimeout INSTEAD of McpKbFailure, so an alarm on McpKbFailure
+ * could never see a Bedrock hang — the most likely outage shape. runRetrieve
+ * counts a timeout as a Failure as well as a Timeout, and owns the abort timer.
+ * Only the cache and the chunk join stay here.
+ *
  * @param {{ agentClient: any, RetrieveCommand: any, kbId: string, question: string, requestId: string, kbCache: any, metrics: any }} deps
  */
 async function retrieveKbContext({ agentClient, RetrieveCommand, kbId, question, requestId, kbCache, metrics }) {
-  const log = createLogger(requestId, { service: "mcp-server" });
   if (!agentClient || !RetrieveCommand || !kbId) return null;
 
   const key = cacheKey(question);
@@ -42,44 +50,26 @@ async function retrieveKbContext({ agentClient, RetrieveCommand, kbId, question,
     return cached;
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), KB_RETRIEVAL_TIMEOUT_MS);
-  const startedAt = Date.now();
-  try {
-    const cmd = new RetrieveCommand({
-      knowledgeBaseId: kbId,
-      retrievalQuery: { text: question },
-      retrievalConfiguration: {
-        vectorSearchConfiguration: { numberOfResults: 5 },
-      },
-    });
-    const resp = await agentClient.send(cmd, { abortSignal: controller.signal });
-    const chunks = Array.isArray(resp?.retrievalResults)
-      ? resp.retrievalResults
-          .map((/** @type {any} */ r) => r?.content?.text)
-          .filter((/** @type {any} */ t) => typeof t === "string" && t.length > 0)
-      : [];
-    const joined = chunks.length > 0 ? chunks.join("\n\n---\n\n") : null;
-    const latencyMs = Date.now() - startedAt;
-    metrics?.record("McpKbLatency", latencyMs, "Milliseconds");
-    metrics?.record("McpKbSuccess");
-    if (joined !== null) kbCache?.set(key, joined);
-    return joined;
-  } catch (err) {
-    const errName = err instanceof Error ? err.name : String(err);
-    if (errName === "AbortError") {
-      metrics?.record("McpKbTimeout");
-    } else {
-      metrics?.record("McpKbFailure");
-    }
-    log.error("mcp_kb_error", {
-      error: errName,
-      message: err instanceof Error ? err.message : "",
-    });
-    return null;
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  const { results } = await runRetrieve(agentClient, RetrieveCommand, question, {
+    knowledgeBaseId: kbId,
+    requestId,
+    metrics,
+    metricPrefix: "McpKb",
+    logPrefix: "mcp_kb",
+    logService: "mcp-server",
+    timeoutMs: KB_RETRIEVAL_TIMEOUT_MS,
+    numberOfResults: 5,
+  });
+  if (results === null) return null;
+
+  const chunks = results
+    .map((/** @type {any} */ r) => r?.content?.text)
+    .filter((/** @type {any} */ t) => typeof t === "string" && t.length > 0);
+  const joined = chunks.length > 0 ? chunks.join("\n\n---\n\n") : null;
+
+  metrics?.record("McpKbSuccess");
+  if (joined !== null) kbCache?.set(key, joined);
+  return joined;
 }
 
 /**
