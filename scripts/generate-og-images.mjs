@@ -53,7 +53,14 @@ const C = {
 // (NOT the raw SEO <title>). Keyed by route path; the slug is derived below.
 // Keep this set in sync with src/utils/ogCards.ts (drift test enforces it).
 export const OG_CARDS = {
-  '/': { eyebrow: 'CHRISTIAN PEREZ', title: 'Founder. Green Beret. Builder.' },
+  // Home ships a committed photographic card (see og-assets/home-hero.png,
+  // art-directed from the original brand portrait) rather than a rendered
+  // wordmark: the site-wide share card is the one place a face beats type.
+  // The slug is 'home-hero', not 'home', ON PURPOSE - X caches a card scrape
+  // per image URL, and its cache of /og/home.png predates this card (an
+  // imageless scrape from the migration window). A new URL is the only
+  // reliable re-scrape trigger.
+  '/': { asset: 'home-hero.png' },
   '/about': { eyebrow: 'ABOUT', title: 'From Special Forces medic to AI engineer.' },
   '/altivum': { eyebrow: 'ALTIVUM INC', title: 'Mission-driven technology, built to serve.' },
   '/foundation': { eyebrow: 'THE ALTIVUM FOUNDATION', title: 'Veteran scholarships in cloud, AI & robotics.' },
@@ -70,9 +77,9 @@ export const OG_CARDS = {
   '/privacy': { eyebrow: 'PRIVACY', title: 'How thechrisgrey.com handles your data.' },
 };
 
-/** Route path -> output slug. '/' -> 'home'; '/aws' -> 'aws'. */
+/** Route path -> output slug. '/' -> 'home-hero' (see OG_CARDS['/']); '/aws' -> 'aws'. */
 export function slugForPath(path) {
-  if (path === '/') return 'home';
+  if (path === '/') return 'home-hero';
   return path.replace(/^\//, '').replace(/\//g, '-');
 }
 
@@ -138,7 +145,10 @@ async function generateAll() {
   let ok = 0;
   for (const [path, content] of Object.entries(OG_CARDS)) {
     const slug = slugForPath(path);
-    const png = await renderCard(content);
+    // An `asset` entry is a pre-made card committed under og-assets/ - copied
+    // byte-for-byte, never re-rendered, so the shipped image is exactly the
+    // reviewed one.
+    const png = content.asset ? readFileSync(join(ASSETS, content.asset)) : await renderCard(content);
     writeFileSync(join(DIST_OG, `${slug}.png`), png);
     ok += 1;
     console.log(`  [og] ok ${path} -> dist/og/${slug}.png (${Math.round(png.length / 1024)}KB)`);
