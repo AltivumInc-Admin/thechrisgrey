@@ -6,6 +6,13 @@ on:
     - cron: '0 3 * * *'
   workflow_dispatch:
 
+# The issue step below files a GitHub issue, which the default workflow token
+# cannot do without this grant - the job's first failure on 2026-09-05 produced
+# a red run and no issue, and nobody was told why.
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   detect-flaky-tests:
     runs-on: ubuntu-latest
@@ -39,6 +46,9 @@ jobs:
         run: node scripts/detect-flaky-tests.mjs --runs 3
         continue-on-error: true
 
+      # outcome == 'failure' covers both exit 1 (flaky) and exit 2 (runs failed
+      # consistently - a broken suite or harness). Both deserve an issue; the
+      # second is worse.
       - name: Create issue if flaky tests detected
         if: steps.flaky.outcome == 'failure'
         uses: actions/github-script@v8
@@ -53,6 +63,6 @@ jobs:
               labels: ['flaky-test', 'bug', 'ci']
             });
 
-      - name: Fail the job if flaky tests were detected
+      - name: Fail the job if detection did not come back clean
         if: steps.flaky.outcome == 'failure'
         run: exit 1
