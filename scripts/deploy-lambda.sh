@@ -88,10 +88,17 @@ if [ "$DRY_RUN" -eq 1 ]; then
 fi
 
 echo "==> [$NAME] Deploying thechrisgrey-$NAME ($REGION)"
+# --query narrows the response to deploy-relevant fields. Without it the CLI
+# prints the ENTIRE function configuration - including Environment.Variables,
+# which for these functions holds signing keys and API secrets - into the
+# terminal, CI logs, and any transcript capturing the deploy. That exact leak
+# forced a SESSION_TOKEN_KEY rotation on 2026-09-06.
 aws lambda update-function-code \
   --function-name "thechrisgrey-$NAME" \
   --zip-file "fileb://function.zip" \
-  --region "$REGION"
+  --region "$REGION" \
+  --query '{FunctionName:FunctionName,CodeSha256:CodeSha256,LastModified:LastModified,State:State,LastUpdateStatus:LastUpdateStatus}' \
+  --output table
 
 # Record a deployment marker in CloudWatch so deploys are visible in the
 # thechrisgrey dashboard (correlates deploys with metric changes).
