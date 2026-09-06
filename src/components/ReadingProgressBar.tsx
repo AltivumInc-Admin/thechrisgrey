@@ -84,6 +84,7 @@ const ReadingProgressBar = () => {
         willChange: 'transform',
       }}
       aria-hidden="true"
+      data-testid="reading-progress"
     />
   );
 };

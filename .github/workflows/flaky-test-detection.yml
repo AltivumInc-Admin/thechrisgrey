@@ -33,11 +33,16 @@ jobs:
       - name: Install Lambda dependencies
         run: |
           set -e
+          # Mirrors ci.yml's canonical loop - keep in sync. The two flags are
+          # load-bearing: the lambda dirs are npm workspaces of the root, so a
+          # plain install escalates to the root project and runs its prepare
+          # script (husky), which is not on PATH here. That exact `sh: husky:
+          # not found` killed this job on 2026-09-05 before a single test ran.
           for dir in lambda/shared lambda/chat-stream lambda/blueprint lambda/kb-builder lambda/metrics lambda/kb-sync lambda/mcp-server lambda/session-token; do
             if [ -f "$dir/package-lock.json" ]; then
-              (cd "$dir" && npm ci --no-audit --no-fund)
+              (cd "$dir" && npm ci --no-audit --no-fund --no-workspaces --ignore-scripts)
             else
-              (cd "$dir" && npm install --no-audit --no-fund)
+              (cd "$dir" && npm install --no-audit --no-fund --no-workspaces --ignore-scripts)
             fi
           done
 

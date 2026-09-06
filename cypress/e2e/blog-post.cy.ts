@@ -37,8 +37,14 @@ describe('Blog Post Page', () => {
   });
 
   it('should display the reading progress bar', () => {
-    // The ReadingProgressBar is fixed at the top
-    cy.get('[role="progressbar"]', { timeout: 15000 }).should('exist');
+    // The bar is deliberately aria-hidden decoration now, NOT role="progressbar":
+    // its value changed on every scroll frame, and screen readers that announce
+    // progressbar updates would fire for the length of the article to convey
+    // position information assistive tech already reports. Assert the element
+    // by test id and pin the aria-hidden contract so a revert is caught.
+    cy.get('[data-testid="reading-progress"]', { timeout: 15000 })
+      .should('exist')
+      .and('have.attr', 'aria-hidden', 'true');
   });
 
   it('should have a link back to the blog listing', () => {
