@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import ChatWidget from '../../components/chat/ChatWidget';
+import { sessionTokens } from '../../utils/sessionToken';
 
 // Mock AltiMascot since Three.js Canvas doesn't work in jsdom
 vi.mock('../../components/chat/AltiMascot', () => ({
@@ -21,8 +22,15 @@ vi.stubEnv('VITE_CHAT_ENDPOINT', 'https://test-chat-endpoint.example.com');
 // Mock session-token issuance so tests don't depend on Turnstile, the issuer
 // endpoint, or the network. No token => no Authorization header (the unset-endpoint
 // path); request bodies and streaming behavior are unaffected.
+// The forget path resets the cached session token as well as calling the
+// endpoint: the token is signed over a hash of the device id being erased, so
+// leaving it cached would keep presenting the wiped identity to the server for
+// the rest of its TTL. Mock the whole module surface the hook touches, not just
+// getSessionToken - a partial mock throws at the reset() call and the failure
+// surfaces as a missing confirmation banner rather than as a mock error.
 vi.mock('../../utils/sessionToken', () => ({
   getSessionToken: vi.fn().mockResolvedValue(''),
+  sessionTokens: { getToken: vi.fn().mockResolvedValue(''), reset: vi.fn() },
 }));
 
 // jsdom in this Vitest config does not expose window.localStorage, so
@@ -266,6 +274,12 @@ describe('Chat Widget Integration', () => {
       await waitFor(() => {
         expect(screen.getByText(/I've forgotten 3 saved item/i)).toBeInTheDocument();
       });
+
+      // The cached token is signed over a hash of the device id just erased, so
+      // a successful forget has to drop it too. Asserting it here keeps the
+      // coupling from regressing silently once chat-stream trusts the token's
+      // deviceHash over the request body.
+      expect(vi.mocked(sessionTokens.reset)).toHaveBeenCalled();
 
       confirmSpy.mockRestore();
     });

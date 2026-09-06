@@ -27,18 +27,44 @@ import {
   type SanitySeriesPost,
   type SanityError,
 } from '../sanity';
+// Pure helpers imported from their own modules rather than the `../sanity`
+// barrel, which the integration test replaces with a hand-enumerated factory:
+// adding a helper here would otherwise fail that whole suite at first access.
+import { isRenderableImageSource } from '../sanity/guards';
+import { sanityError, isRetryableSanityError } from '../sanity/errors';
+import { isAllowedHref } from '../sanity/href';
 import ReadingProgressBar from '../components/ReadingProgressBar';
 import BlogPostArticleSkeleton from '../components/BlogPostArticleSkeleton';
 import Breadcrumbs from '../components/Breadcrumbs';
 import SanityResponsiveImage from '../components/SanityResponsiveImage';
+import BlogPostCard from '../components/BlogPostCard';
 import { getYouTubeId } from '../utils/youtube';
 import { buildVideoObjectSchema, buildArticleSchema } from '../utils/schemas';
 import { createLogger } from '../utils/logger';
+import { captureError, isRumInitialized } from '../utils/rum';
+import { isPrerender } from '../utils/prerender';
 import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
 import { slugify } from '../utils/slugify';
 import Icon from '../components/icons/Icon';
 
 const log = createLogger('BlogPost');
+
+/**
+ * Report a failure that leaves the reader on a dead-end page.
+ *
+ * A breadcrumb is not enough here: the logger redacts `extra` before deciding
+ * whether to capture, which rebuilds an Error as `{}` (message and stack are
+ * non-enumerable), and its Sentry destination is consent-gated on top of that.
+ * So the raw Error is also handed to the cookieless RUM channel — the same
+ * route ErrorBoundary takes — which covers every visitor. `errorMessage` keeps
+ * the text readable in logs regardless of what redaction does to `error`.
+ */
+const reportFailure = (event: string, error: Error, context: Record<string, unknown>) => {
+  log.error(event, { ...context, errorMessage: error.message, error });
+  if (isRumInitialized) {
+    captureError(error, { scope: 'BlogPost', event, ...context });
+  }
+};
 
 /**
  * Extract word count from Portable Text blocks
@@ -144,7 +170,11 @@ const BlogPost = () => {
       return;
     }
 
-    // Check in-memory cache first (instant back-navigation)
+    // Check in-memory cache first (instant back-navigation). No re-validation
+    // here on purpose: setPostCache runs isSanityPost on WRITE and stores
+    // nothing that fails, so a hit is already the same shape the network path
+    // enforces. That is the only place the check can live — the listing's hover
+    // prefetch is a second writer, and hover-then-click is the common path.
     const cached = getPostCache(slug);
     if (cached) {
       setPost(cached);
@@ -166,9 +196,15 @@ const BlogPost = () => {
       if (!data) {
         setNotFound(true);
       } else if (!isSanityPost(data)) {
-        // Shape drift — don't cache or render a malformed post.
-        log.error('shape_validation_failed', { slug });
-        setFetchError({ kind: 'malformed', message: 'We could not load this article right now. Please try again.' });
+        // Shape drift — don't cache or render a malformed post. The HTTP call
+        // succeeded, so RUM's http telemetry sees nothing: this branch is the
+        // only signal that a CMS change has broken every reader of this post.
+        // The Error is both logged (so the logger has a real capture target,
+        // not a string) and recorded, because breadcrumbs alone only surface
+        // when some *other* error is captured.
+        const shapeError = new Error(`Sanity post failed shape validation: ${slug}`);
+        reportFailure('shape_validation_failed', shapeError, { slug, kind: 'malformed' });
+        setFetchError(sanityError('malformed', 'Blog post'));
       } else {
         setPost(data);
         setPostCache(slug, data);
@@ -177,10 +213,10 @@ const BlogPost = () => {
       // Ignore abort errors (expected on unmount or slug change)
       if (error instanceof Error && error.name === 'AbortError') return;
       const classified = classifySanityError(error, 'Blog post');
-      log.error('fetch_failed', {
+      reportFailure('fetch_failed', error instanceof Error ? error : new Error(String(error)), {
+        slug,
         kind: classified.kind,
         message: classified.message,
-        error: error instanceof Error ? error.message : String(error),
       });
       setFetchError(classified);
     } finally {
@@ -239,7 +275,20 @@ const BlogPost = () => {
   if (fetchError) {
     return (
       <div className="min-h-screen bg-altivum-dark">
-        <SEO title="Error Loading Article" description="An error occurred while loading this article." noindex={true} />
+        {/* Withheld under the prerender crawl: <SEO> is what sets
+            window.__PRERENDER_READY__, the crawl's only readiness gate, so
+            rendering it here would bake this noindex error page into
+            dist/blog/<slug>.html for a post the sitemap still advertises. With
+            no ready signal the crawl times out, counts the route failed, writes
+            nothing, and the SPA shell (which refetches on hydration) ships
+            instead. Real visitors are unaffected. */}
+        {!isPrerender() && (
+          <SEO
+            title="Error Loading Article"
+            description="An error occurred while loading this article."
+            noindex={true}
+          />
+        )}
         <div className="pt-32 pb-24">
           <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
             <Icon name="cloud_off" className="text-6xl text-altivum-silver mb-6" />
@@ -250,13 +299,20 @@ const BlogPost = () => {
               {fetchError.message}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={fetchPost}
-                className="inline-flex items-center px-6 py-3 bg-altivum-gold text-altivum-dark font-medium uppercase tracking-wider text-sm hover:bg-white transition-colors duration-300"
-              >
-                <Icon name="refresh" className="mr-2 text-sm" />
-                Try Again
-              </button>
+              {/* Only the transport-level failures get a retry. A 'malformed'
+                  article is deterministic — the same query returns the same
+                  drifted document until the CMS is fixed — so the button
+                  promised a remedy the reader could not reach, and Back to Blog
+                  is the action that still works. */}
+              {isRetryableSanityError(fetchError.kind) && (
+                <button
+                  onClick={fetchPost}
+                  className="inline-flex items-center px-6 py-3 bg-altivum-gold text-altivum-dark font-medium uppercase tracking-wider text-sm hover:bg-white transition-colors duration-300"
+                >
+                  <Icon name="refresh" className="mr-2 text-sm" />
+                  Try Again
+                </button>
+              )}
               <ViewTransitionLink
                 to="/blog"
                 className="inline-flex items-center px-6 py-3 border border-altivum-gold text-altivum-gold font-medium uppercase tracking-wider text-sm hover:bg-altivum-gold hover:text-altivum-dark transition-colors duration-300"
@@ -275,12 +331,17 @@ const BlogPost = () => {
   if (notFound || !post) {
     return (
       <div className="min-h-screen bg-altivum-dark">
-        <SEO
-          title="Article Not Found"
-          description="The article you're looking for doesn't exist or has been moved."
-          url={`https://thechrisgrey.com/blog/${slug}`}
-          noindex={true}
-        />
+        {/* Withheld under the prerender crawl for the same reason as the fetch
+            error branch above — a build-time Sanity blip must not snapshot a
+            noindex "Article Not Found" page over a real post. */}
+        {!isPrerender() && (
+          <SEO
+            title="Article Not Found"
+            description="The article you're looking for doesn't exist or has been moved."
+            url={`https://thechrisgrey.com/blog/${slug}`}
+            noindex={true}
+          />
+        )}
         <div className="pt-32 pb-24">
           <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
             <Icon name="article" className="text-6xl text-altivum-silver mb-6" />
@@ -312,8 +373,14 @@ const BlogPost = () => {
   // Single canonical image URL for both the og:image meta tag and the Article
   // JSON-LD image field (VAL-SD-010). Uses the 1200x630 crop when a Sanity
   // image is available; otherwise the shared /og.png fallback.
-  const articleImageUrl = post.image?.asset
-    ? urlFor(post.image).width(1200).height(630).auto('format').quality(85).url()
+  // Shape, not truthiness. `post.image?.asset` passes an asset that never
+  // dereferenced, and urlFor is called here OUTSIDE any component boundary — so
+  // it throws straight through the article's render, past the /og.png fallback
+  // this expression exists to provide. One derived value serves the hero, the
+  // og:image and the Article JSON-LD so the three cannot disagree.
+  const coverImage = isRenderableImageSource(post.image) ? post.image : null;
+  const articleImageUrl = coverImage
+    ? urlFor(coverImage).width(1200).height(630).auto('format').quality(85).url()
     : 'https://thechrisgrey.com/og.png';
 
   return (
@@ -322,8 +389,8 @@ const BlogPost = () => {
       <SEO
         title={post.seoTitle || post.title}
         description={post.seoDescription || post.excerpt}
-        image={post.image?.asset ? articleImageUrl : undefined}
-        imageAlt={post.image?.alt ? post.image.alt : `Cover image for "${post.title}" by Christian Perez`}
+        image={coverImage ? articleImageUrl : undefined}
+        imageAlt={coverImage?.alt ? coverImage.alt : `Cover image for "${post.title}" by Christian Perez`}
         url={shareUrl}
         type="article"
         datePublished={post.publishedAt}
@@ -354,11 +421,11 @@ const BlogPost = () => {
       {/* Hero Section */}
       <section className="relative pt-24 pb-12">
         {/* Background Image */}
-        {post.image?.asset && (
+        {coverImage && (
           <div className="absolute inset-0 h-[50vh] overflow-hidden">
             <SanityResponsiveImage
-              source={post.image}
-              alt={post.image.alt || post.title}
+              source={coverImage}
+              alt={coverImage.alt || post.title}
               aspectRatio={16 / 5}
               widths={[640, 960, 1280, 1920]}
               sizes="100vw"
@@ -457,17 +524,25 @@ const BlogPost = () => {
       <article className="py-12">
         <div className="max-w-3xl mx-auto px-6 lg:px-8">
           {post.body ? (
-            <div className="prose prose-invert prose-lg max-w-none">
-              <PortableText value={post.body} components={portableTextComponents} />
-            </div>
+            // No prose wrapper: @tailwindcss/typography is not installed and
+            // index.css never registers it, so prose/prose-invert/prose-lg
+            // emitted no CSS at all. Body typography comes from
+            // portableTextComponents, which is where it should be changed.
+            <PortableText value={post.body} components={portableTextComponents} />
           ) : (
             <p className="text-altivum-silver" style={typography.bodyText}>
               {post.excerpt}
             </p>
           )}
 
-          {/* PDF Download */}
-          {post.pdfUrl && (
+          {/* PDF Download. The href is CMS-supplied, so it goes through the same
+              scheme allowlist as the Portable Text link mark and the
+              bookReference card: the deployed Studio schema validates pdfUrl to
+              http/https, but Studio validation is advisory and a document
+              written through the API bypasses it. A rejected href renders no
+              card at all rather than a download button pointing at
+              `javascript:`/`data:`. */}
+          {post.pdfUrl && isAllowedHref(post.pdfUrl) && (
             <div className="mt-16 pt-8 border-t border-white/10">
               <div className="bg-white/5 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 border border-white/5 hover:border-altivum-gold/30 transition-colors">
                 <div className="flex items-center gap-4">
@@ -563,36 +638,7 @@ const BlogPost = () => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {post.relatedPosts.map((relatedPost: SanityPostPreview) => (
-                <ViewTransitionLink key={relatedPost._id} to={`/blog/${relatedPost.slug.current}`} className="group">
-                  <div className="relative overflow-hidden rounded-lg mb-4 aspect-video">
-                    <div className="absolute inset-0 bg-altivum-navy/20 group-hover:bg-transparent transition-colors duration-300 z-10"></div>
-                    {relatedPost.image?.asset ? (
-                      <SanityResponsiveImage
-                        source={relatedPost.image}
-                        alt={relatedPost.image.alt || relatedPost.title}
-                        aspectRatio={16 / 9}
-                        widths={[320, 400, 640]}
-                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        quality={75}
-                        className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-altivum-navy flex items-center justify-center">
-                        <Icon name="article" className="text-3xl text-altivum-silver" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-xs text-altivum-gold uppercase tracking-wider font-medium mb-2">
-                    {relatedPost.category}
-                  </div>
-                  <h3
-                    id={slugify(relatedPost.title)}
-                    className="text-white group-hover:text-altivum-gold transition-colors"
-                    style={typography.cardTitleSmall}
-                  >
-                    {relatedPost.title}
-                  </h3>
-                </ViewTransitionLink>
+                <BlogPostCard key={relatedPost._id} post={relatedPost} variant="related" />
               ))}
             </div>
           </div>

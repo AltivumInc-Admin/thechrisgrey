@@ -1,5 +1,7 @@
 import { memo } from 'react';
 import { typography } from '../../utils/typography';
+import { isInternalPath } from '../../utils/chatLinks';
+import { recordEvent } from '../../utils/rum';
 import ViewTransitionLink from '../ViewTransitionLink';
 import ErrorBoundary from '../ErrorBoundary';
 import type {
@@ -24,16 +26,28 @@ import Icon from '../icons/Icon';
 const cardShell =
   'max-w-[90%] md:max-w-[80%] px-5 py-4 bg-white/5 border border-altivum-gold/20 rounded-2xl animate-fade-in';
 
+/**
+ * Fail-soft renders are deliberate (never an error card mid-thread) but they must
+ * not be invisible: a null return never reaches ErrorBoundary's reporting, and the
+ * Lambda already counted GenUiRendered the moment it wrote the event. Deduped by
+ * key because this subtree re-renders on every streamed chunk — an un-deduped
+ * recordEvent would bill a RUM event per frame for one drift.
+ */
+const reportedRenderGaps = new Set<string>();
+
+function reportRenderGap(eventType: string, key: string, data: Record<string, unknown>) {
+  const signal = `${eventType}:${key}`;
+  if (reportedRenderGaps.has(signal)) return;
+  reportedRenderGaps.add(signal);
+  recordEvent(eventType, data);
+}
+
 function BlockTitle({ children }: { children: string }) {
   return (
     <p className="text-altivum-silver uppercase tracking-wider mb-3" style={typography.smallText}>
       {children}
     </p>
   );
-}
-
-function isInternalPath(path: string): boolean {
-  return typeof path === 'string' && path.startsWith('/') && !path.startsWith('//');
 }
 
 function Timeline({ block }: { block: TimelineBlock }) {
@@ -157,9 +171,13 @@ function Explainer({ block }: { block: ExplainerBlock }) {
   return (
     <div className={cardShell} role="group" aria-label={block.title || 'Explainer'}>
       {block.title ? <BlockTitle>{block.title}</BlockTitle> : null}
+      {/* bodyText, not smallText: this is the vocabulary's prose surface (up to
+          three 400-character paragraphs), and setting it below the answer text it
+          supplements inverts the reading hierarchy. smallText stays on the genuinely
+          secondary captions — BlockTitle, timeline detail, link blurbs. */}
       <div className="space-y-2">
         {block.paragraphs.map((paragraph, i) => (
-          <p key={i} className="text-altivum-silver/90" style={typography.smallText}>
+          <p key={i} className="text-altivum-silver/90" style={typography.bodyText}>
             {paragraph}
           </p>
         ))}
@@ -167,7 +185,7 @@ function Explainer({ block }: { block: ExplainerBlock }) {
       {block.bullets && block.bullets.length > 0 ? (
         <ul className="mt-3 space-y-1.5">
           {block.bullets.map((bullet, i) => (
-            <li key={i} className="text-altivum-silver/90 flex items-start gap-2" style={typography.smallText}>
+            <li key={i} className="text-altivum-silver/90 flex items-start gap-2" style={typography.bodyText}>
               <span className="text-altivum-gold/60 mt-0.5 shrink-0" aria-hidden="true">
                 —
               </span>
@@ -182,7 +200,10 @@ function Explainer({ block }: { block: ExplainerBlock }) {
 
 function LinkGrid({ block }: { block: LinkGridBlock }) {
   const links = block.links.filter((l) => isInternalPath(l.path));
-  if (links.length === 0) return null;
+  if (links.length === 0) {
+    reportRenderGap('gen_ui_empty_link_grid', block.title || 'untitled', { dropped: block.links.length });
+    return null;
+  }
   return (
     <div className={cardShell} role="group" aria-label={block.title || 'Links'}>
       {block.title ? <BlockTitle>{block.title}</BlockTitle> : null}
@@ -211,34 +232,49 @@ function LinkGrid({ block }: { block: LinkGridBlock }) {
   );
 }
 
-function renderBlock(block: UiBlock, index: number) {
+function renderBlockContent(block: UiBlock) {
   switch (block.type) {
     case 'timeline':
-      return <Timeline key={index} block={block} />;
+      return <Timeline block={block} />;
     case 'comparison':
-      return <Comparison key={index} block={block} />;
+      return <Comparison block={block} />;
     case 'stat_row':
-      return <StatRow key={index} block={block} />;
+      return <StatRow block={block} />;
     case 'profile_mini':
-      return <ProfileMini key={index} block={block} />;
+      return <ProfileMini block={block} />;
     case 'explainer':
-      return <Explainer key={index} block={block} />;
+      return <Explainer block={block} />;
     case 'link_grid':
-      return <LinkGrid key={index} block={block} />;
-    default:
+      return <LinkGrid block={block} />;
+    default: {
+      // A type the Lambda's Zod vocabulary allows but this mirror does not know
+      // — see the drift guard in src/utils/uiBlocks.test.ts.
+      const unknownType = String((block as { type?: unknown }).type ?? 'undefined');
+      reportRenderGap('gen_ui_unknown_block', unknownType, { blockType: unknownType });
       return null;
+    }
   }
+}
+
+function renderBlock(block: UiBlock, index: number) {
+  // One boundary PER BLOCK, not around the list. React error boundaries never
+  // reset on new props, so a list-level boundary latched by one malformed block
+  // would blank every later block too — and blocks stream in one at a time,
+  // appending into a message whose key (and therefore this instance) is stable.
+  //
+  // showHomeButton is deliberately NOT passed (see SafeCanvas): with `fallback`
+  // present ErrorBoundary returns it before that prop is ever read, so passing it
+  // reads as configuration that does nothing.
+  return (
+    <ErrorBoundary key={index} fallback={<></>} pageName="Generative UI">
+      {renderBlockContent(block)}
+    </ErrorBoundary>
+  );
 }
 
 const GenerativeBlocks = memo(function GenerativeBlocks({ blocks }: { blocks: UiBlock[] }) {
   if (!blocks || blocks.length === 0) return null;
-  return (
-    // Empty fragment fallback: a malformed block renders nothing rather than an
-    // error card inside the chat thread.
-    <ErrorBoundary fallback={<></>} showHomeButton={false} pageName="Generative UI">
-      <div className="flex flex-col gap-3">{blocks.map((block, i) => renderBlock(block, i))}</div>
-    </ErrorBoundary>
-  );
+  return <div className="flex flex-col gap-3">{blocks.map((block, i) => renderBlock(block, i))}</div>;
 });
 
 export default GenerativeBlocks;

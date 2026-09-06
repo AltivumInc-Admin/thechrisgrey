@@ -17,7 +17,11 @@
     "./logger": "./logger.mjs",
     "./timeout": "./timeout.mjs",
     "./errorTracking": "./errorTracking.mjs",
-    "./productAnalytics": "./productAnalytics.mjs"
+    "./productAnalytics": "./productAnalytics.mjs",
+    "./deviceId": "./deviceId.mjs",
+    "./pii": "./pii.mjs",
+    "./bedrockRetrieve": "./bedrockRetrieve.mjs",
+    "./dynamoDbSchemas": "./dynamoDbSchemas.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch": "^3.1068.0",

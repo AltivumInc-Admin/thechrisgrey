@@ -143,12 +143,14 @@ export const ROUTES: readonly RouteDefinition[] = [
       'What topics does it cover?',
       'How can I listen?',
     ],
-    // Podcast guest images are served from the Sanity CDN (podcast project
-    // uaxzdsfa, same cdn.sanity.io host as the blog project). Episode
-    // thumbnails come from i.ytimg.com but those preconnects are injected by
-    // the YouTubeFacade component itself (only when an episode card actually
+    // The guest query goes to the podcast project's own API CDN host
+    // (`podcastClient` is project uaxzdsfa, so uaxzdsfa.apicdn.sanity.io — a
+    // different origin from the blog's k5950b3w), and the guest images it
+    // returns come from the shared cdn.sanity.io asset host. Episode thumbnails
+    // come from i.ytimg.com but those preconnects are injected by the
+    // YouTubeFacade component itself (only when an episode card actually
     // renders a facade), so they are not listed here.
-    preconnects: ['https://cdn.sanity.io'],
+    preconnects: ['https://uaxzdsfa.apicdn.sanity.io', 'https://cdn.sanity.io'],
   },
   {
     path: '/beyond-the-assessment',
@@ -193,9 +195,13 @@ export const ROUTES: readonly RouteDefinition[] = [
       'What are the most popular posts?',
       'Does he have a blog series?',
     ],
-    // Blog post cards render Sanity CDN images (cdn.sanity.io) for every post
-    // in the listing, so /blog preconnects to the Sanity CDN (VAL-PERF-008).
-    preconnects: ['https://cdn.sanity.io'],
+    // Two Sanity origins, both hit in the first moments of a /blog visit
+    // (VAL-PERF-008). The listing query goes out on mount to the project's API
+    // CDN — `@sanity/client`'s `useCdn: true` resolves to
+    // `<projectId>.apicdn.sanity.io` — and the post cards it renders then pull
+    // their images from cdn.sanity.io. The API host is the one on the critical
+    // path: nothing paints until that query returns.
+    preconnects: ['https://k5950b3w.apicdn.sanity.io', 'https://cdn.sanity.io'],
   },
   {
     path: '/blog/:slug',
@@ -213,11 +219,12 @@ export const ROUTES: readonly RouteDefinition[] = [
     // in the regular prefetch map would shadow that. See
     // `prefetchBlogPostChunk` in routeManifest.ts.
     noPrefetch: true,
-    // Blog posts render Sanity CDN images (cdn.sanity.io) for the hero image
-    // and inline PortableText image blocks. YouTube embeds (i.ytimg.com) are
+    // Same two Sanity origins as /blog: the post query blocks the render on
+    // k5950b3w.apicdn.sanity.io, then the hero image and inline PortableText
+    // image blocks come from cdn.sanity.io. YouTube embeds (i.ytimg.com) are
     // injected by the YouTubeFacade component only on posts that actually
     // embed a video, so i.ytimg.com is intentionally NOT listed here.
-    preconnects: ['https://cdn.sanity.io'],
+    preconnects: ['https://k5950b3w.apicdn.sanity.io', 'https://cdn.sanity.io'],
   },
   {
     path: '/links',

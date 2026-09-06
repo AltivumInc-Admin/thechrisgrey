@@ -22,9 +22,29 @@ export const VALID_PATHS = new Set([
 export const BLOG_SLUG_PATTERN = /^\/blog\/[a-z0-9][a-z0-9-]*$/;
 export const SAFE_TEXT_PATTERN = /^[a-zA-Z0-9 ()/:,&'-]+$/;
 
+/**
+ * Real routes that must never be offered as a LINK. /admin is the Cognito-gated
+ * console and /chat is where the visitor already is (or, from the widget, a
+ * context switch nobody asked for).
+ *
+ * Both link-emitting surfaces read this: tools/navigate.mjs refuses these paths
+ * with its own "restricted" copy, and uiBlocks.mjs rejects them at the schema so
+ * a render_ui block cannot carry one. They had a private copy each, and the
+ * client is no backstop — GenerativeBlocks.tsx only checks the leading slash.
+ */
+export const UNLINKABLE_PATHS = new Set(["/admin", "/chat"]);
+
 /** @param {string} path @returns {boolean} */
 export function isValidPath(path) {
   return VALID_PATHS.has(path) || BLOG_SLUG_PATTERN.test(path);
+}
+
+/**
+ * isValidPath minus UNLINKABLE_PATHS — the predicate for "may appear as a link".
+ * @param {string} path @returns {boolean}
+ */
+export function isLinkablePath(path) {
+  return isValidPath(path) && !UNLINKABLE_PATHS.has(path);
 }
 
 /**

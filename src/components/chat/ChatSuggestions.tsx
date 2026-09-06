@@ -1,23 +1,21 @@
 import { memo } from 'react';
 
+/**
+ * Starter chips. `suggestions` is required on purpose: pageContext.ts (fed by the
+ * canonical ROUTES table) is the single source of this copy, and every call site
+ * resolves it through getSuggestionsForPage, which always returns a non-empty
+ * list. A component-level default would be unreachable and would quietly become
+ * a second, divergent source of user-facing copy.
+ */
 interface ChatSuggestionsProps {
   onSelect: (suggestion: string) => void;
-  suggestions?: string[];
+  suggestions: string[];
 }
 
-const DEFAULT_SUGGESTIONS = [
-  'How did he go from Green Beret to tech CEO?',
-  "What drives Altivum's mission?",
-  'Why did he write Beyond the Assessment?',
-  "What's his take on AI and veterans?",
-];
-
 const ChatSuggestions = memo(({ onSelect, suggestions }: ChatSuggestionsProps) => {
-  const items = suggestions || DEFAULT_SUGGESTIONS;
-
   return (
     <div className="flex flex-wrap gap-3 justify-center px-4 py-6">
-      {items.map((suggestion) => (
+      {suggestions.map((suggestion) => (
         <button
           key={suggestion}
           onClick={() => onSelect(suggestion)}

@@ -1,11 +1,11 @@
-import { Suspense, useRef, useState, useCallback, useEffect } from 'react';
+import { Suspense, useRef, useEffect, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import Icon from '../icons/Icon';
+import { useDocumentVisible } from '../../hooks/useDocumentVisible';
 
-function AltiModel({ onHoverChange, animate }: { onHoverChange: (h: boolean) => void; animate: boolean }) {
+function AltiModel({ animate }: { animate: boolean }) {
   const { scene } = useGLTF('/alti.glb');
   const groupRef = useRef<THREE.Group>(null);
   const hoveredRef = useRef(false);
@@ -42,15 +42,17 @@ function AltiModel({ onHoverChange, animate }: { onHoverChange: (h: boolean) => 
   return (
     <group
       ref={groupRef}
+      // Raycast hover drives ONLY the 3D lift, which legitimately wants a mesh
+      // hit. The launcher's visible hover affordance (the platform glow) is CSS
+      // on the button in ChatWidgetButton, so it covers the whole 64px target
+      // and keyboard focus instead of just the model's silhouette.
       onPointerEnter={(e) => {
         e.stopPropagation();
         hoveredRef.current = true;
-        onHoverChange(true);
       }}
       onPointerLeave={(e) => {
         e.stopPropagation();
         hoveredRef.current = false;
-        onHoverChange(false);
       }}
     >
       <primitive object={scene} />
@@ -59,20 +61,22 @@ function AltiModel({ onHoverChange, animate }: { onHoverChange: (h: boolean) => 
 }
 
 interface AltiMascotProps {
-  isOpen: boolean;
+  /**
+   * Called once if the WebGL context is lost after mount (iOS Safari reclaiming
+   * it under memory pressure or after long backgrounding, a GPU-process crash,
+   * or the browser force-losing the oldest context at the per-page cap). The
+   * caller is expected to swap to its static stand-in: three.js `preventDefault`s
+   * the event and then early-returns from every render until a restore that may
+   * never arrive, which leaves an empty canvas and a rAF loop ticking for
+   * nothing — and neither an error boundary nor the mount-time WebGL probe can
+   * observe it.
+   */
+  onContextLost?: () => void;
 }
 
-const AltiMascot = ({ isOpen }: AltiMascotProps) => {
-  const [hovered, setHovered] = useState(false);
-  const handleHoverChange = useCallback((h: boolean) => setHovered(h), []);
-
+const AltiMascot = ({ onContextLost }: AltiMascotProps) => {
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
-  const [docVisible, setDocVisible] = useState(() => (typeof document === 'undefined' ? true : !document.hidden));
-  useEffect(() => {
-    const onVisibility = () => setDocVisible(!document.hidden);
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, []);
+  const docVisible = useDocumentVisible();
 
   // Keep the 3D mascot, but: honor reduced-motion (render the model once, no idle
   // animation) and pause the render loop entirely when the tab is backgrounded —
@@ -80,39 +84,42 @@ const AltiMascot = ({ isOpen }: AltiMascotProps) => {
   // (negligible at 64x64) to keep it light on mobile/high-DPI screens.
   const frameloop: 'always' | 'demand' | 'never' = reducedMotion ? 'demand' : docVisible ? 'always' : 'never';
 
+  // onCreated fires once, so the listener has to reach the CURRENT callback
+  // through a ref rather than closing over the one that existed at mount.
+  const lostHandlerRef = useRef(onContextLost);
+  useEffect(() => {
+    lostHandlerRef.current = onContextLost;
+  }, [onContextLost]);
+  const detachRef = useRef<(() => void) | null>(null);
+
+  const handleCreated = useCallback(({ gl }: { gl: THREE.WebGLRenderer }) => {
+    const canvasEl = gl.domElement;
+    const onLost = () => lostHandlerRef.current?.();
+    canvasEl.addEventListener('webglcontextlost', onLost);
+    detachRef.current = () => canvasEl.removeEventListener('webglcontextlost', onLost);
+  }, []);
+
+  useEffect(() => () => detachRef.current?.(), []);
+
   return (
-    <div className="flex flex-col items-center">
-      <div className="w-16 h-16" style={{ pointerEvents: 'none' }}>
-        <Canvas
-          frameloop={frameloop}
-          dpr={[1, 2]}
-          gl={{ alpha: true, antialias: false }}
-          camera={{ position: [0, 0, 3], fov: 45 }}
-          style={{ pointerEvents: 'auto' }}
-        >
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[2, 2, 5]} intensity={0.8} />
-          <Suspense fallback={null}>
-            <AltiModel onHoverChange={handleHoverChange} animate={!reducedMotion} />
-          </Suspense>
-        </Canvas>
-      </div>
-      {/* Platform — gold glow, intensifies on hover */}
-      <div
-        className="w-14 h-4 rounded-[50%] flex items-center justify-center"
-        style={{
-          marginTop: '-6px',
-          background: hovered
-            ? 'radial-gradient(ellipse at center, rgba(197,165,114,0.7) 0%, rgba(197,165,114,0.3) 50%, transparent 100%)'
-            : 'radial-gradient(ellipse at center, rgba(197,165,114,0.5) 0%, rgba(197,165,114,0.15) 50%, transparent 100%)',
-          boxShadow: hovered
-            ? '0 0 16px 6px rgba(197,165,114,0.4), 0 0 32px 12px rgba(197,165,114,0.15)'
-            : '0 0 12px 4px rgba(197,165,114,0.2), 0 0 24px 8px rgba(197,165,114,0.08)',
-          transition: 'background 0.3s ease, box-shadow 0.3s ease',
-        }}
+    // pointerEvents is off on the wrapper and back on for the canvas so the
+    // surrounding launcher chrome stays click-through while the model can still
+    // be raycast for the hover lift.
+    <div className="w-full h-full" style={{ pointerEvents: 'none' }}>
+      <Canvas
+        frameloop={frameloop}
+        dpr={[1, 2]}
+        gl={{ alpha: true, antialias: false }}
+        camera={{ position: [0, 0, 3], fov: 45 }}
+        style={{ pointerEvents: 'auto' }}
+        onCreated={handleCreated}
       >
-        {isOpen && <Icon name="close" className="text-altivum-silver text-[10px] leading-none" />}
-      </div>
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[2, 2, 5]} intensity={0.8} />
+        <Suspense fallback={null}>
+          <AltiModel animate={!reducedMotion} />
+        </Suspense>
+      </Canvas>
     </div>
   );
 };

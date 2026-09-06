@@ -125,12 +125,16 @@ function converseTextTurn(
  * value — exactly how agent.mjs consumes `agent.stream()` (manual
  * generator.next() loop, reading next.value on done).
  *
- * `onAbort` (when provided) lets a test simulate the SDK behavior on
- * cancellation: per @strands-agents/sdk agent.js, a cancelled invocation
- * propagates a thrown error (CancelledError) out of the generator rather than
- * returning a normal AgentResult.
+ * `cancelAt` models what the SDK ACTUALLY does when a cancelSignal fires
+ * (verified in @strands-agents/sdk 1.5.0 agent.js: the external signal is merged
+ * into the same controller `agent.cancel()` aborts, the resulting CancelledError
+ * is caught INSIDE `stream()`, and an AgentResult with stopReason 'cancelled' is
+ * RETURNED). The generator stops early with done:true — it does not throw.
+ *
+ * `throwAt`/`throwError` remain for the genuinely-throwing case: a dependency
+ * outside the SDK that aborts, which index.mjs still classifies as a timeout.
  */
-function makeStreamingAgent({ events, finalResult, throwAt = null, throwError = null }) {
+function makeStreamingAgent({ events, finalResult, throwAt = null, throwError = null, cancelAt = null }) {
   return {
     stream: () => {
       let i = 0;
@@ -138,6 +142,9 @@ function makeStreamingAgent({ events, finalResult, throwAt = null, throwError = 
         next: async () => {
           if (throwAt != null && i === throwAt) {
             throw throwError;
+          }
+          if (cancelAt != null && i >= cancelAt) {
+            return { done: true, value: finalResult };
           }
           if (i >= events.length) {
             return { done: true, value: finalResult };
@@ -149,8 +156,10 @@ function makeStreamingAgent({ events, finalResult, throwAt = null, throwError = 
   };
 }
 
-// Minimal AbortError, shaped like the DOMException Node raises on abort and the
-// CancelledError the Strands SDK throws — what index.mjs's catch block keys on.
+// Minimal AbortError, shaped like the DOMException Node raises on abort — what
+// index.mjs's catch block keys on. NOT what the Strands SDK does on its own
+// cancelSignal: that is caught inside the SDK and returned (see the cancelSignal
+// test below), which is why index.mjs detects its deadline from a flag instead.
 function abortError(name = "AbortError") {
   const err = new Error("The operation was aborted");
   err.name = name;
@@ -309,68 +318,63 @@ test("graceful end with stopReason 'cancelled' (SDK soft-cancel) still returns, 
 });
 
 // ---------------------------------------------------------------------------
-// 4. An aborted stream is surfaced as an abort, not validation_failed.
+// 4. The cancelSignal deadline. This test previously asserted the OPPOSITE of
+//    what the SDK does — its fake threw on abort, so it locked in a throw the
+//    real SDK never performs and index.mjs's `errName === "AbortError"` timeout
+//    branch looked covered while being unreachable.
 // ---------------------------------------------------------------------------
-test("aborted stream (SDK throws on cancelSignal) propagates as abort, not a silent success", async () => {
-  // Real SDK behavior on a fired cancelSignal: a thrown error propagates out of
-  // the generator (CancelledError / AbortError) — it does NOT resolve done:true
-  // with a normal AgentResult. agent.mjs has no internal try/catch around the
-  // loop, so the throw propagates straight out of streamAgentResponse, and
-  // index.mjs's catch maps error.name === "AbortError" to the timeout path.
-  const { events } = converseTextTurn("partial before abort", { chunkSize: 6 });
-  // Abort fires after the first delta has streamed (mid-stream), like the real
-  // 25s AbortController timeout in index.mjs.
-  const agent = makeStreamingAgent({ events, throwAt: 2, throwError: abortError("AbortError") });
+test("a fired cancelSignal RETURNS stopReason 'cancelled' with partial text, it does not throw", async () => {
+  // @strands-agents/sdk 1.5.0 agent.js: an external cancelSignal is merged via
+  // AbortSignal.any into the same controller agent.cancel() aborts; the
+  // CancelledError it raises is caught inside stream() and an AgentResult with
+  // stopReason 'cancelled' is returned (agent.js `if (error instanceof
+  // CancelledError)`). So the 25s deadline in index.mjs ends the generator
+  // gracefully — nothing propagates to a catch block.
+  const { events } = converseTextTurn("partial before the deadline", { chunkSize: 6 });
+  const finalResult = { stopReason: "cancelled", metrics: { accumulatedUsage: { inputTokens: 40, outputTokens: 9 } } };
+  // Cancellation lands after the first two deltas have streamed, like the real
+  // 25s timer firing mid-answer.
+  const agent = makeStreamingAgent({ events, finalResult, cancelAt: 3 });
   const stream = fakeStream();
   const ac = new AbortController();
 
+  let result;
+  await assert.doesNotReject(async () => {
+    result = await streamAgentResponse({
+      agent,
+      userMessage: "long task",
+      responseStream: stream,
+      cancelSignal: ac.signal,
+    });
+  }, "a cancelled invocation must resolve — index.mjs cannot rely on a throw to detect its own deadline");
+
+  // The signal index.mjs must key on: a returned result, with the text that made
+  // it out kept, NOT an exception and NOT a silent full success.
+  assert.equal(result.stopReason, "cancelled");
+  assert.notEqual(result.stopReason, "end_turn");
+  assert.equal(result.hadText, true);
+  assert.ok(textChunks(stream).length > 0, "text streamed before the deadline must survive");
+});
+
+test("a genuinely thrown AbortError still propagates (non-SDK dependency abort)", async () => {
+  // index.mjs keeps its AbortError catch as belt and braces: the SDK's own
+  // cancellation returns (above), but an awaited dependency outside the SDK can
+  // still abort, and that must not be rewrapped as a validation failure.
+  const { events } = converseTextTurn("partial before abort", { chunkSize: 6 });
+  const agent = makeStreamingAgent({ events, throwAt: 2, throwError: abortError("AbortError") });
+  const stream = fakeStream();
+
   await assert.rejects(
-    () =>
-      streamAgentResponse({
-        agent,
-        userMessage: "long task",
-        responseStream: stream,
-        cancelSignal: ac.signal,
-      }),
+    () => streamAgentResponse({ agent, userMessage: "long task", responseStream: stream }),
     (err) => {
-      // It is surfaced AS an abort: the AbortError propagates intact, and is NOT
-      // swallowed/returned as a success or rewrapped as a validation failure.
       assert.equal(err.name, "AbortError");
-      assert.doesNotMatch(err.name, /Validation/i);
       assert.doesNotMatch(String(err.message), /validation_failed|Unterminated string/i);
       return true;
     },
-    "an aborted stream must reject (propagate the abort), not resolve",
   );
 });
 
-test("index.mjs error classifier maps AbortError to the abort/timeout path, not validation", () => {
-  // Lock the downstream classification (index.mjs catch block) end-to-end with
-  // the error agent.mjs propagates. This is the exact branch logic in index.mjs:
-  //   error.name === "AbortError"  -> AgentTimeout / "taking too long"
-  //   ValidationException + "guardrail" -> guardrail pre-stream
-  // An abort must take the first branch — never be reported as validation_failed.
-  function classify(error) {
-    if (error.name === "AbortError") return "abort_timeout";
-    if (error.name === "ValidationException" && error.message?.toLowerCase().includes("guardrail")) {
-      return "guardrail_prestream";
-    }
-    if (error.name === "ThrottlingException" || error.name === "ServiceQuotaExceededException") {
-      return "throttled";
-    }
-    return "unhandled";
-  }
-
-  assert.equal(classify(abortError("AbortError")), "abort_timeout");
-  // A Strands CancelledError surfacing as AbortError-named also routes to abort.
-  assert.equal(classify(abortError("AbortError")), "abort_timeout");
-  // Crucially: an abort is NOT classified as a validation failure.
-  assert.notEqual(classify(abortError("AbortError")), "guardrail_prestream");
-  assert.notEqual(classify(abortError("AbortError")), "unhandled");
-
-  // And a genuine guardrail ValidationException is the ONLY thing that routes to
-  // the guardrail branch — proving aborts and validations stay distinct.
-  const ve = new Error("Input failed guardrail policy");
-  ve.name = "ValidationException";
-  assert.equal(classify(ve), "guardrail_prestream");
-});
+// The error-classification assertions that used to live here drove a hand-copied
+// `classify()` defined in this file, so deleting a branch from index.mjs failed
+// nothing. They now run against the real exported `classifyError` in
+// __tests__/index.test.mjs.

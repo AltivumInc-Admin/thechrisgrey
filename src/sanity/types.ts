@@ -1,9 +1,28 @@
 // TypeScript types for Sanity content
 
+export interface SanityImageDimensions {
+  width: number;
+  height: number;
+  /** width / height, as Sanity computed it at upload time. */
+  aspectRatio: number;
+}
+
+/**
+ * Asset metadata Sanity precomputes and stores alongside every image. Optional
+ * because un-dereferenced sources (a bookReference cover arrives as
+ * `{ asset: { _ref } }`) carry none.
+ */
+export interface SanityImageAssetMetadata {
+  /** Inline `data:image/...;base64,` placeholder, ~800 bytes. */
+  lqip?: string;
+  dimensions?: SanityImageDimensions;
+}
+
 export interface SanityImage {
   asset: {
     _id: string;
     url: string;
+    metadata?: SanityImageAssetMetadata;
   };
   alt?: string;
   caption?: string;
@@ -52,10 +71,14 @@ export interface SanitySeriesPost {
   seriesOrder?: number;
 }
 
+/**
+ * Result of BLOG_LISTING_QUERY. Posts only — the listing page derives its
+ * category chips from the posts themselves and its tag/series filters from URL
+ * params, so the top-level tag/series collections this used to declare were a
+ * contract nothing read.
+ */
 export interface BlogListingResult {
   posts: SanityPostPreview[];
-  tags: SanityTag[];
-  series: SanitySeries[];
 }
 
 export interface SanityPostPreview {

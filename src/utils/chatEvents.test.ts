@@ -84,19 +84,67 @@ describe('createChatStreamParser', () => {
     expect(out).toContainEqual({ kind: 'text', text: 'not json' });
   });
 
-  it('flush emits buffered tail text', () => {
+  it('flush emits nothing once push has already drained the buffer', () => {
     const p = createChatStreamParser();
-    p.push(`leading ${EVT_DELIM}{"kind":"tool_invocation","tool":"x"}${EVT_DELIM}tail`);
+    const drained = p.push(`leading ${EVT_DELIM}{"kind":"tool_invocation","tool":"x"}${EVT_DELIM}tail`);
+    expect(drained).toContainEqual({ kind: 'text', text: 'tail' });
+    expect(p.flush()).toEqual([]);
+  });
+
+  it('flush discards an unterminated event frame instead of rendering it as prose', () => {
+    // A stream cut mid-frame (agent timeout, dropped connection, client abort)
+    // leaves the opening delimiter plus half a JSON object in the buffer. Emitting
+    // that as text painted the raw delimiters into the assistant bubble, persisted
+    // them, and replayed them to the model as an assistant turn on the next send.
+    const p = createChatStreamParser();
+    const visible = p.push(`hi there ${EVT_DELIM}{"kind":"draft_ac`);
+    expect(visible).toEqual([{ kind: 'text', text: 'hi there ' }]);
+
     const tail = p.flush();
     expect(tail).toEqual([]);
   });
 
-  it('flush emits system message from buffered partial', () => {
+  it('flush keeps the prose in front of a truncated delimiter and drops the rest', () => {
+    // A delimiter split across chunk boundaries: push() holds the whole buffer
+    // because it cannot yet tell prose from the start of a frame.
     const p = createChatStreamParser();
-    p.push(`visible text`);
-    p.push(`${SYS_DELIM}Error occurred`);
+    expect(p.push('final words\x00SY')).toEqual([]);
+
     const tail = p.flush();
-    expect(tail).toEqual([]);
+    expect(tail).toEqual([{ kind: 'text', text: 'final words' }]);
+  });
+
+  it('never emits a NUL byte in visible text', () => {
+    const p = createChatStreamParser();
+    const emitted = [...p.push(`prose ${SYS_DELIM.slice(0, 2)}`), ...p.flush()];
+    for (const part of emitted) {
+      if (part.kind !== 'event') expect(part.text).not.toContain('\x00');
+    }
+  });
+
+  it('drops a well-formed frame whose kind is not a known event', () => {
+    const p = createChatStreamParser();
+    const out = p.push(wrapEvent({ kind: 'not_a_real_event', payload: 'x' }));
+    expect(out).toEqual([]);
+  });
+
+  it('drops a draft_action whose card fields are missing', () => {
+    // ToolDraftCard dereferences each variant's fields unguarded — a
+    // blog_search_results without `results` would throw on `.results.length`.
+    const p = createChatStreamParser();
+    expect(p.push(wrapEvent({ kind: 'draft_action', action: 'blog_search_results', query: 'ai' }))).toEqual([]);
+    expect(p.push(wrapEvent({ kind: 'draft_action', action: 'navigate', reason: 'no path' }))).toEqual([]);
+    expect(p.push(wrapEvent({ kind: 'draft_action', action: 'teleport', path: '/podcast' }))).toEqual([]);
+  });
+
+  it('still accepts every draft variant the backend actually emits', () => {
+    const p = createChatStreamParser();
+    const results = { kind: 'draft_action', action: 'blog_search_results', query: 'ai', results: [] };
+    expect(p.push(wrapEvent(results))).toContainEqual({ kind: 'event', event: results });
+    const memory = { kind: 'memory_update', action: 'remembered', content: 'likes coffee' };
+    expect(p.push(wrapEvent(memory))).toContainEqual({ kind: 'event', event: memory });
+    const block = { kind: 'ui_block', block: { type: 'stat_row', stats: [] } };
+    expect(p.push(wrapEvent(block))).toContainEqual({ kind: 'event', event: block });
   });
 
   it('buffers a bare EVT start byte across pushes', () => {

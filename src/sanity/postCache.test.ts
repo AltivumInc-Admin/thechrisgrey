@@ -84,6 +84,72 @@ describe('postCache', () => {
     expect(getPostCache('b')).toBeNull();
   });
 
+  it('should reject a malformed post on write (the hover prefetch does not validate)', () => {
+    // Blog.tsx's hover prefetch writes raw fetch results straight in, and
+    // BlogPost renders cache hits without re-checking — so the guard has to live
+    // here or the ordinary hover-then-click flow skips it entirely.
+    const drifted = { _id: 'post-x', title: 'No slug' } as unknown as SanityPost;
+
+    expect(setPostCache('drifted', drifted)).toBe(false);
+    expect(getPostCache('drifted')).toBeNull();
+  });
+
+  it('should leave an existing entry untouched when a malformed write is rejected', () => {
+    const post = makeMockPost('keep-me');
+    setPostCache('keep-me', post);
+
+    setPostCache('keep-me', { ...post, slug: {} } as unknown as SanityPost);
+
+    expect(getPostCache('keep-me')).toEqual(post);
+  });
+
+  it('should reject a post whose tags stopped dereferencing', () => {
+    // `tags[]->` returning nulls is the drift the guards were written for; the
+    // listing renders `tag.slug.current` inside a .map with no null check.
+    const post = { ...makeMockPost('bad-tags'), tags: [null] } as unknown as SanityPost;
+
+    expect(setPostCache('bad-tags', post)).toBe(false);
+  });
+
+  it('should evict the least-recently-used post past the size cap', () => {
+    // Article bodies are the largest thing this app holds in memory, and the
+    // listing's hover prefetch writes one per card. Without a cap the only way
+    // an entry left was a TTL-expired read, which a key nobody reads again
+    // never gets.
+    for (let i = 0; i < 11; i++) {
+      setPostCache(`post-${i}`, makeMockPost(`post-${i}`));
+    }
+
+    expect(getPostCache('post-0')).toBeNull();
+    expect(getPostCache('post-1')).not.toBeNull();
+    expect(getPostCache('post-10')).not.toBeNull();
+  });
+
+  it('should treat a read as use, so a re-read post outlives one merely written earlier', () => {
+    for (let i = 0; i < 10; i++) {
+      setPostCache(`post-${i}`, makeMockPost(`post-${i}`));
+    }
+
+    // The reader goes back to the oldest article, then opens one more.
+    expect(getPostCache('post-0')).not.toBeNull();
+    setPostCache('post-10', makeMockPost('post-10'));
+
+    expect(getPostCache('post-0')).not.toBeNull();
+    expect(getPostCache('post-1')).toBeNull();
+  });
+
+  it('should not reset the TTL when an entry is merely read', () => {
+    // Recency ordering must not turn a read into a write: a stale body would
+    // otherwise live forever as long as someone kept opening it.
+    setPostCache('ttl-on-read', makeMockPost('ttl-on-read'));
+
+    vi.advanceTimersByTime(9 * 60 * 1000);
+    expect(getPostCache('ttl-on-read')).not.toBeNull();
+
+    vi.advanceTimersByTime(1 * 60 * 1000 + 1);
+    expect(getPostCache('ttl-on-read')).toBeNull();
+  });
+
   it('should delete expired entries from the cache on access', () => {
     const post = makeMockPost('cleanup');
     setPostCache('cleanup', post);

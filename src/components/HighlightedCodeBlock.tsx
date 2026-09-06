@@ -1,5 +1,8 @@
 import { useState, useEffect, memo } from 'react';
-import { getHighlighter, isSupportedLanguage } from '../utils/shikiHighlighter';
+import { ensureLanguage, isSupportedLanguage, type SupportedLanguage } from '../utils/shikiHighlighter';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('HighlightedCodeBlock');
 
 interface HighlightedCodeBlockProps {
   code: string;
@@ -13,10 +16,9 @@ const HighlightedCodeBlock = memo(({ code, language, filename }: HighlightedCode
   useEffect(() => {
     let cancelled = false;
 
-    async function highlight() {
+    async function highlight(lang: SupportedLanguage) {
       try {
-        const lang = language && isSupportedLanguage(language) ? language : 'text';
-        const highlighter = await getHighlighter();
+        const highlighter = await ensureLanguage(lang);
         const html = highlighter.codeToHtml(code, {
           lang,
           theme: 'github-dark',
@@ -24,13 +26,25 @@ const HighlightedCodeBlock = memo(({ code, language, filename }: HighlightedCode
         if (!cancelled) {
           setHighlightedHtml(html);
         }
-      } catch {
-        // Shiki failed to load or language unsupported — keep plain fallback
+      } catch (error) {
+        // The plain <pre> below stays on screen, so the failure is invisible
+        // otherwise: a broken grammar chunk would unstyle every code block on
+        // the blog with no operator signal. Logged with the raw Error too so
+        // the logger can hand Sentry a real capture target.
+        log.error('highlight_failed', {
+          language: lang,
+          errorMessage: error instanceof Error ? error.message : String(error),
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
       }
     }
 
-    if (code) {
-      highlight();
+    // An absent or unsupported language used to fall back to 'text', which has
+    // no grammar to tokenize with — yet still pulled the whole highlighter down
+    // to produce what the plain <pre> below already renders.
+    const lang = language && isSupportedLanguage(language) ? language : null;
+    if (code && lang) {
+      highlight(lang);
     }
 
     return () => {
@@ -49,7 +63,7 @@ const HighlightedCodeBlock = memo(({ code, language, filename }: HighlightedCode
         // Safe: Shiki generates HTML from its own tokenizer on CMS-authored code strings.
         // No user-supplied content flows through this path.
         <div
-          className={`not-prose [&>pre]:bg-altivum-navy/50 [&>pre]:p-4 [&>pre]:overflow-x-auto [&>pre]:text-sm [&>pre]:font-mono ${
+          className={`[&>pre]:bg-altivum-navy/50 [&>pre]:p-4 [&>pre]:overflow-x-auto [&>pre]:text-sm [&>pre]:font-mono ${
             filename ? '[&>pre]:rounded-b-lg [&>pre]:rounded-t-none' : '[&>pre]:rounded-lg'
           }`}
           dangerouslySetInnerHTML={{ __html: highlightedHtml }}

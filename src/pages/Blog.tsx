@@ -1,11 +1,9 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import ViewTransitionLink from '../components/ViewTransitionLink';
+import { useSearchParams, type SetURLSearchParams } from 'react-router-dom';
 import { SEO } from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import NewsletterForm from '../components/NewsletterForm';
 import { typography } from '../utils/typography';
-import { formatDate } from '../utils/dateFormatter';
 import { blogFAQs, buildItemListSchema, buildBlogCollectionPageSchema } from '../utils/schemas';
 import { ogImageForUrl } from '../utils/ogCards';
 import DirectAnswerSummary from '../components/aeo/DirectAnswerSummary';
@@ -34,19 +32,132 @@ import {
   getPostCache,
   setPostCache,
   classifySanityError,
-  isBlogListingResult,
+  isSanityPost,
+  isSanityPostPreview,
   type SanityPostPreview,
   type SanityPost,
   type BlogListingResult,
   type SanityError,
 } from '../sanity';
+// Pure helpers imported from their own modules rather than the `../sanity`
+// barrel, which the integration test replaces with a hand-enumerated factory:
+// adding a helper here would otherwise fail that whole suite at first access.
+import { filterValidPostPreviews } from '../sanity/guards';
+import { sanityError, isRetryableSanityError } from '../sanity/errors';
 import BlogPostSkeleton from '../components/BlogPostSkeleton';
-import SanityResponsiveImage from '../components/SanityResponsiveImage';
+import BlogPostCard from '../components/BlogPostCard';
 import { prefetchBlogPostChunk } from '../utils/routeManifest';
 import { createLogger } from '../utils/logger';
+import { captureError } from '../utils/rum';
 import Icon from '../components/icons/Icon';
 
 const log = createLogger('Blog');
+
+/** Query-string keys this page owns; anything else survives a "Clear all". */
+const FILTER_PARAM_KEYS = ['category', 'tag', 'series', 'q'] as const;
+
+/**
+ * Hover-intent delay before a card warms its article. POST_BY_SLUG_QUERY pulls
+ * the whole document (body[] + relatedPosts + a seriesPosts subquery), so
+ * firing on bare mouseenter meant a pointer sweeping the two-column grid cost
+ * one full article per card it crossed.
+ */
+const HOVER_INTENT_MS = 120;
+
+/**
+ * Ceiling on articles one listing visit may warm. The post cache is capped too,
+ * but this is the cheaper limit: without it a pointer sweeping the grid costs
+ * one full document fetch per card it rests on, whether or not the result is
+ * ever read.
+ */
+const MAX_PREFETCHED_POSTS = 6;
+
+/**
+ * Diagnostic payload for a listing whose posts did not all pass the preview
+ * guard. The event used to log bare, which told the operator that a CMS schema
+ * drifted but not which post lost a field — the one thing needed to fix it.
+ * Reports shape and field NAMES only; no post content reaches the log.
+ *
+ * The tag/series array diagnostics this carried are gone with the collections
+ * themselves: BLOG_LISTING_QUERY projects `posts` alone now, so those two fields
+ * could only ever log `false` and point a triage at a drift that never happened.
+ */
+function describeListingDrift(result: unknown): Record<string, unknown> {
+  if (typeof result !== 'object' || result === null) {
+    return { received: result === null ? 'null' : typeof result };
+  }
+  const { posts } = result as Record<string, unknown>;
+  const detail: Record<string, unknown> = {
+    postsIsArray: Array.isArray(posts),
+  };
+  if (Array.isArray(posts)) {
+    const index = posts.findIndex((post) => !isSanityPostPreview(post));
+    detail.postCount = posts.length;
+    detail.firstInvalidPostIndex = index;
+    if (index >= 0) {
+      const invalid = posts[index];
+      detail.firstInvalidPostKeys =
+        typeof invalid === 'object' && invalid !== null
+          ? Object.keys(invalid).sort().join(',')
+          : invalid === null
+            ? 'null'
+            : typeof invalid;
+    }
+  }
+  return detail;
+}
+
+/**
+ * `_id`s of the entries the preview guard rejected, so the operator can open the
+ * offending documents in Studio instead of diffing the whole dataset. An entry
+ * too broken to carry an `_id` is reported by position.
+ */
+function droppedPostIds(posts: readonly unknown[]): string[] {
+  return posts.flatMap((post, index) => {
+    if (isSanityPostPreview(post)) return [];
+    const id = typeof post === 'object' && post !== null ? (post as { _id?: unknown })._id : undefined;
+    return [typeof id === 'string' ? id : `<no _id at index ${index}>`];
+  });
+}
+
+/**
+ * Report a listing drift to BOTH channels. `log.error` alone never leaves the
+ * visitor's browser (its Sentry gate tests the redacted clone with
+ * `instanceof Error`, which no caller can satisfy, and Sentry is consent-gated
+ * besides), so a drift that costs the index a card would otherwise be visible
+ * only in the console of the person who lost the card. Mirrors what
+ * BlogPost.tsx's reportFailure does for the same event.
+ */
+function reportDrift(detail: Record<string, unknown>): void {
+  log.error('shape_validation_failed', detail);
+  captureError(new Error('Blog listing failed shape validation'), { scope: 'Blog', kind: 'malformed', ...detail });
+}
+
+/** The `posts` array of a listing response, or null when the response is not that shape at all. */
+function postsArrayOf(result: unknown): unknown[] | null {
+  if (typeof result !== 'object' || result === null) return null;
+  const posts = (result as { posts?: unknown }).posts;
+  return Array.isArray(posts) ? posts : null;
+}
+
+/**
+ * Text for the page's single live region. Each branch is worded differently from
+ * the visible copy it accompanies so a screen reader hears the state once rather
+ * than twice, and it lives out here to keep the page component under the
+ * complexity ceiling.
+ */
+function listingStatusMessage(state: {
+  isLoading: boolean;
+  fetchError: SanityError | null;
+  postCount: number;
+  filteredCount: number;
+}): string {
+  if (state.isLoading) return 'Loading articles';
+  if (state.fetchError) return `Unable to load posts. ${state.fetchError.message}`;
+  if (state.postCount === 0) return 'No articles published yet.';
+  if (state.filteredCount === 0) return 'No articles match the current filters.';
+  return `${state.filteredCount} ${state.filteredCount === 1 ? 'article' : 'articles'}`;
+}
 
 const Blog = () => {
   const [posts, setPosts] = useState<SanityPostPreview[]>([]);
@@ -60,7 +171,9 @@ const Blog = () => {
   const searchQuery = searchParams.get('q') || '';
   const activeSeries = searchParams.get('series') || null;
 
-  const fetchBlogData = async () => {
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const fetchBlogData = useCallback(async () => {
     const cached = getBlogListingCache();
     if (cached) {
       setPosts(cached.posts);
@@ -68,58 +181,143 @@ const Blog = () => {
       return;
     }
 
+    // Abort any previous in-flight listing fetch. Try Again is wired straight to
+    // this function, so without it repeated clicks race and the listing takes
+    // whichever response resolves last.
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setIsLoading(true);
     setFetchError(null);
     try {
-      const result = await client.fetch<BlogListingResult>(BLOG_LISTING_QUERY);
-      // Validate the shape before trusting/caching it — a CMS schema drift would
-      // otherwise enter the cache and render as a blank page.
-      if (!isBlogListingResult(result)) {
-        log.error('shape_validation_failed');
-        setFetchError({ kind: 'malformed', message: 'We could not load the blog right now. Please try again.' });
+      const result = await client.fetch<BlogListingResult>(BLOG_LISTING_QUERY, {}, { signal: controller.signal });
+      // Partition, don't reject. `client.fetch<T>()` validates nothing at
+      // runtime, so a CMS drift arrives typed and unchecked — and the old
+      // all-or-nothing guard turned ONE drifted document into a blank index
+      // behind a "Try Again" button re-running a deterministic query that can
+      // never succeed. A visitor should lose the card, not the blog.
+      const rawPosts = postsArrayOf(result);
+      if (rawPosts === null) {
+        reportDrift(describeListingDrift(result));
+        setFetchError(sanityError('malformed', 'Blog listing'));
         return;
       }
-      setBlogListingCache(result);
-      setPosts(result.posts);
+
+      const validPosts = filterValidPostPreviews(rawPosts);
+      if (validPosts.length < rawPosts.length) {
+        // Reported once per fetch, naming every dropped document: the HTTP call
+        // succeeded, so nothing in the network telemetry fires and this is the
+        // only signal that a CMS change has quietly cost the index a card.
+        reportDrift({ ...describeListingDrift(result), droppedIds: droppedPostIds(rawPosts) });
+      }
+
+      if (rawPosts.length > 0 && validPosts.length === 0) {
+        // Nothing survived: there is no partial index to show, and the failure
+        // is still deterministic, so this is the one case that stays an error.
+        setFetchError(sanityError('malformed', 'Blog listing'));
+        return;
+      }
+
+      // Cache the response minus the entries we could not use. Handing the raw
+      // response over would fail the cache's own write-time validation on any
+      // drift, so a single bad document would cost a refetch on every return to
+      // /blog on top of costing the index a card.
+      setBlogListingCache({ ...result, posts: validPosts });
+      setPosts(validPosts);
     } catch (error) {
+      // A deliberate cancel (unmount, or a newer Try Again) is not a visitor-facing failure.
+      if (error instanceof Error && error.name === 'AbortError') return;
       const classified = classifySanityError(error, 'Blog listing');
       log.error('fetch_failed', {
         kind: classified.kind,
         message: classified.message,
         error: error instanceof Error ? error.message : String(error),
       });
+      // log.error alone never leaves the visitor's browser: its Sentry gate tests
+      // the REDACTED clone with `instanceof Error`, which no caller can satisfy,
+      // and Sentry is consent-gated besides. captureError is the path that
+      // actually records a RUM error event, so a Sanity outage that blanks /blog
+      // is visible to the operator and not only to the visitor.
+      captureError(classified.causedBy ?? new Error(classified.message), {
+        scope: 'Blog',
+        kind: classified.kind,
+      });
       setFetchError(classified);
     } finally {
-      setIsLoading(false);
+      // A superseded attempt must not clear the loading flag out from under the
+      // attempt that replaced it, or the grid flashes its empty state mid-retry.
+      if (abortControllerRef.current === controller) setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    // Cache-then-fetch on mount. fetchBlogData manages its own setState
+    // Cache-then-fetch on mount, with AbortController cleanup so navigating away
+    // mid-fetch cancels the request instead of leaving it outstanding for the
+    // client's full 10s timeout. fetchBlogData manages its own setState
     // transitions (cache-hit shortcut, loading, success/error, finally).
     // Migrating to a data-fetching library to satisfy the strict rule is
     // out of scope; the pattern is canonical for this codebase.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchBlogData();
-  }, []);
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, [fetchBlogData]);
 
-  // Filter helper function
-  const setCategory = (category: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (category === 'All') {
-      params.delete('category');
-    } else {
-      params.set('category', category);
-    }
-    // Clear tag when changing category for cleaner UX
-    params.delete('tag');
-    setSearchParams(params);
-  };
+  // Single writer for the query string. Six controls used to clone-mutate-set by
+  // hand and had already drifted apart: the search box cleared `q` with
+  // { replace: true } while the chip for that same `q` pushed, so the two ways
+  // of clearing a search left two different back-button histories. Routing every
+  // control through here keeps the semantic in one place — `q` replaces (live
+  // typing must not push an entry per keystroke, and clearing it is the tail of
+  // that same interaction) while the discrete filter choices push, so Back undoes
+  // them one at a time.
+  const updateParams = useCallback(
+    (mutate: (params: URLSearchParams) => void, options?: Parameters<SetURLSearchParams>[1]) => {
+      const params = new URLSearchParams(searchParams);
+      mutate(params);
+      setSearchParams(params, options);
+    },
+    [searchParams, setSearchParams],
+  );
 
-  // Clear all filters
-  const clearFilters = () => {
-    setSearchParams({});
-  };
+  const setSearchQuery = useCallback(
+    (value: string) => {
+      updateParams(
+        (params) => {
+          if (value) {
+            params.set('q', value);
+          } else {
+            params.delete('q');
+          }
+        },
+        { replace: true },
+      );
+    },
+    [updateParams],
+  );
+
+  const setCategory = useCallback(
+    (category: string) => {
+      updateParams((params) => {
+        if (category === 'All') {
+          params.delete('category');
+        } else {
+          params.set('category', category);
+        }
+        // Clear tag when changing category for cleaner UX
+        params.delete('tag');
+      });
+    },
+    [updateParams],
+  );
+
+  const clearFilters = useCallback(() => {
+    updateParams((params) => {
+      for (const key of FILTER_PARAM_KEYS) params.delete(key);
+    });
+  }, [updateParams]);
 
   // Client-side filtering logic
   const filteredPosts = useMemo(() => {
@@ -160,26 +358,77 @@ const Blog = () => {
     return filtered;
   }, [posts, activeCategory, activeTag, activeSeries, searchQuery]);
 
+  // The human-readable series title the banner shows, so the chip names the same
+  // thing the heading does instead of the raw URL slug. Falls back to the slug
+  // when the filter matches nothing (there is no post to read a title from).
+  const activeSeriesLabel = activeSeries ? (filteredPosts[0]?.series?.title ?? activeSeries) : null;
+
   // Prefetch blog post chunk + data on card hover
   const prefetchedSlugs = useRef<Set<string>>(new Set());
-  const handleCardHover = useCallback((slug: string) => {
-    if (prefetchedSlugs.current.has(slug)) return;
-    prefetchedSlugs.current.add(slug);
-    prefetchBlogPostChunk();
-    if (!getPostCache(slug)) {
-      client
-        .fetch<SanityPost>(POST_BY_SLUG_QUERY, { slug })
-        .then((data) => {
-          if (data) setPostCache(slug, data);
-        })
-        .catch(() => {});
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelHoverPrefetch = useCallback(() => {
+    if (hoverTimerRef.current !== null) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
     }
   }, []);
+
+  const handleCardHover = useCallback(
+    (slug: string) => {
+      if (prefetchedSlugs.current.has(slug) || prefetchedSlugs.current.size >= MAX_PREFETCHED_POSTS) return;
+      cancelHoverPrefetch();
+      hoverTimerRef.current = setTimeout(() => {
+        hoverTimerRef.current = null;
+        prefetchedSlugs.current.add(slug);
+        prefetchBlogPostChunk();
+        if (getPostCache(slug)) return;
+        client
+          .fetch<SanityPost>(POST_BY_SLUG_QUERY, { slug })
+          .then((data) => {
+            // The same guard BlogPost applies on its own network path. BlogPost
+            // renders a cache hit WITHOUT revalidating, so an unguarded write
+            // here is exactly how a drifted payload reaches render — and hover
+            // then click is the common path, so it would be the usual one.
+            if (isSanityPost(data)) {
+              setPostCache(slug, data);
+            } else {
+              // Keep the slug marked: refetching a drifted document just drifts again.
+              log.warn('prefetch_shape_invalid', { slug });
+            }
+          })
+          .catch((error) => {
+            // Unmark so a transient failure does not poison this card for the
+            // rest of the visit, and log it: prefetches failing in bulk is an
+            // early signal that the dataset or CDN is unhealthy, ahead of any
+            // visitor-facing fetch failing.
+            prefetchedSlugs.current.delete(slug);
+            log.warn('prefetch_failed', { slug, kind: classifySanityError(error, 'Blog prefetch').kind });
+          });
+      }, HOVER_INTENT_MS);
+    },
+    [cancelHoverPrefetch],
+  );
+
+  useEffect(() => {
+    // Only the pending timer is cancelled on unmount. An in-flight prefetch is
+    // deliberately left alone: unmounting /blog is usually the navigation the
+    // prefetch was warming, so aborting it would cancel the one request the
+    // visitor is about to need.
+    return cancelHoverPrefetch;
+  }, [cancelHoverPrefetch]);
 
   const categories = useMemo(() => {
     const unique = [...new Set(posts.map((p) => p.category).filter(Boolean))];
     return ['All', ...unique];
   }, [posts]);
+
+  const statusMessage = listingStatusMessage({
+    isLoading,
+    fetchError,
+    postCount: posts.length,
+    filteredCount: filteredPosts.length,
+  });
 
   return (
     <div className="min-h-screen bg-altivum-dark">
@@ -265,15 +514,7 @@ const Blog = () => {
                 aria-label="Search blog articles"
                 placeholder="Search articles..."
                 value={searchQuery}
-                onChange={(e) => {
-                  const params = new URLSearchParams(searchParams);
-                  if (e.target.value) {
-                    params.set('q', e.target.value);
-                  } else {
-                    params.delete('q');
-                  }
-                  setSearchParams(params, { replace: true });
-                }}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full px-4 py-2 pl-10 bg-white/5 border border-white/10 rounded-full text-white placeholder-white/70 focus:outline-hidden focus:border-altivum-gold transition-colors"
               />
               <Icon
@@ -284,11 +525,7 @@ const Blog = () => {
               {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => {
-                    const params = new URLSearchParams(searchParams);
-                    params.delete('q');
-                    setSearchParams(params, { replace: true });
-                  }}
+                  onClick={() => setSearchQuery('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-altivum-silver/50 hover:text-white transition-colors"
                   aria-label="Clear search"
                 >
@@ -297,13 +534,17 @@ const Blog = () => {
               )}
             </form>
 
-            {/* Category Buttons */}
+            {/* Category Buttons — aria-pressed carries the active state, which
+                was previously signalled by a class swap alone and so announced
+                all six categories identically. */}
             <div className="flex flex-wrap gap-3">
               {categories.map((category) => (
                 <button
                   key={category}
+                  type="button"
                   onClick={() => setCategory(category)}
-                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  aria-pressed={activeCategory === category}
+                  className={`inline-flex items-center min-h-[44px] px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 touch-manipulation ${
                     activeCategory === category
                       ? 'bg-white text-altivum-dark'
                       : 'bg-transparent text-altivum-silver border border-white/10 hover:border-altivum-gold hover:text-altivum-gold'
@@ -321,15 +562,20 @@ const Blog = () => {
       {/* Blog Posts */}
       <section className="py-24 bg-altivum-dark">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          {/* Active Filters Display */}
+          {/* Active Filters Display — every chip REMOVES its filter, so the verb
+              lives in the accessible name. Without it the name is just the value
+              (the close icon is aria-hidden), which announces identically to the
+              button that APPLIES that same filter. */}
           {(activeCategory !== 'All' || activeTag || activeSeries || searchQuery) && (
             <div className="flex flex-wrap items-center gap-2 mb-8">
               <span className="text-altivum-silver text-sm">Active filters:</span>
 
               {activeCategory !== 'All' && (
                 <button
+                  type="button"
                   onClick={() => setCategory('All')}
-                  className="flex items-center gap-1 px-3 py-1 bg-altivum-gold/20 text-altivum-gold rounded-full text-sm hover:bg-altivum-gold/30 transition-colors"
+                  aria-label={`Remove category filter: ${activeCategory}`}
+                  className="flex items-center gap-1 min-h-[44px] px-3 py-1 bg-altivum-gold/20 text-altivum-gold rounded-full text-sm hover:bg-altivum-gold/30 transition-colors touch-manipulation"
                 >
                   {activeCategory}
                   <Icon name="close" className="text-xs" />
@@ -338,12 +584,10 @@ const Blog = () => {
 
               {activeTag && (
                 <button
-                  onClick={() => {
-                    const params = new URLSearchParams(searchParams);
-                    params.delete('tag');
-                    setSearchParams(params);
-                  }}
-                  className="flex items-center gap-1 px-3 py-1 bg-altivum-gold/20 text-altivum-gold rounded-full text-sm hover:bg-altivum-gold/30 transition-colors"
+                  type="button"
+                  onClick={() => updateParams((params) => params.delete('tag'))}
+                  aria-label={`Remove tag filter: ${activeTag}`}
+                  className="flex items-center gap-1 min-h-[44px] px-3 py-1 bg-altivum-gold/20 text-altivum-gold rounded-full text-sm hover:bg-altivum-gold/30 transition-colors touch-manipulation"
                 >
                   #{activeTag}
                   <Icon name="close" className="text-xs" />
@@ -352,33 +596,33 @@ const Blog = () => {
 
               {activeSeries && (
                 <button
-                  onClick={() => {
-                    const params = new URLSearchParams(searchParams);
-                    params.delete('series');
-                    setSearchParams(params);
-                  }}
-                  className="flex items-center gap-1 px-3 py-1 bg-altivum-gold/20 text-altivum-gold rounded-full text-sm hover:bg-altivum-gold/30 transition-colors"
+                  type="button"
+                  onClick={() => updateParams((params) => params.delete('series'))}
+                  aria-label={`Remove series filter: ${activeSeriesLabel}`}
+                  className="flex items-center gap-1 min-h-[44px] px-3 py-1 bg-altivum-gold/20 text-altivum-gold rounded-full text-sm hover:bg-altivum-gold/30 transition-colors touch-manipulation"
                 >
                   <Icon name="library_books" className="text-xs" />
-                  Series: {activeSeries}
+                  Series: {activeSeriesLabel}
                   <Icon name="close" className="text-xs" />
                 </button>
               )}
 
               {searchQuery && (
                 <button
-                  onClick={() => {
-                    const params = new URLSearchParams(searchParams);
-                    params.delete('q');
-                    setSearchParams(params);
-                  }}
-                  className="flex items-center gap-1 px-3 py-1 bg-altivum-gold/20 text-altivum-gold rounded-full text-sm hover:bg-altivum-gold/30 transition-colors"
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  aria-label={`Clear search: ${searchQuery}`}
+                  className="flex items-center gap-1 min-h-[44px] px-3 py-1 bg-altivum-gold/20 text-altivum-gold rounded-full text-sm hover:bg-altivum-gold/30 transition-colors touch-manipulation"
                 >
                   "{searchQuery}"<Icon name="close" className="text-xs" />
                 </button>
               )}
 
-              <button onClick={clearFilters} className="text-altivum-silver/70 text-sm hover:text-white underline ml-2">
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center min-h-[44px] px-2 ml-2 text-altivum-silver text-sm hover:text-white underline touch-manipulation"
+              >
                 Clear all
               </button>
             </div>
@@ -401,8 +645,17 @@ const Blog = () => {
             </div>
           )}
 
+          {/* One polite live region for all five branches below. It has to stay
+              mounted across them: the loading grid used to be the page's only
+              role="status", so it unmounted the moment results arrived and never
+              announced them — and a filter keystroke, an empty result and a
+              failed load were silent entirely. */}
+          <p className="sr-only" role="status" aria-live="polite">
+            {statusMessage}
+          </p>
+
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12" role="status" aria-label="Loading articles">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
               {Array.from({ length: 6 }).map((_, i) => (
                 <BlogPostSkeleton key={i} />
               ))}
@@ -416,13 +669,21 @@ const Blog = () => {
               <p className="text-altivum-silver mb-6" style={typography.bodyText}>
                 {fetchError.message}
               </p>
-              <button
-                onClick={fetchBlogData}
-                className="inline-flex items-center px-6 py-3 bg-altivum-gold text-altivum-dark font-medium uppercase tracking-wider text-sm hover:bg-white transition-colors duration-300"
-              >
-                <Icon name="refresh" className="mr-2 text-sm" />
-                Try Again
-              </button>
+              {/* Only the transport-level failures get a retry. A 'malformed'
+                  listing is deterministic — the same query returns the same
+                  drifted document until the CMS is fixed — so offering the
+                  button promised a remedy the visitor could not reach. The copy
+                  for that kind tells them to check back instead. */}
+              {isRetryableSanityError(fetchError.kind) && (
+                <button
+                  type="button"
+                  onClick={fetchBlogData}
+                  className="inline-flex items-center px-6 py-3 bg-altivum-gold text-altivum-dark font-medium uppercase tracking-wider text-sm hover:bg-white transition-colors duration-300 touch-manipulation"
+                >
+                  <Icon name="refresh" className="mr-2 text-sm" />
+                  Try Again
+                </button>
+              )}
             </div>
           ) : posts.length === 0 ? (
             <div className="flex items-center justify-center py-20">
@@ -432,90 +693,24 @@ const Blog = () => {
             <div className="text-center py-20">
               <Icon name="search_off" className="text-5xl text-altivum-silver mb-4 block" />
               <p className="text-altivum-silver mb-4">No posts match your filters.</p>
-              <button onClick={clearFilters} className="text-altivum-gold hover:underline">
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center min-h-[44px] px-2 text-altivum-gold hover:underline touch-manipulation"
+              >
                 Clear filters
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
               {filteredPosts.map((post) => (
-                <article
+                <BlogPostCard
                   key={post._id}
-                  className="group hover:-translate-y-0.5 transition-transform duration-300"
-                  onMouseEnter={() => handleCardHover(post.slug.current)}
-                >
-                  <ViewTransitionLink to={`/blog/${post.slug.current}`} className="block">
-                    <div className="relative overflow-hidden rounded-lg mb-6 aspect-video">
-                      <div className="absolute inset-0 bg-altivum-navy/20 group-hover:bg-transparent transition-colors duration-300 z-10"></div>
-                      {post.image?.asset ? (
-                        <SanityResponsiveImage
-                          source={post.image}
-                          alt={post.image.alt || post.title}
-                          aspectRatio={16 / 9}
-                          widths={[320, 480, 640]}
-                          sizes="(max-width: 768px) 100vw, 50vw"
-                          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-altivum-navy flex items-center justify-center">
-                          <Icon name="article" className="text-4xl text-altivum-silver" />
-                        </div>
-                      )}
-                      {post.isFeatured && (
-                        <div className="absolute top-4 left-4 z-20 px-3 py-1 bg-altivum-gold text-altivum-dark text-xs font-semibold uppercase tracking-wider rounded-sm">
-                          Featured
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-4 text-xs text-altivum-gold uppercase tracking-wider font-medium">
-                        <span>{post.category}</span>
-                        <span>-</span>
-                        <span>{formatDate(post.publishedAt)}</span>
-                        {post.readingTime && (
-                          <>
-                            <span>-</span>
-                            <span>{post.readingTime} min read</span>
-                          </>
-                        )}
-                      </div>
-                      <h3
-                        id={slugify(post.title)}
-                        className="text-white group-hover:text-altivum-gold transition-colors"
-                        style={typography.cardTitleLarge}
-                      >
-                        {post.title}
-                      </h3>
-                      <p className="text-altivum-silver line-clamp-3" style={typography.bodyText}>
-                        {post.excerpt}
-                      </p>
-                    </div>
-                  </ViewTransitionLink>
-                  {/* Tags */}
-                  {post.tags && post.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {post.tags.slice(0, 3).map((tag) => (
-                        <ViewTransitionLink
-                          key={tag._id}
-                          to={`/blog?tag=${tag.slug.current}`}
-                          className="px-2 py-1 text-xs bg-altivum-gold/10 text-altivum-gold rounded-sm hover:bg-altivum-gold/20 transition-colors"
-                        >
-                          {tag.title}
-                        </ViewTransitionLink>
-                      ))}
-                    </div>
-                  )}
-                  <ViewTransitionLink
-                    to={`/blog/${post.slug.current}`}
-                    className="inline-flex items-center text-altivum-gold text-sm font-medium mt-3 group-hover:translate-x-2 transition-transform"
-                  >
-                    Read Article{' '}
-                    <Icon
-                      name="arrow_forward"
-                      className="text-sm ml-1 group-hover:translate-x-1 transition-transform"
-                    />
-                  </ViewTransitionLink>
-                </article>
+                  post={post}
+                  variant="listing"
+                  onHover={handleCardHover}
+                  onHoverEnd={cancelHoverPrefetch}
+                />
               ))}
             </div>
           )}

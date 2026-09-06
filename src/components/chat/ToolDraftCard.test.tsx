@@ -311,3 +311,123 @@ describe('ToolDraftCard — podcast_citation', () => {
     openSpy.mockRestore();
   });
 });
+
+describe('ToolDraftCard — model-supplied target validation', () => {
+  // The server allowlists these targets today (validation.mjs, searchPodcast.mjs).
+  // These guards make a server regression degrade the card to inert text rather
+  // than turning navigate()/window.open() into an open-redirect sink.
+
+  it('drops the navigate control when the path is not internal', () => {
+    renderWithRouter(
+      <ToolDraftCard
+        action={{
+          kind: 'draft_action',
+          action: 'navigate',
+          path: 'https://evil.example/phish',
+          reason: 'Trust me.',
+        }}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Take me there/i })).not.toBeInTheDocument();
+    // The card still explains itself and can still be dismissed.
+    expect(screen.getByText(/Trust me/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Dismiss/i })).toBeInTheDocument();
+  });
+
+  it('drops the navigate control for a protocol-relative path', () => {
+    renderWithRouter(
+      <ToolDraftCard action={{ kind: 'draft_action', action: 'navigate', path: '//evil.example', reason: 'reason' }} />,
+    );
+    expect(screen.queryByRole('button', { name: /Take me there/i })).not.toBeInTheDocument();
+  });
+
+  it('drops the read control when a citation slug is not slug-shaped', () => {
+    renderWithRouter(
+      <ToolDraftCard
+        action={{
+          kind: 'draft_action',
+          action: 'citation',
+          slug: '../admin',
+          title: 'Escaping Title',
+          excerpt: 'quote',
+          url: 'https://thechrisgrey.com/blog/x',
+        }}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Read the post/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Escaping Title/)).toBeInTheDocument();
+  });
+
+  it('filters blog search results down to slug-shaped entries', () => {
+    renderWithRouter(
+      <ToolDraftCard
+        action={{
+          kind: 'draft_action',
+          action: 'blog_search_results',
+          query: 'agents',
+          results: [
+            { slug: 'going-agentic', title: 'Going Agentic', excerpt: '', url: 'https://x/1' },
+            { slug: '../../admin', title: 'Escape Hatch', excerpt: '', url: 'https://x/2' },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText('Going Agentic')).toBeInTheDocument();
+    expect(screen.queryByText('Escape Hatch')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Read this post/i })).toHaveLength(1);
+  });
+
+  it('renders nothing when every blog search result has an unusable slug', () => {
+    const { container } = renderWithRouter(
+      <ToolDraftCard
+        action={{
+          kind: 'draft_action',
+          action: 'blog_search_results',
+          query: 'agents',
+          results: [{ slug: 'HTTPS://evil.example', title: 'Nope', excerpt: '', url: 'https://x/1' }],
+        }}
+      />,
+    );
+    expect(container.querySelector('[aria-label="Blog search results"]')).toBeNull();
+  });
+
+  it('drops the play control when the podcast URL is not an https YouTube URL', () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    renderWithRouter(
+      <ToolDraftCard
+        action={{
+          kind: 'draft_action',
+          action: 'podcast_citation',
+          videoId: 'x',
+          startSeconds: 0,
+          episodeTitle: 'Some Episode',
+          quote: 'a quote',
+          timestampLabel: '00:10',
+          url: 'https://evil.example/watch?v=x',
+        }}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Play at/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Some Episode')).toBeInTheDocument();
+    expect(openSpy).not.toHaveBeenCalled();
+    openSpy.mockRestore();
+  });
+
+  it('keeps the play control for a youtu.be share link', () => {
+    renderWithRouter(
+      <ToolDraftCard
+        action={{
+          kind: 'draft_action',
+          action: 'podcast_citation',
+          videoId: 'ndX9SkIY7Mc',
+          startSeconds: 725,
+          episodeTitle: 'Episode',
+          quote: '',
+          timestampLabel: '12:05',
+          url: 'https://youtu.be/ndX9SkIY7Mc?t=725',
+        }}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Play at 12:05/i })).toBeInTheDocument();
+  });
+});

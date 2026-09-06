@@ -62,7 +62,10 @@ test("buildBedrockModel constructs with guardrail config", () => {
   assert.equal(cfg.stream, true);
   assert.equal(cfg.guardrailConfig.guardrailIdentifier, "gr-1");
   assert.equal(cfg.guardrailConfig.guardrailVersion, "5");
-  assert.equal(cfg.guardrailConfig.streamProcessingMode, "async");
+  // sync, NOT async: async hands each chunk to the visitor before the guardrail
+  // has scanned it, and index.mjs only remediates a turn that streamed no text —
+  // so async makes the guardrail advisory on exactly the turns it should block.
+  assert.equal(cfg.guardrailConfig.streamProcessingMode, "sync");
 });
 
 test("buildBedrockModel omits guardrailConfig when ids absent", () => {
@@ -230,6 +233,69 @@ test("streamAgentResponse extracts usage from metadata events", async () => {
   const stream = fakeStream();
   const res = await streamAgentResponse({ agent, userMessage: "x", responseStream: stream });
   assert.deepEqual(res.usage, { inputTokens: 50, outputTokens: 20 });
+});
+
+test("streamAgentResponse records the terminal stop reason as a metric", async () => {
+  const agent = makeAgent(
+    [
+      {
+        type: "modelStreamUpdateEvent",
+        event: { type: "modelContentBlockDeltaEvent", delta: { type: "textDelta", text: "Half a thoug" } },
+      },
+    ],
+    { stopReason: "max_tokens" },
+  );
+  const stream = fakeStream();
+  const metrics = fakeMetrics();
+  const res = await streamAgentResponse({ agent, userMessage: "x", responseStream: stream, metrics });
+
+  // hadText is true, so index.mjs takes its normal success path; the metric is
+  // the only thing separating this truncated turn from a complete one.
+  assert.equal(res.hadText, true);
+  assert.ok(metrics.records.includes("AgentStop_max_tokens"));
+  assert.ok(!metrics.records.includes("AgentStop_end_turn"));
+});
+
+test("streamAgentResponse records AgentStop_cancelled when the loop cap trips", async () => {
+  const agent = makeAgent(
+    [
+      {
+        type: "modelStreamUpdateEvent",
+        event: { type: "modelContentBlockDeltaEvent", delta: { type: "textDelta", text: "So far" } },
+      },
+    ],
+    { stopReason: "cancelled" },
+  );
+  const metrics = fakeMetrics();
+  const res = await streamAgentResponse({
+    agent,
+    userMessage: "x",
+    responseStream: fakeStream(),
+    metrics,
+  });
+  assert.equal(res.hadText, true);
+  assert.ok(metrics.records.includes("AgentStop_cancelled"));
+});
+
+test("streamAgentResponse records AgentStop_unknown when the SDK reports no stop reason", async () => {
+  const agent = makeAgent([], undefined);
+  const metrics = fakeMetrics();
+  const res = await streamAgentResponse({
+    agent,
+    userMessage: "x",
+    responseStream: fakeStream(),
+    metrics,
+  });
+  assert.equal(res.stopReason, null);
+  assert.ok(metrics.records.includes("AgentStop_unknown"));
+});
+
+test("streamAgentResponse sanitizes an unexpected stop reason into one bounded metric name", async () => {
+  const agent = makeAgent([], { stopReason: "weird/reason value" });
+  const metrics = fakeMetrics();
+  await streamAgentResponse({ agent, userMessage: "x", responseStream: fakeStream(), metrics });
+  const stops = metrics.records.filter((n) => n.startsWith("AgentStop_"));
+  assert.deepEqual(stops, ["AgentStop_weird_reason_value"]);
 });
 
 test("streamAgentResponse validates required args", async () => {

@@ -344,6 +344,77 @@ describe('BlogPost Page Integration', () => {
     });
   });
 
+  describe('Shape drift', () => {
+    it('refuses to render or cache a post whose shape drifted', async () => {
+      // The HTTP call succeeded, so nothing in the network telemetry fires: this
+      // branch is the only signal that a CMS change broke every reader of the
+      // post. A drifted document must never reach render, and must never reach
+      // the cache either - BlogPost serves a cache hit without revalidating.
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockFetch.mockResolvedValue({ ...mockPost, category: undefined });
+      renderBlogPost();
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /unable to load article/i })).toBeInTheDocument();
+      });
+
+      expect(screen.queryByRole('heading', { level: 1, name: 'Building AI Systems on AWS' })).not.toBeInTheDocument();
+      expect(mockSetPostCache).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('shape_validation_failed'),
+        expect.objectContaining({ slug: 'building-ai-systems', kind: 'malformed' }),
+      );
+    });
+  });
+
+  describe('Fetch lifecycle', () => {
+    it('passes the slug and an abort signal to the batched post query', async () => {
+      renderBlogPost();
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalled();
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'mock-post-query',
+        { slug: 'building-ai-systems' },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    });
+
+    it('swallows the abort when the reader navigates away mid-flight', async () => {
+      // Unmount fires the controller; the resulting rejection must be recognised
+      // as an abort and dropped. Reported instead, it would bury the real Sanity
+      // outages under one alert per impatient reader, and a late setPostCache
+      // would seed the cache from a request nobody is waiting on.
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockFetch.mockImplementation(
+        (_query: string, _params: unknown, options?: { signal?: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            // Reject with the signal's own reason, which is what fetch does. A
+            // hand-built `new DOMException(...)` would be wrong here: jsdom's
+            // DOMException global is not an Error subclass (browsers' is), so
+            // the page's `error instanceof Error` abort guard would miss it and
+            // the test would fail against behaviour that is fine in production.
+            const signal = options?.signal;
+            signal?.addEventListener('abort', () => reject(signal.reason));
+          }),
+      );
+
+      const { unmount } = renderBlogPost();
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalled();
+      });
+
+      unmount();
+      // Let the aborted request's rejection settle before asserting on fallout.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(mockSetPostCache).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Caching', () => {
     it('uses cached post data when available', async () => {
       mockGetPostCache.mockReturnValue(mockPost);

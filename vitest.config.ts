@@ -7,6 +7,22 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    // Hermetic env: obviously-fake values for every VITE_* var the code under
+    // test reads. Without these, tests that exercise an endpoint-building path
+    // pass on machines carrying .env.local and fail on CI, which has none -
+    // the forget-flow tests did exactly that on PR #231's first run. Tests
+    // must never depend on developer-local env, and these values make a local
+    // run behave identically to the runner.
+    env: {
+      VITE_CHAT_ENDPOINT: 'https://chat.test.invalid',
+      VITE_CONTACT_ENDPOINT: 'https://contact.test.invalid',
+      VITE_NEWSLETTER_ENDPOINT: 'https://newsletter.test.invalid',
+      VITE_METRICS_ENDPOINT: 'https://metrics.test.invalid',
+      VITE_KB_BUILDER_ENDPOINT: 'https://kb.test.invalid',
+      VITE_SESSION_ENDPOINT: 'https://session.test.invalid',
+      VITE_COGNITO_USER_POOL_ID: 'us-east-1_TESTPOOL',
+      VITE_COGNITO_CLIENT_ID: 'test-client-id',
+    },
     setupFiles: ['./src/__tests__/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs'],
     css: false,

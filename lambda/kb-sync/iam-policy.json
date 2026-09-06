@@ -4,7 +4,7 @@
     {
       "Sid": "BedrockKBSync",
       "Effect": "Allow",
-      "Action": "bedrock:StartIngestionJob",
+      "Action": ["bedrock:StartIngestionJob", "bedrock:GetIngestionJob"],
       "Resource": "arn:aws:bedrock:us-east-1:${ACCOUNT_ID}:knowledge-base/${KB_ID}"
     },
     {

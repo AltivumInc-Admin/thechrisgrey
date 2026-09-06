@@ -134,6 +134,188 @@ aws cloudwatch put-metric-alarm \
   --comparison-operator "GreaterThanThreshold" \
   --treat-missing-data "notBreaching"
 
+# Unhandled handler errors — the catch-all in index.mjs. Anything that reaches
+# it is a bug the more specific alarms below did not classify.
+aws cloudwatch put-metric-alarm \
+  --region "$REGION" \
+  --alarm-name "thechrisgrey-chat-unhandled-errors" \
+  --alarm-description "Chat handler unhandled errors exceed 5 in a 1-hour window" \
+  --alarm-actions "$SNS_TOPIC_ARN" \
+  --namespace "TheChrisGrey/SiteMetrics" \
+  --metric-name "UnhandledError" \
+  --statistic "Sum" \
+  --period 3600 \
+  --evaluation-periods 1 \
+  --threshold 5 \
+  --comparison-operator "GreaterThanThreshold" \
+  --treat-missing-data "notBreaching"
+
+# Bedrock throttling — sustained ThrottlingException means the account is at its
+# Haiku TPM/RPM ceiling, which reads to a visitor as a chat that just fails.
+aws cloudwatch put-metric-alarm \
+  --region "$REGION" \
+  --alarm-name "thechrisgrey-chat-bedrock-throttled" \
+  --alarm-description "Bedrock throttling on chat exceeds 5 in a 1-hour window (account quota ceiling)" \
+  --alarm-actions "$SNS_TOPIC_ARN" \
+  --namespace "TheChrisGrey/SiteMetrics" \
+  --metric-name "BedrockThrottled" \
+  --statistic "Sum" \
+  --period 3600 \
+  --evaluation-periods 1 \
+  --threshold 5 \
+  --comparison-operator "GreaterThanThreshold" \
+  --treat-missing-data "notBreaching"
+
+# Visitor-memory read failures — DynamoDB is degraded or the table/IAM changed.
+# The chat still answers, so nothing else surfaces this: returning visitors
+# silently lose their remembered context.
+aws cloudwatch put-metric-alarm \
+  --region "$REGION" \
+  --alarm-name "thechrisgrey-memory-load-failures" \
+  --alarm-description "Visitor memory load failures exceed 5 in a 1-hour window (DynamoDB degraded)" \
+  --alarm-actions "$SNS_TOPIC_ARN" \
+  --namespace "TheChrisGrey/SiteMetrics" \
+  --metric-name "MemoryLoadFailure" \
+  --statistic "Sum" \
+  --period 3600 \
+  --evaluation-periods 1 \
+  --threshold 5 \
+  --comparison-operator "GreaterThanThreshold" \
+  --treat-missing-data "notBreaching"
+
+# POST /forget failures. Threshold 0, not 5: a visitor asked for their data to be
+# deleted and it was not. One occurrence is the whole signal.
+aws cloudwatch put-metric-alarm \
+  --region "$REGION" \
+  --alarm-name "thechrisgrey-memory-forget-failures" \
+  --alarm-description "A visitor data-deletion request (POST /forget) failed" \
+  --alarm-actions "$SNS_TOPIC_ARN" \
+  --namespace "TheChrisGrey/SiteMetrics" \
+  --metric-name "ForgetFailure" \
+  --statistic "Sum" \
+  --period 3600 \
+  --evaluation-periods 1 \
+  --threshold 0 \
+  --comparison-operator "GreaterThanThreshold" \
+  --treat-missing-data "notBreaching"
+
+# KB returned zero passages. Bedrock returns the top-K nearest neighbours for any
+# query, so "no results at all" is an emptied or broken vector index, not a
+# question with no good answer. kb-failures cannot see it: the empty path is in
+# neither term of the success/failure ratio.
+aws cloudwatch put-metric-alarm \
+  --region "$REGION" \
+  --alarm-name "thechrisgrey-kb-empty" \
+  --alarm-description "KB retrieval returned zero passages more than 5 times in a 1-hour window (emptied or broken index)" \
+  --alarm-actions "$SNS_TOPIC_ARN" \
+  --namespace "TheChrisGrey/SiteMetrics" \
+  --metric-name "KBRetrievalEmpty" \
+  --statistic "Sum" \
+  --period 3600 \
+  --evaluation-periods 1 \
+  --threshold 5 \
+  --comparison-operator "GreaterThanThreshold" \
+  --treat-missing-data "notBreaching"
+
+# KB returned passages carrying no content.text — a response-shape or ingestion
+# regression. Alti falls back to the un-grounded prompt and keeps answering, so
+# without this alarm the degradation is invisible.
+aws cloudwatch put-metric-alarm \
+  --region "$REGION" \
+  --alarm-name "thechrisgrey-kb-unparseable" \
+  --alarm-description "KB retrieval returned unparseable passages more than 5 times in a 1-hour window" \
+  --alarm-actions "$SNS_TOPIC_ARN" \
+  --namespace "TheChrisGrey/SiteMetrics" \
+  --metric-name "KBRetrievalUnparseable" \
+  --statistic "Sum" \
+  --period 3600 \
+  --evaluation-periods 1 \
+  --threshold 5 \
+  --comparison-operator "GreaterThanThreshold" \
+  --treat-missing-data "notBreaching"
+
+# Podcast KB retrieval failures (includes timeouts). The podcast KB is a separate
+# knowledge base behind the search_podcast tool; no Podcast* metric was watched
+# before, so an outage there only showed up as Alti claiming there are no episodes.
+aws cloudwatch put-metric-alarm \
+  --region "$REGION" \
+  --alarm-name "thechrisgrey-podcast-kb-failures" \
+  --alarm-description "Podcast KB retrieval failures exceed 5 in a 1-hour window" \
+  --alarm-actions "$SNS_TOPIC_ARN" \
+  --namespace "TheChrisGrey/SiteMetrics" \
+  --metric-name "PodcastKBRetrievalFailure" \
+  --statistic "Sum" \
+  --period 3600 \
+  --evaluation-periods 1 \
+  --threshold 5 \
+  --comparison-operator "GreaterThanThreshold" \
+  --treat-missing-data "notBreaching"
+
+# Podcast passages that no longer carry videoId/startSeconds — exactly what a
+# re-ingest that drops the transcript metadata contract produces.
+aws cloudwatch put-metric-alarm \
+  --region "$REGION" \
+  --alarm-name "thechrisgrey-podcast-kb-unparseable" \
+  --alarm-description "Podcast KB returned unparseable passages more than 5 times in a 1-hour window (ingestion metadata drift)" \
+  --alarm-actions "$SNS_TOPIC_ARN" \
+  --namespace "TheChrisGrey/SiteMetrics" \
+  --metric-name "PodcastKBRetrievalUnparseable" \
+  --statistic "Sum" \
+  --period 3600 \
+  --evaluation-periods 1 \
+  --threshold 5 \
+  --comparison-operator "GreaterThanThreshold" \
+  --treat-missing-data "notBreaching"
+
+# GenUi runs Opus 4.6 from inside chat-stream, so its spend lands in
+# TheChrisGrey/SiteMetrics, NOT TheChrisGrey/Blueprint. Same arithmetic as
+# thechrisgrey-blueprint-opus-cost: ~$25/day of Opus input tokens.
+aws cloudwatch put-metric-alarm \
+  --region "$REGION" \
+  --alarm-name "thechrisgrey-genui-opus-cost" \
+  --alarm-description "GenUi Opus 4.6 spend exceeds \$25/day" \
+  --alarm-actions "$SNS_TOPIC_ARN" \
+  --namespace "TheChrisGrey/SiteMetrics" \
+  --metric-name "GenUiOpusInputTokens" \
+  --statistic "Sum" \
+  --period 86400 \
+  --evaluation-periods 1 \
+  --threshold 1600000 \
+  --comparison-operator "GreaterThanThreshold" \
+  --treat-missing-data "notBreaching"
+
+# GenUi generation errors — the block set is dropped and the visitor gets plain
+# text, so a broken GenUi path degrades silently.
+aws cloudwatch put-metric-alarm \
+  --region "$REGION" \
+  --alarm-name "thechrisgrey-genui-errors" \
+  --alarm-description "GenUi generation errors exceed 3 in a 15-minute window" \
+  --alarm-actions "$SNS_TOPIC_ARN" \
+  --namespace "TheChrisGrey/SiteMetrics" \
+  --metric-name "GenUiError" \
+  --statistic "Sum" \
+  --period 900 \
+  --evaluation-periods 1 \
+  --threshold 3 \
+  --comparison-operator "GreaterThanThreshold" \
+  --treat-missing-data "notBreaching"
+
+# GenUi timeouts — the counterpart to thechrisgrey-blueprint-opus-timeout for the
+# Opus call chat-stream makes.
+aws cloudwatch put-metric-alarm \
+  --region "$REGION" \
+  --alarm-name "thechrisgrey-genui-timeout" \
+  --alarm-description "GenUi Opus generation timeouts exceed 3 in a 15-minute window" \
+  --alarm-actions "$SNS_TOPIC_ARN" \
+  --namespace "TheChrisGrey/SiteMetrics" \
+  --metric-name "GenUiTimeout" \
+  --statistic "Sum" \
+  --period 900 \
+  --evaluation-periods 1 \
+  --threshold 3 \
+  --comparison-operator "GreaterThanThreshold" \
+  --treat-missing-data "notBreaching"
+
 echo ""
 echo "--- Blueprint ---"
 
@@ -413,7 +595,11 @@ echo "=== Alarm setup complete ==="
 echo ""
 echo "Alarms configured (all 8 apps covered):"
 echo "  Frontend:     high-cls, csp-violations"
-echo "  Chat-stream:  kb-failures, rate-limit-surge, bedrock-cost, agent-timeout"
+echo "  Chat-stream:  kb-failures, kb-empty, kb-unparseable, rate-limit-surge, bedrock-cost,"
+echo "                agent-timeout, chat-unhandled-errors, chat-bedrock-throttled,"
+echo "                memory-load-failures, memory-forget-failures (threshold 0),"
+echo "                podcast-kb-failures, podcast-kb-unparseable,"
+echo "                genui-opus-cost, genui-errors, genui-timeout"
 echo "  Blueprint:    opus-cost, errors, validation-failures, opus-timeout, generation-errors"
 echo "  KB-builder:   kb-builder-errors (log-based, namespace TheChrisGrey/KBBuilder)"
 echo "  KB-sync:      kb-sync-failure"

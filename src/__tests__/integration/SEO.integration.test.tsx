@@ -75,7 +75,12 @@ vi.mock('../../sanity', async () => {
     setPostCache: vi.fn(),
     classifySanityError: actual.classifySanityError,
     isBlogListingResult: actual.isBlogListingResult,
+    // Blog.tsx reads all four guards. Only the empty-posts fixture below keeps
+    // the last two from ever being touched, so omitting them leaves the mock one
+    // fixture change away from throwing "No export is defined on the mock".
+    isRenderableImageSource: actual.isRenderableImageSource,
     isSanityPost: actual.isSanityPost,
+    isSanityPostPreview: actual.isSanityPostPreview,
   };
 });
 

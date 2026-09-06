@@ -224,16 +224,32 @@ describe('preconnectsForPath — per-route preconnect resolution (VAL-PERF-008)'
     expect(preconnectsForPath('/')).toEqual(['https://d1x8296f4gso9u.cloudfront.net']);
   });
 
-  it('/podcast preconnects to the Sanity CDN (guest images)', () => {
-    expect(preconnectsForPath('/podcast')).toEqual(['https://cdn.sanity.io']);
+  it('/podcast preconnects to the podcast project API CDN and the Sanity asset CDN', () => {
+    // podcastClient is project uaxzdsfa, so its query host differs from the
+    // blog project's; the guest images it returns share cdn.sanity.io.
+    expect(preconnectsForPath('/podcast')).toEqual(['https://uaxzdsfa.apicdn.sanity.io', 'https://cdn.sanity.io']);
   });
 
-  it('/blog preconnects to the Sanity CDN (post card images)', () => {
-    expect(preconnectsForPath('/blog')).toEqual(['https://cdn.sanity.io']);
+  it('/blog preconnects to the blog project API CDN and the Sanity asset CDN', () => {
+    // The listing query blocks the first paint, so the API host matters at
+    // least as much as the image host the post cards then use.
+    expect(preconnectsForPath('/blog')).toEqual(['https://k5950b3w.apicdn.sanity.io', 'https://cdn.sanity.io']);
   });
 
-  it('/blog/:slug posts preconnect to the Sanity CDN', () => {
-    expect(preconnectsForPath('/blog/some-post')).toEqual(['https://cdn.sanity.io']);
+  it('/blog/:slug posts preconnect to the blog project API CDN and the Sanity asset CDN', () => {
+    expect(preconnectsForPath('/blog/some-post')).toEqual([
+      'https://k5950b3w.apicdn.sanity.io',
+      'https://cdn.sanity.io',
+    ]);
+  });
+
+  it('never preconnects a project API host to a route that does not query it', () => {
+    // The two Sanity projects have distinct API CDN hosts. Crossing them would
+    // open a connection that is never reused — the exact waste the per-route
+    // split exists to avoid.
+    expect(preconnectsForPath('/blog')).not.toContain('https://uaxzdsfa.apicdn.sanity.io');
+    expect(preconnectsForPath('/blog/some-post')).not.toContain('https://uaxzdsfa.apicdn.sanity.io');
+    expect(preconnectsForPath('/podcast')).not.toContain('https://k5950b3w.apicdn.sanity.io');
   });
 
   it('routes with no third-party origins return an empty list (no dead preconnects)', () => {
@@ -246,16 +262,19 @@ describe('preconnectsForPath — per-route preconnect resolution (VAL-PERF-008)'
   });
 
   it('normalizes trailing slashes (Amplify serves /podcast/)', () => {
-    expect(preconnectsForPath('/podcast/')).toEqual(['https://cdn.sanity.io']);
-    expect(preconnectsForPath('/blog/')).toEqual(['https://cdn.sanity.io']);
+    expect(preconnectsForPath('/podcast/')).toEqual(['https://uaxzdsfa.apicdn.sanity.io', 'https://cdn.sanity.io']);
+    expect(preconnectsForPath('/blog/')).toEqual(['https://k5950b3w.apicdn.sanity.io', 'https://cdn.sanity.io']);
   });
 
   it('keeps the bare /blog path distinct from /blog/:slug posts', () => {
-    // Both resolve to cdn.sanity.io today, but the lookup keys differ —
+    // Both resolve to the same pair today, but the lookup keys differ —
     // /blog is a direct key, /blog/<slug> resolves via the /blog/:slug route.
     // This guards against a future change that accidentally drops one.
-    expect(preconnectsForPath('/blog')).toEqual(['https://cdn.sanity.io']);
-    expect(preconnectsForPath('/blog/another-post')).toEqual(['https://cdn.sanity.io']);
+    expect(preconnectsForPath('/blog')).toEqual(['https://k5950b3w.apicdn.sanity.io', 'https://cdn.sanity.io']);
+    expect(preconnectsForPath('/blog/another-post')).toEqual([
+      'https://k5950b3w.apicdn.sanity.io',
+      'https://cdn.sanity.io',
+    ]);
   });
 
   it('does NOT return i.ytimg.com (injected by YouTubeFacade, not route metadata)', () => {

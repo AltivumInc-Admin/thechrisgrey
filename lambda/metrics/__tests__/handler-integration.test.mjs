@@ -231,7 +231,20 @@ test("GET /health with valid Cognito token returns 200 with aggregated health da
       if (["KBRetrievalLatency", "BedrockInvocationLatency", "TotalRequestLatency"].includes(metricName)) {
         return { Datapoints: [{ Average: 250, SampleCount: 100 }] };
       }
-      // Sum-based metrics
+      // Distinct sums for the four retrieval outcomes so kbSuccessRate is an
+      // arithmetic assertion rather than a coincidence of equal stubs: an empty
+      // or unparseable retrieval grounds a turn no better than a failure, so all
+      // four belong in the denominator (60 of 100 → "60.0").
+      const KB_OUTCOME_SUMS = {
+        KBRetrievalSuccess: 60,
+        KBRetrievalFailure: 20,
+        KBRetrievalEmpty: 15,
+        KBRetrievalUnparseable: 5,
+      };
+      if (metricName in KB_OUTCOME_SUMS) {
+        return { Datapoints: [{ Sum: KB_OUTCOME_SUMS[metricName] }] };
+      }
+      // Every other sum-based metric
       return { Datapoints: [{ Sum: 5 }] };
     }
     return {};
@@ -255,9 +268,14 @@ test("GET /health with valid Cognito token returns 200 with aggregated health da
 
     // Verify chat metrics
     assert.ok(body.chat, "chat object present");
-    assert.equal(body.chat.kbFailures, 5);
-    assert.equal(body.chat.kbSuccesses, 5);
-    assert.equal(body.chat.kbSuccessRate, "50.0");
+    assert.equal(body.chat.kbFailures, 20);
+    assert.equal(body.chat.kbSuccesses, 60);
+    assert.equal(body.chat.kbEmpties, 15);
+    assert.equal(body.chat.kbUnparseables, 5);
+    assert.equal(body.chat.kbSuccessRate, "60.0");
+    // Stream + mid-stream + pre-stream, all stubbed at 5. A turn blocked after
+    // text had already shipped counts under its own name; the panel wants the sum.
+    assert.equal(body.chat.guardrailInterventions, 15);
 
     // Verify costs
     assert.ok(body.costs, "costs object present");

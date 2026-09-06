@@ -75,6 +75,25 @@ describe('CapabilityIntro', () => {
     });
   });
 
+  describe('contrast', () => {
+    it('keeps every silver instructional run at or above the /80 AA floor', () => {
+      // altivum-silver/80 on altivum-dark is about 5.4:1; /70 is 4.3:1 and /50 is
+      // 2.8:1, both under the 4.5:1 AA floor these smallText sizes require. This
+      // pins the tints that regressed rather than the rendered pixels.
+      renderIntro({ initiallyExpanded: true });
+      const runs = [
+        screen.getByText(/search, draft, navigate, remember/i),
+        screen.getByText(/Try asking him to/i),
+        screen.getByText('Ask Alti to take you to the right page on thechrisgrey.com.'),
+        screen.getByText(/ask alti to forget you anytime/i),
+      ];
+      for (const run of runs) {
+        expect(run.className).not.toMatch(/text-altivum-silver\/(?:[1-7]\d|\d)\b/);
+        expect(run.className).toMatch(/text-altivum-silver\/(?:8\d|9\d|100)\b/);
+      }
+    });
+  });
+
   describe('expand / collapse', () => {
     it('toggles aria-expanded when the toggle is clicked', () => {
       renderIntro();

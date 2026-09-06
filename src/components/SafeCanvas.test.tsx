@@ -2,6 +2,17 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import SafeCanvas from './SafeCanvas';
 
+// Stand in for the telemetry sink so the boundary's report can be inspected.
+// isRumInitialized is forced true — otherwise componentDidCatch takes the
+// console-logger branch and nothing observable is recorded.
+vi.mock('../utils/rum', () => ({
+  isRumInitialized: true,
+  captureError: vi.fn(),
+  addBreadcrumb: vi.fn(),
+}));
+import { captureError } from '../utils/rum';
+const mockedCaptureError = vi.mocked(captureError);
+
 // A child that throws during render — simulates a GLB-parse / R3F-init failure.
 function Boom(): never {
   throw new Error('webgl mount failed');
@@ -10,6 +21,7 @@ function Boom(): never {
 describe('SafeCanvas', () => {
   afterEach(() => {
     cleanup();
+    vi.clearAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -54,6 +66,22 @@ describe('SafeCanvas', () => {
     expect(container).toBeEmptyDOMElement();
     expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /refresh page/i })).not.toBeInTheDocument();
+    errSpy.mockRestore();
+  });
+
+  it('names the surface in the error report instead of filing it as unknown', () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <SafeCanvas fallback={<div data-testid="fallback" />} pageName="Alti mascot">
+        <Boom />
+      </SafeCanvas>,
+    );
+
+    expect(mockedCaptureError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ pageName: 'Alti mascot' }),
+    );
     errSpy.mockRestore();
   });
 });

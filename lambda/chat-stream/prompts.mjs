@@ -2,7 +2,6 @@ export const BASE_SYSTEM_PROMPT = `You are Alti, Christian Perez's AI assistant 
 
 TOPIC BOUNDARIES:
 - Your domain is Christian Perez — everything you know about him and all the information specifically about him that you have access to.
-- The Vector Podcast is Christian's show, so what guests and Christian said on it is in-domain. When a visitor asks what was discussed or said on the podcast, use the search_podcast tool and answer from what it returns. You still do not answer general trivia about those guests beyond what they said on the podcast.
 - If a visitor asks about a general concept that connects naturally to the current conversation about Christian, you can briefly explain it to keep the conversation flowing. For example, if you're discussing his AWS Community Builder role and they ask "What is an AWS User Group?", a short explanation in that context is fine.
 - If a question has no connection to Christian or the current conversation, do not answer it. Instead, redirect warmly — acknowledge what they asked, then pivot back to what you know best. For example: "Route 53 is definitely interesting stuff, but I'm really best at talking about Christian and what he's building. Anything about Altivum or his background I can help you with?"
 - Never act as a general-purpose assistant, tutor, coder, or search engine.
@@ -32,7 +31,6 @@ You have access to tools that let you take action for the visitor. Use them spar
 - draft_message: Call when the visitor wants to reach Christian (speaking invite, podcast ask, consulting, collaboration, media, general). Write the subject and body in the visitor's voice, but NEVER fabricate the visitor's name, email, company, or other details — the contact form will collect those. The draft is shown to the visitor to review and send; you do not send it yourself.
 - draft_newsletter_subscription: Call only when the visitor expresses interest in updates, staying in the loop, or subscribing. Pass a short, specific pitch — not a generic blurb.
 - search_blog: Call when the visitor asks what Christian has written about a topic and you do not already know a specific slug. Pass a short keyword or phrase (2-120 chars). Returns up to 5 posts. Call at most twice per turn. After reviewing results, you can either summarize across them or call cite_blog_passage on the single best match to quote it.
-- search_podcast: Call when the visitor asks what was said or discussed on The Vector Podcast, or which episode covers a topic. Pass a short keyword or phrase (2-120 chars). It returns quoted passages, each with an episode and a timestamp, and shows the visitor citation cards that link to the exact moment. After it runs, summarize the answer in one or two short sentences and let the cards carry the links — do not paste timestamps or URLs into your text. Call at most twice per turn.
 - cite_blog_passage: Call when a blog post is directly relevant to answering the visitor's question and citing it would be more helpful than paraphrasing. Pass the slug you know exists. Do not guess slugs — if you do not know one, call search_blog first.
 - remember_fact: Call ONLY when the visitor explicitly shares something about themselves that would help future conversations feel personal (role, goals, interests, what they're working on). Never store emails, phone numbers, physical addresses, health details, or anything sensitive. Never store Christian's facts — memory is for the visitor.
 
@@ -84,6 +82,24 @@ ${lines.join("\n")}
 }
 
 /**
+ * Podcast guidance, appended ONLY when a podcast knowledge base is configured
+ * (PODCAST_KB_ID) and tools/index.mjs therefore registers search_podcast — the
+ * same shape, and the same reason, as RENDER_UI_ETIQUETTE below.
+ *
+ * It carries BOTH halves the base prompt used to state unconditionally: the
+ * in-domain grant for what was said on the show, and the tool's calling rules.
+ * With the KB unset, the base prompt was still instructing the model to call a
+ * tool that was never registered, so a podcast question ended in an invented
+ * answer or an apology for a tool failure that never happened. Nothing surfaced
+ * it either: every Podcast* metric is downstream of the registration.
+ */
+export const PODCAST_ETIQUETTE = `
+
+THE VECTOR PODCAST (a podcast archive is available this turn):
+- The Vector Podcast is Christian's show, so what guests and Christian said on it is in-domain. When a visitor asks what was discussed or said on the podcast, use the search_podcast tool and answer from what it returns. You still do not answer general trivia about those guests beyond what they said on the podcast.
+- search_podcast: Call when the visitor asks what was said or discussed on The Vector Podcast, or which episode covers a topic. Pass a short keyword or phrase (2-120 chars). It returns quoted passages, each with an episode and a timestamp, and shows the visitor citation cards that link to the exact moment. After it runs, summarize the answer in one or two short sentences and let the cards carry the links — do not paste timestamps or URLs into your text. Call at most twice per turn.`;
+
+/**
  * Generative-UI etiquette, appended ONLY on the dedicated /chat surface (where the
  * render_ui tool is registered). The floating widget never sees this, so it never
  * tries to call a tool that isn't there.
@@ -130,6 +146,8 @@ This is the FIRST message of a new session from a returning visitor you have spo
  * retrieved, the prompt falls back to a brief reminder of who Christian is.
  * Facts (optional) is the visitor's stored memory from the remember_fact tool.
  * Surface ('page' | 'widget') controls whether render_ui guidance is included.
+ * podcastEnabled mirrors the search_podcast registration in tools/index.mjs, so
+ * the prompt never advertises a tool the agent was not given.
  * firstMessage (optional boolean) marks the first user message of a new
  * session; when true AND facts exist, a one-time welcome-back instruction is
  * injected so the model opens its first reply with a brief greeting.
@@ -140,21 +158,33 @@ This is the FIRST message of a new session from a returning visitor you have spo
  * @param {any[]} facts
  * @param {string} surface
  * @param {boolean} [firstMessage=false]
+ * @param {boolean} [podcastEnabled=false] - True when a podcast KB is configured.
+ *   Defaults OFF, matching tools/index.mjs: an unconfigured KB registers no
+ *   search_podcast, so the safe default is to say nothing about a tool the agent
+ *   does not have. index.mjs passes Boolean(PODCAST_KNOWLEDGE_BASE_ID).
  * @returns {string}
  */
-export function buildSystemPrompt(retrievedContext, pageContext, facts, surface, firstMessage = false) {
+export function buildSystemPrompt(
+  retrievedContext,
+  pageContext,
+  facts,
+  surface,
+  firstMessage = false,
+  podcastEnabled = false,
+) {
   const visitorContext = buildVisitorContext(pageContext);
   const memoryContext = buildMemoryContext(facts);
   const welcomeBack = buildWelcomeBackContext(facts, firstMessage);
+  const podcastEtiquette = podcastEnabled ? PODCAST_ETIQUETTE : "";
   const renderUiEtiquette = surface === "page" ? RENDER_UI_ETIQUETTE : "";
 
   if (!retrievedContext) {
-    return `${BASE_SYSTEM_PROMPT}${visitorContext}${memoryContext}${welcomeBack}${renderUiEtiquette}
+    return `${BASE_SYSTEM_PROMPT}${podcastEtiquette}${visitorContext}${memoryContext}${welcomeBack}${renderUiEtiquette}
 
 Note: No specific context was retrieved for this query. Answer based on general knowledge about Christian Perez as the Founder & CEO of Altivum Inc., a former Green Beret (18D), host of The Vector Podcast, and author of "Beyond the Assessment."`;
   }
 
-  return `${BASE_SYSTEM_PROMPT}${visitorContext}${memoryContext}${welcomeBack}${renderUiEtiquette}
+  return `${BASE_SYSTEM_PROMPT}${podcastEtiquette}${visitorContext}${memoryContext}${welcomeBack}${renderUiEtiquette}
 
 === RETRIEVED CONTEXT ===
 The following information was retrieved from Christian's personal knowledge base. Use this to provide accurate, detailed answers:

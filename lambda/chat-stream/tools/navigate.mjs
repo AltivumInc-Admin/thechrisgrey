@@ -1,6 +1,6 @@
 import { tool } from "@strands-agents/sdk";
 import { z } from "zod";
-import { isValidPath } from "../validation.mjs";
+import { isValidPath, UNLINKABLE_PATHS } from "../validation.mjs";
 import { emitEvent, EVENT_KINDS } from "../events.mjs";
 
 const _tool = /** @type {any} */ (tool);
@@ -20,7 +20,12 @@ export function buildNavigateTool({ responseStream, metrics }) {
       reason: z.string().min(4).max(240).describe("One sentence explaining why this page helps the visitor"),
     }),
     callback: async (/** @type {{ path: string, reason: string }} */ { path, reason }) => {
-      if (path === "/admin" || path === "/chat") {
+      // Shared with render_ui's block schema via validation.mjs (isLinkablePath
+      // is exactly isValidPath minus this set). Kept as its own branch rather
+      // than folded into isLinkablePath so a restricted route still gets the
+      // "restricted" answer instead of "not a known route" — the model should
+      // learn the page exists and is off-limits, not that it was imagined.
+      if (UNLINKABLE_PATHS.has(path)) {
         metrics?.record("ToolRejection_NavigateTo");
         return { ok: false, error: "Path is restricted." };
       }

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BLOG_CITE_QUERY, SITE_ORIGIN } from "lambda-shared/sanityQueries";
 import { emitEvent, EVENT_KINDS } from "../events.mjs";
 import { createLogger } from "lambda-shared/logger";
+import { recordToolFailure } from "./toolMetrics.mjs";
 
 const _tool = /** @type {any} */ (tool);
 
@@ -24,12 +25,14 @@ export function buildCitePassageTool({ sanityClient, responseStream, metrics, re
         .describe("The blog post slug, e.g. 'building-agentic-alti'"),
     }),
     callback: async (/** @type {{ slug: string }} */ { slug }) => {
+      // ToolCall_ counts ATTEMPTS, matching navigate/draft_*. Recording it after
+      // the fetch resolved meant a failed call emitted ToolFailure_ and no
+      // ToolCall_, so any failure-rate ratio over this namespace was wrong.
+      metrics?.record("ToolCall_CitePassage");
       const startedAt = Date.now();
       try {
         const post = await sanityClient.fetch(BLOG_CITE_QUERY, { slug });
-        const latencyMs = Date.now() - startedAt;
-        metrics?.record("ToolCall_CitePassage");
-        metrics?.record("ToolLatency_CitePassage", latencyMs, "Milliseconds");
+        metrics?.record("ToolLatency_CitePassage", Date.now() - startedAt, "Milliseconds");
 
         if (!post) {
           return { ok: false, error: `No blog post found for slug '${slug}'.` };
@@ -53,7 +56,7 @@ export function buildCitePassageTool({ sanityClient, responseStream, metrics, re
           slug: post.slug,
         };
       } catch (error) {
-        metrics?.record("ToolFailure_CitePassage");
+        recordToolFailure(metrics, "CitePassage");
         log.error("tool_error", {
           tool: "cite_blog_passage",
           error: error instanceof Error ? error.name : String(error),

@@ -1,14 +1,53 @@
 {
-  "description": "Gzipped size budgets (KB) for the frontend production bundle, enforced by scripts/track-bundle-size.mjs after `vite build`. Per-chunk budgets guard the named code-split groups from vite.config.ts; the totals guard against unnoticed dependency bloat across all emitted JS/CSS. Budgets are gzipped (what CloudFront transfers) and carry deliberate headroom over observed sizes. Raise a budget only when a chunk grows for a justified reason. The entry (index) budget was raised from 45 to 55 KB after lazy-loading the chat widget panel (VAL-PERF-013): rolldown merged the previously separate SEO/Icon/hooks shared chunks into the entry, so the entry grew but the total initial JS gzip dropped ~12 KB (191 KB -> 179 KB) and the chat engine is now deferred until the widget opens.",
+  "description": "Gzipped size budgets (KB) for the frontend production bundle, enforced by scripts/track-bundle-size.mjs after `vite build`. Per-chunk budgets guard the named code-split groups from vite.config.ts; the totals guard against unnoticed dependency bloat across all emitted JS/CSS. Budgets are gzipped (what CloudFront transfers) and carry deliberate headroom over observed sizes. Raise a budget only when a chunk grows for a justified reason. The `assets` block budgets unhashed binaries shipped from the dist root (public/) on RAW bytes, since those are already-compressed formats that gzip cannot shrink further. The entry (index) budget was raised from 45 to 55 KB after lazy-loading the chat widget panel (VAL-PERF-013): rolldown merged the previously separate SEO/Icon/hooks shared chunks into the entry, so the entry grew but the total initial JS gzip dropped ~12 KB (191 KB -> 179 KB) and the chat engine is now deferred until the widget opens. The r3f-vendor budget is 135 KB against a measured 118 KB: naming the @react-three group consolidated bytes that previously split between an unnamed chunk (~48 KB) and the lazy mascot/topology consumer chunks, so the first 60 KB guess - taken from the unnamed chunk alone, before rebuilding - was under the chunk's true size. Total JS gzip (1.76 MB) stays well inside the 2100 KB total guard, and the chunk loads lazily with its consumers.",
   "totalJsGzipKB": 2100,
   "totalCssGzipKB": 25,
   "chunks": {
-    "entry (index)": { "match": "index-", "ext": "js", "maxGzipKB": 55 },
-    "vendor (react)": { "match": "vendor-", "ext": "js", "maxGzipKB": 80 },
-    "router": { "match": "router-", "ext": "js", "maxGzipKB": 30 },
-    "sanity": { "match": "sanity-", "ext": "js", "maxGzipKB": 55 },
-    "cognito": { "match": "cognito-", "ext": "js", "maxGzipKB": 55 },
-    "three-vendor": { "match": "three-vendor-", "ext": "js", "maxGzipKB": 230 },
-    "gsap-vendor": { "match": "gsap-vendor-", "ext": "js", "maxGzipKB": 60 }
+    "entry (index)": {
+      "match": "index-",
+      "ext": "js",
+      "maxGzipKB": 55
+    },
+    "vendor (react)": {
+      "match": "vendor-",
+      "ext": "js",
+      "maxGzipKB": 80
+    },
+    "router": {
+      "match": "router-",
+      "ext": "js",
+      "maxGzipKB": 30
+    },
+    "sanity": {
+      "match": "sanity-",
+      "ext": "js",
+      "maxGzipKB": 55
+    },
+    "cognito": {
+      "match": "cognito-",
+      "ext": "js",
+      "maxGzipKB": 55
+    },
+    "three-vendor": {
+      "match": "three-vendor-",
+      "ext": "js",
+      "maxGzipKB": 230
+    },
+    "gsap-vendor": {
+      "match": "gsap-vendor-",
+      "ext": "js",
+      "maxGzipKB": 60
+    },
+    "r3f-vendor": {
+      "match": "r3f-vendor-",
+      "ext": "js",
+      "maxGzipKB": 135
+    }
+  },
+  "assets": {
+    "alti.glb (3D mascot)": {
+      "path": "alti.glb",
+      "maxBytes": 1300000
+    }
   }
 }

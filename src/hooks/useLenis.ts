@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import Lenis from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { REDUCED_MOTION_QUERY } from '../utils/motion';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -23,7 +24,7 @@ export function useLenisInstance() {
   const [lenis, setLenis] = useState<Lenis | null>(null);
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReducedMotion = window.matchMedia(REDUCED_MOTION_QUERY).matches;
     if (prefersReducedMotion) return;
 
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;

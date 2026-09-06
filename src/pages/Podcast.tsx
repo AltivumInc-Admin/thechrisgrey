@@ -38,10 +38,15 @@ import NewsletterCTA from '../components/NewsletterCTA';
 import YouTubeFacade from '../components/YouTubeFacade';
 import SpotifyFacade from '../components/SpotifyFacade';
 import { podcastClient, PODCAST_GUESTS_QUERY, classifySanityError, isPodcastGuestArray } from '../sanity';
+// Imported from its own module rather than the barrel, for the same reason as
+// on Blog/BlogPost: the page tests replace `../sanity` with a hand-enumerated
+// factory.
+import { sanityError } from '../sanity/errors';
 import type { PodcastGuest } from '../sanity';
 import GuestCard from '../components/GuestCard';
 import { SpotifyIcon, ApplePodcastIcon, YouTubeIcon } from '../components/PodcastPlatformIcons';
 import { createLogger } from '../utils/logger';
+import { captureError } from '../utils/rum';
 
 const log = createLogger('Podcast');
 
@@ -63,21 +68,35 @@ const Podcast = () => {
 
   useEffect(() => {
     // Guests are supplementary — the section degrades gracefully to empty on
-    // failure. We still validate the shape and classify/log errors so a real
+    // failure. We still validate the shape and classify/report errors so a real
     // outage or schema drift is observable rather than silently swallowed.
+    //
+    // captureError, not log.error alone: the logger's Sentry gate tests the
+    // REDACTED clone with `instanceof Error` (which no caller can satisfy) and
+    // is consent-gated besides, so a log.error never leaves the visitor's
+    // browser. This section failing silently for everyone is exactly the
+    // outcome the comment above claimed to prevent.
     podcastClient
       .fetch<PodcastGuest[]>(PODCAST_GUESTS_QUERY)
       .then((data) => {
         if (isPodcastGuestArray(data)) {
           setGuests(data);
         } else {
-          log.error('shape_validation_failed');
+          // The HTTP call succeeded, so no network telemetry fires: this is the
+          // only signal that the podcastGuest schema drifted.
+          const classified = sanityError('malformed', 'Podcast guests');
+          log.error('shape_validation_failed', { kind: classified.kind });
+          captureError(new Error(classified.message), { scope: 'Podcast', kind: classified.kind });
           setGuests([]);
         }
       })
       .catch((err) => {
         const classified = classifySanityError(err, 'Podcast guests');
         log.error('fetch_failed', { kind: classified.kind, message: classified.message });
+        captureError(classified.causedBy ?? new Error(classified.message), {
+          scope: 'Podcast',
+          kind: classified.kind,
+        });
         setGuests([]);
       })
       .finally(() => setIsLoadingGuests(false));

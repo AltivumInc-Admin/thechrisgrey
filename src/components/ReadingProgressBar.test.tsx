@@ -4,18 +4,39 @@ import ReadingProgressBar from './ReadingProgressBar';
 
 describe('ReadingProgressBar', () => {
   let rafCallback: FrameRequestCallback | null = null;
+  let scrollHeightReads = 0;
+  let scrollHeight = 2000;
+
+  const setScrollHeight = (value: number) => {
+    scrollHeight = value;
+  };
+
+  const scrollTo = (y: number) => {
+    Object.defineProperty(window, 'scrollY', { value: y, configurable: true });
+    act(() => {
+      window.dispatchEvent(new Event('scroll'));
+      if (rafCallback) rafCallback(0);
+    });
+  };
 
   beforeEach(() => {
     rafCallback = null;
+    scrollHeightReads = 0;
+    scrollHeight = 2000;
+
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
       rafCallback = cb;
       return 1;
     });
 
-    // Default: page is at top with some scrollable height
+    // A getter (not a value) so the tests can count how often the component
+    // reads this layout property.
     Object.defineProperty(document.documentElement, 'scrollHeight', {
-      value: 2000,
       configurable: true,
+      get() {
+        scrollHeightReads += 1;
+        return scrollHeight;
+      },
     });
     Object.defineProperty(window, 'innerHeight', {
       value: 800,
@@ -33,67 +54,69 @@ describe('ReadingProgressBar', () => {
     vi.restoreAllMocks();
   });
 
-  it('should render a progressbar element', () => {
-    render(<ReadingProgressBar />);
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+  const renderBar = () => {
+    const { container } = render(<ReadingProgressBar />);
+    return container.firstChild as HTMLElement;
+  };
+
+  it('should render a decorative bar that is hidden from assistive tech', () => {
+    const bar = renderBar();
+    expect(bar).toHaveAttribute('aria-hidden', 'true');
+    // The value changed on every scroll frame, so exposing it as a live
+    // progressbar made screen readers announce continuously while reading.
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   });
 
-  it('should have correct aria attributes', () => {
-    render(<ReadingProgressBar />);
-    const bar = screen.getByRole('progressbar');
-    expect(bar).toHaveAttribute('aria-valuemin', '0');
-    expect(bar).toHaveAttribute('aria-valuemax', '100');
-    expect(bar).toHaveAttribute('aria-label', 'Reading progress');
+  it('should start fully collapsed when at the top of the page', () => {
+    const bar = renderBar();
+    expect(bar.style.transform).toBe('scaleX(0)');
   });
 
-  it('should start at 0% progress when at top of page', () => {
-    render(<ReadingProgressBar />);
-    const bar = screen.getByRole('progressbar');
-    expect(bar).toHaveAttribute('aria-valuenow', '0');
-    expect(bar.style.width).toBe('0%');
+  it('should scale on the compositor rather than animating width', () => {
+    const bar = renderBar();
+    scrollTo(600);
+
+    // 600 / (2000 - 800) = 50%
+    expect(bar.style.transform).toBe('scaleX(0.5)');
+    expect(bar.style.willChange).toBe('transform');
+    expect(bar.style.width).toBe('');
   });
 
-  it('should update progress on scroll', () => {
-    render(<ReadingProgressBar />);
+  it('should not re-measure the document height on every scroll frame', () => {
+    renderBar();
+    scrollHeightReads = 0;
 
-    // Simulate scrolling halfway
-    Object.defineProperty(window, 'scrollY', { value: 600, configurable: true });
+    scrollTo(200);
+    scrollTo(400);
+    scrollTo(600);
 
+    expect(scrollHeightReads).toBe(0);
+  });
+
+  it('should re-measure the document height on resize', () => {
+    const bar = renderBar();
+    scrollTo(600);
+    expect(bar.style.transform).toBe('scaleX(0.5)');
+
+    setScrollHeight(3200);
     act(() => {
-      window.dispatchEvent(new Event('scroll'));
-      if (rafCallback) rafCallback(0);
+      window.dispatchEvent(new Event('resize'));
     });
 
-    const bar = screen.getByRole('progressbar');
-    // 600 / (2000 - 800) = 50%
-    expect(bar).toHaveAttribute('aria-valuenow', '50');
+    // 600 / (3200 - 800) = 25%
+    expect(bar.style.transform).toBe('scaleX(0.25)');
   });
 
   it('should handle zero scrollable height without errors', () => {
-    Object.defineProperty(document.documentElement, 'scrollHeight', {
-      value: 800,
-      configurable: true,
-    });
-    // scrollHeight equals innerHeight, so docHeight = 0
-
-    render(<ReadingProgressBar />);
-    const bar = screen.getByRole('progressbar');
-    expect(bar).toHaveAttribute('aria-valuenow', '0');
+    setScrollHeight(800); // equals innerHeight, so nothing is scrollable
+    const bar = renderBar();
+    expect(bar.style.transform).toBe('scaleX(0)');
   });
 
-  it('should clamp progress to 100', () => {
-    render(<ReadingProgressBar />);
-
-    // Scroll beyond the document height
-    Object.defineProperty(window, 'scrollY', { value: 2000, configurable: true });
-
-    act(() => {
-      window.dispatchEvent(new Event('scroll'));
-      if (rafCallback) rafCallback(0);
-    });
-
-    const bar = screen.getByRole('progressbar');
-    expect(bar).toHaveAttribute('aria-valuenow', '100');
+  it('should clamp progress to the full width', () => {
+    const bar = renderBar();
+    scrollTo(2000);
+    expect(bar.style.transform).toBe('scaleX(1)');
   });
 
   it('should clean up event listeners on unmount', () => {

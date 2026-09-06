@@ -11,6 +11,12 @@
  * This runs the REAL retrieveContext() (lambda/chat-stream/kbRetrieve.mjs) with a
  * real BedrockAgentRuntimeClient + RetrieveCommand.
  *
+ * Every assertion below must be UNSATISFIABLE by the failure path. retrieveContext
+ * swallows every error into null and records latency on both branches, so
+ * "null or a string" and "latency OR failure" would pass with no credentials, a
+ * deleted KB, or the wrong region — a green run proving nothing. Assert the
+ * success metric and the absence of the failure metric instead.
+ *
  * GATING: skips cleanly (exit 0) unless KB_RETRIEVE_CONTRACT_TESTS is set. Enable:
  *
  *   KB_RETRIEVE_CONTRACT_TESTS=1 node --test lambda/chat-stream/__tests__/kb-retrieve-contract.test.mjs
@@ -38,7 +44,7 @@ if (!process.env.KB_RETRIEVE_CONTRACT_TESTS) {
   const LIVE_TIMEOUT_MS = 30_000;
 
   test(
-    "LIVE Retrieve against the KB returns a parseable string or null (never throws)",
+    "LIVE Retrieve against the KB returns grounded passages for a topic the KB demonstrably covers",
     { timeout: LIVE_TIMEOUT_MS },
     async () => {
       const metrics = recordingMetrics();
@@ -49,20 +55,23 @@ if (!process.env.KB_RETRIEVE_CONTRACT_TESTS) {
         { knowledgeBaseId, requestId: "contract-1", metrics, timeoutMs: 8000, numberOfResults: 5 },
       );
 
-      // The contract: retrieveContext returns either the joined passage string or
-      // null (empty/error). If it returns a string it must be non-empty content.
-      assert.ok(
-        result === null || (typeof result === "string" && result.length > 0),
-        `expected a non-empty string or null, got ${typeof result}`,
-      );
-
-      // A successful call records latency; a hard failure records a failure metric.
-      // Either way the API must have been reached without an unhandled throw.
       const names = metrics.records.map((r) => r.name);
-      assert.ok(
-        names.includes("KBRetrievalLatency") || names.includes("KBRetrievalFailure"),
-        `expected a latency or failure metric, got: ${names.join(", ") || "(none)"}`,
-      );
+
+      // null is what retrieveContext returns for a bad KB id, a wrong region, or
+      // missing credentials. For a KB that holds Christian's biography, null is a
+      // FAILURE, not an acceptable contract outcome.
+      assert.equal(typeof result, "string", `expected passages, got ${result === null ? "null" : typeof result}`);
+      assert.ok(result.length > 0, "a live retrieval must return non-empty passages");
+
+      // Named metrics, not a disjunction that both branches satisfy.
+      assert.ok(names.includes("KBRetrievalSuccess"), `expected KBRetrievalSuccess, got: ${names.join(", ")}`);
+      assert.ok(!names.includes("KBRetrievalFailure"), `unexpected KBRetrievalFailure: ${names.join(", ")}`);
+      assert.ok(!names.includes("KBRetrievalEmpty"), "the KB returned zero hits for a topic it holds");
+      assert.ok(!names.includes("KBRetrievalUnparseable"), "retrievalResults[].content.text no longer parses");
+
+      // A shape change that keeps content.text but empties the corpus would still
+      // satisfy everything above; this pins that the KB is the right one.
+      assert.match(result, /Christian/i, "retrieved passages must come from Christian's knowledge base");
     },
   );
 
@@ -82,7 +91,11 @@ if (!process.env.KB_RETRIEVE_CONTRACT_TESTS) {
       });
       assert.equal(result, null, "an aborted retrieval must return null");
       const names = metrics.records.map((r) => r.name);
-      assert.ok(names.includes("KBRetrievalFailure"), "a timed-out retrieval must record KBRetrievalFailure");
+      // KBRetrievalFailure alone is recorded for EVERY error name, so asserting it
+      // would pass even if the abort classification never fired. Timeout is the
+      // only metric that proves the SDK's abort error is still named AbortError.
+      assert.ok(names.includes("KBRetrievalTimeout"), `expected KBRetrievalTimeout, got: ${names.join(", ")}`);
+      assert.ok(names.includes("KBRetrievalFailure"), "a timed-out retrieval must also record KBRetrievalFailure");
     },
   );
 }

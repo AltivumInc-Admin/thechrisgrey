@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { BLOG_LISTING_QUERY, POST_BY_SLUG_QUERY, PODCAST_GUESTS_QUERY } from './queries';
 
 describe('GROQ queries', () => {
@@ -52,9 +54,15 @@ describe('GROQ queries', () => {
       expect(BLOG_LISTING_QUERY).toContain('seriesOrder');
     });
 
-    it('should also query for tags and series at top level', () => {
-      expect(BLOG_LISTING_QUERY).toContain('_type == "tag"');
-      expect(BLOG_LISTING_QUERY).toContain('_type == "series"');
+    it('should NOT fetch the whole tag and series collections', () => {
+      // Nothing reads them: the category chips come from the posts, and the
+      // tag/series filters come from URL params set by links on the cards.
+      expect(BLOG_LISTING_QUERY).not.toContain('_type == "tag"');
+      expect(BLOG_LISTING_QUERY).not.toMatch(/\*\[\s*_type == "series"/);
+    });
+
+    it('should exclude draft documents in the query text', () => {
+      expect(BLOG_LISTING_QUERY).toContain('!(_id in path("drafts.**"))');
     });
   });
 
@@ -96,6 +104,35 @@ describe('GROQ queries', () => {
     it('should include pdfUrl field', () => {
       expect(POST_BY_SLUG_QUERY).toContain('pdfUrl');
     });
+
+    it('should project _updatedAt so dateModified is not silently publishedAt', () => {
+      // BlogPost.tsx reads `post._updatedAt || post.publishedAt` for both
+      // article:modified_time and the Article schema's dateModified. Unprojected,
+      // the left operand is always undefined and the page contradicts the
+      // <lastmod> the sitemap generator emits from that same field.
+      expect(POST_BY_SLUG_QUERY).toContain('_updatedAt');
+    });
+
+    it('should exclude draft documents in the query text', () => {
+      expect(POST_BY_SLUG_QUERY).toContain('!(_id in path("drafts.**"))');
+    });
+  });
+
+  describe('image projections', () => {
+    // metadata.dimensions is what lets the body renderer reserve a box shaped
+    // like the real image instead of hard-cropping to 4:3; metadata.lqip is the
+    // placeholder that replaces a second, eager CDN request per image.
+    it('every dereferenced image asset asks for lqip and dimensions', () => {
+      for (const [name, query] of Object.entries({ BLOG_LISTING_QUERY, POST_BY_SLUG_QUERY, PODCAST_GUESTS_QUERY })) {
+        // One asset projection, allowing a single level of nesting (`metadata { ... }`).
+        const assetProjections = query.match(/asset->\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g) ?? [];
+        expect(assetProjections.length, `${name} must dereference at least one image asset`).toBeGreaterThan(0);
+        for (const projection of assetProjections) {
+          expect(projection, `${name}: ${projection}`).toContain('lqip');
+          expect(projection, `${name}: ${projection}`).toContain('dimensions');
+        }
+      }
+    });
   });
 
   describe('PODCAST_GUESTS_QUERY', () => {
@@ -129,5 +166,32 @@ describe('GROQ queries', () => {
         expect(PODCAST_GUESTS_QUERY).toContain(field);
       });
     });
+  });
+});
+
+describe('POST_BY_SLUG_QUERY projects every post field the detail page reads', () => {
+  // The durable guard for consumed-but-unprojected fields — the class of bug that
+  // made `post._updatedAt || post.publishedAt` dead code for the life of the
+  // feature. Derived from the page source, so it fails when a new `post.x` read
+  // appears without a matching projection rather than needing a hand-edited list.
+  //
+  // Fields resolved inside the query rather than stored under the same name.
+  const PROJECTED_UNDER_ANOTHER_NAME = new Set<string>([
+    // `"category": coalesce(category->title, category)` — the alias is quoted.
+    'category',
+  ]);
+
+  it('every `post.<field>` read in BlogPost.tsx appears in the projection', () => {
+    const source = readFileSync(join(process.cwd(), 'src/pages/BlogPost.tsx'), 'utf8');
+    const read = new Set([...source.matchAll(/\bpost\.([A-Za-z_][A-Za-z0-9_]*)/g)].map((m) => m[1]));
+
+    expect(read.size, 'BlogPost.tsx must read at least one post field').toBeGreaterThan(0);
+    for (const field of read) {
+      if (PROJECTED_UNDER_ANOTHER_NAME.has(field)) {
+        expect(POST_BY_SLUG_QUERY, `"${field}" must be projected under its alias`).toContain(`"${field}"`);
+        continue;
+      }
+      expect(POST_BY_SLUG_QUERY, `BlogPost.tsx reads post.${field}, which the query never projects`).toContain(field);
+    }
   });
 });

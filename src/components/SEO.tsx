@@ -7,6 +7,7 @@ import {
   buildWebSiteSchema,
   buildFAQSchema,
   buildBreadcrumbSchema,
+  serializeJsonLd,
 } from '../utils/schemas';
 import { ogImageForUrl } from '../utils/ogCards';
 import { preconnectsForPath } from '../routes';
@@ -184,8 +185,11 @@ export const SEO = ({
       <meta name="twitter:image" content={ogImage} />
       <meta name="twitter:image:alt" content={ogImageAlt} />
 
-      {/* Structured Data for AI */}
-      <script type="application/ld+json">{JSON.stringify(finalStructuredData)}</script>
+      {/* Structured Data for AI. Serialised through serializeJsonLd, not a bare
+          JSON.stringify: react-helmet-async assigns script children via
+          innerHTML and the prerender crawl writes the result to static HTML, so
+          an unescaped `<` from a CMS string would close this tag for real. */}
+      <script type="application/ld+json">{serializeJsonLd(finalStructuredData)}</script>
     </Helmet>
   );
 };

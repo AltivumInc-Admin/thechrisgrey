@@ -4,23 +4,17 @@
  * Run after vite build: node scripts/generate-sitemap.js
  */
 
-import { createClient } from '@sanity/client';
 import { writeFileSync, realpathSync, existsSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { execSync } from 'child_process';
+import { createBuildClient, SITE_URL } from './lib/sanity-build-client.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
 
-// Sanity client configuration
-const client = createClient({
-  projectId: 'k5950b3w',
-  dataset: 'production',
-  apiVersion: '2024-01-01',
-  useCdn: false, // We want fresh data at build time
-  timeout: 15000, // 15s — fail fast if Sanity is unreachable
-});
+// Fresh (useCdn: false) reads with a 15s timeout — see scripts/lib/sanity-build-client.js.
+const client = createBuildClient();
 
 // Static pages with their priorities and change frequencies.
 //
@@ -69,16 +63,23 @@ const staticPages = [
 export const STATIC_ROUTES = staticPages.map((page) => page.url);
 
 /**
+ * The published-post set itself: filter + ordering, with no projection.
+ * Exported so every build artifact derived from the blog (sitemap, prerender
+ * crawl, RSS feed) composes its projection onto the SAME set rather than
+ * re-declaring the filter. Drift here silently ships a feed and a sitemap that
+ * disagree about which posts exist, which is what VAL-SEO-009 exists to catch.
+ */
+export const BLOG_POSTS_FILTER = `*[_type == "post" && defined(slug.current)] | order(publishedAt desc)`;
+
+/**
  * GROQ projection for every published blog slug, shared with
  * scripts/prerender.js. Sitemap also needs _updatedAt for <lastmod>; prerender
  * only reads .slug, so the extra field is harmless there.
  */
-export const BLOG_SLUGS_QUERY = `*[_type == "post" && defined(slug.current)] | order(publishedAt desc) {
+export const BLOG_SLUGS_QUERY = `${BLOG_POSTS_FILTER} {
     "slug": slug.current,
     "lastmod": _updatedAt
   }`;
-
-const SITE_URL = 'https://thechrisgrey.com';
 
 /**
  * Fetch all published blog posts from Sanity

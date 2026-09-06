@@ -6,22 +6,44 @@ import type { Message } from './useChatEngine';
 // Mock import.meta.env
 vi.stubEnv('VITE_CHAT_ENDPOINT', 'https://test-chat-endpoint.example.com');
 
+// Shared spies, hoisted so the vi.mock factories below can close over them.
+// getOrCreateDeviceId is a plain arrow rather than a vi.fn: restoreAllMocks in
+// afterEach would strip a vi.fn's implementation and silently disable the
+// forget path from the second test onward.
+const mocks = vi.hoisted(() => ({
+  resetSessionTokens: vi.fn(),
+  clearDeviceId: vi.fn(),
+  deviceId: { current: 'device-under-test' as string | null },
+}));
+
 // Mock session-token issuance so tests don't depend on Turnstile, the issuer
 // endpoint, or the network. No token => no Authorization header (the unset-endpoint
 // path); request bodies and streaming behavior are unaffected.
 vi.mock('../utils/sessionToken', () => ({
   getSessionToken: vi.fn().mockResolvedValue(''),
+  sessionTokens: { getToken: vi.fn().mockResolvedValue(''), reset: mocks.resetSessionTokens },
+}));
+
+// jsdom in this Vitest config does not expose window.localStorage, so the real
+// getOrCreateDeviceId returns null and handleForgetMemory short-circuits before
+// it ever issues a request. Provide a stable id so the forget path is exercised.
+vi.mock('../utils/deviceId', () => ({
+  getOrCreateDeviceId: () => mocks.deviceId.current,
+  clearDeviceId: mocks.clearDeviceId,
+  DEVICE_ID_STORAGE_KEY: 'alti-device-id',
 }));
 
 describe('useChatEngine', () => {
   beforeEach(() => {
     window.sessionStorage.clear();
     vi.clearAllMocks();
+    mocks.deviceId.current = 'device-under-test';
   });
 
   afterEach(() => {
     window.sessionStorage.clear();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   describe('exports', () => {
@@ -382,6 +404,47 @@ describe('useChatEngine', () => {
     });
   });
 
+  describe('omitDeviceId (topic-scoped surfaces)', () => {
+    /** A fetch that completes the stream immediately; we only inspect the request. */
+    const stubStreamingFetch = () => {
+      const reader = { read: vi.fn().mockResolvedValue({ done: true, value: undefined }) };
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, body: { getReader: () => reader } });
+      vi.stubGlobal('fetch', fetchMock);
+      return fetchMock;
+    };
+
+    it('omits the device id entirely when omitDeviceId is set', async () => {
+      // The podcast ask box passes this. A distinct storageKey isolates only the
+      // browser transcript; the 90-day server memory is partitioned by device id,
+      // so without the flag an episode question would file facts into - and recall
+      // them from - the visitor's main Alti memory.
+      const fetchMock = stubStreamingFetch();
+      const { result } = renderHook(() =>
+        useChatEngine(undefined, { storageKey: 'podcast-ask', initialMessages: [], omitDeviceId: true }),
+      );
+
+      await act(async () => {
+        await result.current.handleSend('Which episode covers selection?');
+      });
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect('deviceId' in body).toBe(false);
+    });
+
+    it('still sends the device id when omitDeviceId is not set', async () => {
+      // Guards the flag's default: the main chat surfaces must keep their memory.
+      const fetchMock = stubStreamingFetch();
+      const { result } = renderHook(() => useChatEngine());
+
+      await act(async () => {
+        await result.current.handleSend('Remember that I fly gliders.');
+      });
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(body.deviceId).toBe('device-under-test');
+    });
+  });
+
   describe('handleSuggestionSelect', () => {
     it('should call handleSend with the suggestion text', async () => {
       const mockReader = {
@@ -712,53 +775,237 @@ describe('useChatEngine', () => {
   });
 
   describe('AbortError handling', () => {
-    it('should show a timeout message when aborted before any chunks arrive', async () => {
+    it('shows the timeout message when the request aborts before any chunk arrives', async () => {
+      // Driven by the real production trigger — the client-side stream budget —
+      // rather than by a second send, and it asserts the copy the branch exists
+      // to produce. The previous version of this test asserted only that
+      // isStreaming/isTyping settled, so deleting the whole AbortError branch
+      // would have left it green.
+      vi.useFakeTimers();
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(
+          (_url, opts) =>
+            new Promise((_resolve, reject) => {
+              opts.signal.addEventListener('abort', () => {
+                const err = new Error('Aborted');
+                err.name = 'AbortError';
+                reject(err);
+              });
+            }),
+        ),
+      );
+
+      const { result } = renderHook(() => useChatEngine());
+
+      let sendPromise: Promise<void> | undefined;
+      await act(async () => {
+        sendPromise = result.current.handleSend('hello');
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(46_000);
+        await sendPromise;
+      });
+
+      expect(
+        result.current.messages.some((m: Message) => m.content === 'The response timed out. Please try again.'),
+      ).toBe(true);
+      expect(result.current.isStreaming).toBe(false);
+      expect(result.current.isTyping).toBe(false);
+    });
+
+    it('flags an answer cut off mid-stream and keeps the fragment out of the next request', async () => {
+      vi.useFakeTimers();
+      const encoder = new TextEncoder();
+
+      // One chunk, then a read that only settles when the client's own abort
+      // signal fires — a stream whose Lambda died mid-answer.
       vi.stubGlobal(
         'fetch',
         vi.fn().mockImplementation((_url, opts) => {
-          return new Promise((_resolve, reject) => {
-            opts.signal.addEventListener('abort', () => {
-              const err = new Error('Aborted');
-              err.name = 'AbortError';
-              reject(err);
-            });
+          let reads = 0;
+          return Promise.resolve({
+            ok: true,
+            body: {
+              getReader: () => ({
+                read: () => {
+                  reads += 1;
+                  if (reads === 1) {
+                    return Promise.resolve({ done: false, value: encoder.encode('Christian served as a') });
+                  }
+                  return new Promise((_resolve, reject) => {
+                    opts.signal.addEventListener('abort', () => {
+                      const err = new Error('Aborted');
+                      err.name = 'AbortError';
+                      reject(err);
+                    });
+                  });
+                },
+              }),
+            },
           });
         }),
       );
 
       const { result } = renderHook(() => useChatEngine());
 
-      // Kick off the send and immediately abort via a second send
       let sendPromise: Promise<void> | undefined;
-      act(() => {
-        sendPromise = result.current.handleSend('hello');
+      await act(async () => {
+        sendPromise = result.current.handleSend('tell me about him');
       });
 
-      // Abort the in-flight request by issuing another send that also aborts
-      // Simulate by manually invoking an AbortController path: send again.
-      // The new send aborts the old one; we await it so the rejection runs.
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue({
-          ok: true,
-          body: {
-            getReader: () => ({
-              read: vi.fn().mockResolvedValue({ done: true, value: undefined }),
-            }),
-          },
-        }),
-      );
+      // The client budget must outlast the server's own ceiling (25s agent +
+      // up to 4s of KB retrieval), so nothing shorter may kill a live answer.
+      await act(async () => {
+        vi.advanceTimersByTime(30_000);
+      });
+      expect(result.current.messages.some((m: Message) => m.isSystem)).toBe(false);
 
       await act(async () => {
-        await result.current.handleSend('second');
+        vi.advanceTimersByTime(16_000);
         await sendPromise;
       });
 
-      // At least one timeout message OR an empty-response message exists for
-      // the aborted first request. We only care that the hook did not crash
-      // and isStreaming returned to false.
-      expect(result.current.isStreaming).toBe(false);
-      expect(result.current.isTyping).toBe(false);
+      const partial = result.current.messages.find((m: Message) => m.content === 'Christian served as a');
+      expect(partial).toBeDefined();
+      expect(partial?.truncated).toBe(true);
+      expect(result.current.messages.some((m: Message) => m.isSystem && /cut off/i.test(m.content))).toBe(true);
+
+      // Next turn: neither the half-sentence nor the notice may be replayed to
+      // the model as something Alti actually said.
+      const normalFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        body: { getReader: () => ({ read: vi.fn().mockResolvedValue({ done: true, value: undefined }) }) },
+      });
+      vi.stubGlobal('fetch', normalFetch);
+      await act(async () => {
+        await result.current.handleSend('go on');
+      });
+
+      const body = JSON.parse(normalFetch.mock.calls[0][1].body);
+      expect(body.messages.some((m: { content: string }) => m.content.includes('Christian served as a'))).toBe(false);
+      expect(body.messages.some((m: { content: string }) => /cut off/i.test(m.content))).toBe(false);
+    });
+
+    it('commits text still sitting in the flush buffer when the stream dies', async () => {
+      // Streamed text after the opening chunk is coalesced onto a 60ms tick, so
+      // the tail of an answer can be in that buffer rather than in state when
+      // the stream fails. Fake timers hold the tick back for the whole turn and
+      // the abort comes from a resend, so the tick provably never runs: the only
+      // thing that can put the second chunk on screen is the abort path's own
+      // drain. Losing it would silently shorten every cut-off answer.
+      vi.useFakeTimers();
+      const encoder = new TextEncoder();
+      let calls = 0;
+
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation((_url, opts) => {
+          calls += 1;
+          if (calls === 1) {
+            let reads = 0;
+            return Promise.resolve({
+              ok: true,
+              body: {
+                getReader: () => ({
+                  read: () => {
+                    reads += 1;
+                    if (reads <= 2) {
+                      return Promise.resolve({
+                        done: false,
+                        value: encoder.encode(reads === 1 ? 'Christian served ' : 'as an 18D.'),
+                      });
+                    }
+                    return new Promise((_resolve, reject) => {
+                      opts.signal.addEventListener('abort', () => {
+                        const err = new Error('Aborted');
+                        err.name = 'AbortError';
+                        reject(err);
+                      });
+                    });
+                  },
+                }),
+              },
+            });
+          }
+          return Promise.resolve({
+            ok: true,
+            body: { getReader: () => ({ read: vi.fn().mockResolvedValue({ done: true, value: undefined }) }) },
+          });
+        }),
+      );
+
+      const { result } = renderHook(() => useChatEngine());
+
+      let firstSend: Promise<void> | undefined;
+      await act(async () => {
+        firstSend = result.current.handleSend('tell me about him');
+      });
+
+      // Only the opening chunk has reached the transcript: the second is still
+      // buffered behind a tick that has never been advanced.
+      expect(result.current.messages.some((m: Message) => m.content === 'Christian served ')).toBe(true);
+
+      await act(async () => {
+        await result.current.handleSend('go on');
+        await firstSend;
+      });
+
+      const partial = result.current.messages.find((m: Message) => m.truncated);
+      expect(partial?.content).toBe('Christian served as an 18D.');
+    });
+
+    it('does not stack a cut-off notice when a newer send superseded the turn', async () => {
+      // Abort-on-resend: the notice would land after the visitor's next question
+      // and read as a reply to it. The fragment is still flagged out of history.
+      const encoder = new TextEncoder();
+      let calls = 0;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation((_url, opts) => {
+          calls += 1;
+          if (calls === 1) {
+            let reads = 0;
+            return Promise.resolve({
+              ok: true,
+              body: {
+                getReader: () => ({
+                  read: () => {
+                    reads += 1;
+                    if (reads === 1) return Promise.resolve({ done: false, value: encoder.encode('partial reply') });
+                    return new Promise((_resolve, reject) => {
+                      opts.signal.addEventListener('abort', () => {
+                        const err = new Error('Aborted');
+                        err.name = 'AbortError';
+                        reject(err);
+                      });
+                    });
+                  },
+                }),
+              },
+            });
+          }
+          return Promise.resolve({
+            ok: true,
+            body: { getReader: () => ({ read: vi.fn().mockResolvedValue({ done: true, value: undefined }) }) },
+          });
+        }),
+      );
+
+      const { result } = renderHook(() => useChatEngine());
+
+      let firstSend: Promise<void> | undefined;
+      await act(async () => {
+        firstSend = result.current.handleSend('first');
+      });
+      await act(async () => {
+        await result.current.handleSend('second');
+        await firstSend;
+      });
+
+      expect(result.current.messages.find((m: Message) => m.content === 'partial reply')?.truncated).toBe(true);
+      expect(result.current.messages.some((m: Message) => m.isSystem && /cut off/i.test(m.content))).toBe(false);
     });
   });
 
@@ -967,6 +1214,295 @@ describe('useChatEngine', () => {
 
       const ids = result.current.messages.map((m: Message) => m.id);
       expect(new Set(ids).size).toBe(ids.length); // all unique
+    });
+  });
+
+  describe('handleForgetMemory', () => {
+    type Outcome = { ok: boolean; deleted?: number; error?: string };
+
+    it('clears the device id, the cached session token and the transcript on success', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true, deleted: 2 }) }));
+      const { result } = renderHook(() => useChatEngine());
+
+      let outcome: Outcome | undefined;
+      await act(async () => {
+        outcome = await result.current.handleForgetMemory();
+      });
+
+      expect(outcome).toEqual({ ok: true, deleted: 2 });
+      expect(mocks.clearDeviceId).toHaveBeenCalledTimes(1);
+      // The cached session token is signed over a hash of the id just erased;
+      // leaving it cached keeps presenting the erased identity for its whole TTL.
+      expect(mocks.resetSessionTokens).toHaveBeenCalledTimes(1);
+    });
+
+    it('surfaces a rejecting fetch and keeps the device id so a retry hits the same partition', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network down')));
+      const { result } = renderHook(() => useChatEngine());
+
+      let outcome: Outcome | undefined;
+      await act(async () => {
+        outcome = await result.current.handleForgetMemory();
+      });
+
+      expect(outcome).toEqual({ ok: false, error: 'Network down' });
+      expect(mocks.clearDeviceId).not.toHaveBeenCalled();
+      expect(mocks.resetSessionTokens).not.toHaveBeenCalled();
+    });
+
+    it('surfaces an ok:false body without clearing the device id', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: false, error: 'Rate limited.' }) }),
+      );
+      const { result } = renderHook(() => useChatEngine());
+
+      let outcome: Outcome | undefined;
+      await act(async () => {
+        outcome = await result.current.handleForgetMemory();
+      });
+
+      expect(outcome).toEqual({ ok: false, error: 'Rate limited.' });
+      expect(mocks.clearDeviceId).not.toHaveBeenCalled();
+    });
+
+    it('bounds a hung request instead of leaving the caller awaiting forever', async () => {
+      // Without a timeout the awaited promise never settles: the widget's
+      // "Clearing your saved facts" banner is terminal and /chat reports nothing.
+      vi.useFakeTimers();
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(
+          (_url, opts) =>
+            new Promise((_resolve, reject) => {
+              opts.signal.addEventListener('abort', () => {
+                const err = new Error('Aborted');
+                err.name = 'AbortError';
+                reject(err);
+              });
+            }),
+        ),
+      );
+      const { result } = renderHook(() => useChatEngine());
+
+      let pending: Promise<Outcome> | undefined;
+      await act(async () => {
+        pending = result.current.handleForgetMemory();
+      });
+      expect(result.current.isForgetting).toBe(true);
+
+      let outcome: Outcome | undefined;
+      await act(async () => {
+        vi.advanceTimersByTime(10_000);
+        outcome = await pending;
+      });
+
+      expect(outcome?.ok).toBe(false);
+      expect(outcome?.error).toMatch(/too long/i);
+      expect(result.current.isForgetting).toBe(false);
+      expect(mocks.clearDeviceId).not.toHaveBeenCalled();
+    });
+
+    it('dedupes a double click into a single delete', async () => {
+      let settle: (value: unknown) => void = () => {};
+      const fetchMock = vi.fn().mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            settle = resolve;
+          }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+      const { result } = renderHook(() => useChatEngine());
+
+      let first: Promise<Outcome> | undefined;
+      let second: Promise<Outcome> | undefined;
+      await act(async () => {
+        first = result.current.handleForgetMemory();
+        second = result.current.handleForgetMemory();
+      });
+
+      expect(first).toBe(second);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        settle({ ok: true, json: async () => ({ ok: true, deleted: 1 }) });
+        await first;
+      });
+      expect(result.current.isForgetting).toBe(false);
+    });
+
+    it('still resets the cached token when there is no device id to delete', async () => {
+      mocks.deviceId.current = null;
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+      const { result } = renderHook(() => useChatEngine());
+
+      let outcome: Outcome | undefined;
+      await act(async () => {
+        outcome = await result.current.handleForgetMemory();
+      });
+
+      expect(outcome).toEqual({ ok: true, deleted: 0 });
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(mocks.resetSessionTokens).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('auto-scroll stickiness', () => {
+    type FakeScroller = HTMLDivElement & { scrollTo: ReturnType<typeof vi.fn> };
+
+    function fakeScroller(): FakeScroller {
+      // Parked at the bottom: scrollHeight - scrollTop - clientHeight === 0.
+      return { scrollHeight: 1000, scrollTop: 500, clientHeight: 500, scrollTo: vi.fn() } as unknown as FakeScroller;
+    }
+
+    function gate(): { promise: Promise<void>; open: () => void } {
+      let open: () => void = () => {};
+      const promise = new Promise<void>((resolve) => {
+        open = resolve;
+      });
+      return { promise, open };
+    }
+
+    it('stops following the stream when the visitor scrolls up, and resumes at the bottom', async () => {
+      const encoder = new TextEncoder();
+      const gates = [gate(), gate()];
+      let reads = 0;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          body: {
+            getReader: () => ({
+              read: async () => {
+                reads += 1;
+                if (reads === 1) return { done: false, value: encoder.encode('one ') };
+                if (reads === 2) {
+                  await gates[0].promise;
+                  return { done: false, value: encoder.encode('two ') };
+                }
+                if (reads === 3) {
+                  await gates[1].promise;
+                  return { done: false, value: encoder.encode('three') };
+                }
+                return { done: true, value: undefined };
+              },
+            }),
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useChatEngine());
+      const el = fakeScroller();
+      result.current.messagesContainerRef.current = el;
+
+      let sendPromise: Promise<void> | undefined;
+      await act(async () => {
+        sendPromise = result.current.handleSend('hi');
+      });
+      expect(el.scrollTo).toHaveBeenCalled();
+
+      // The visitor scrolls up 400px to re-read an earlier answer. Every further
+      // token used to yank them straight back down.
+      el.scrollTop = 100;
+      el.scrollTo.mockClear();
+      await act(async () => {
+        gates[0].open();
+      });
+      expect(el.scrollTo).not.toHaveBeenCalled();
+
+      // Scrolled back to the bottom: following resumes on its own.
+      el.scrollTop = 500;
+      await act(async () => {
+        gates[1].open();
+        await sendPromise;
+      });
+      expect(el.scrollTo).toHaveBeenCalled();
+    });
+
+    it('jumps instantly while streaming and animates only once the answer settles', async () => {
+      const encoder = new TextEncoder();
+      const hold = gate();
+      let reads = 0;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          body: {
+            getReader: () => ({
+              read: async () => {
+                reads += 1;
+                if (reads === 1) return { done: false, value: encoder.encode('answer') };
+                await hold.promise;
+                return { done: true, value: undefined };
+              },
+            }),
+          },
+        }),
+      );
+
+      const { result } = renderHook(() => useChatEngine());
+      const el = fakeScroller();
+      result.current.messagesContainerRef.current = el;
+
+      let sendPromise: Promise<void> | undefined;
+      await act(async () => {
+        sendPromise = result.current.handleSend('hi');
+      });
+
+      // Mid-stream: a smooth animation cannot keep up with per-token appends, and
+      // its lagging scrollTop would read as "the visitor scrolled up" on the next
+      // chunk and stop the follow dead.
+      const midStream = el.scrollTo.mock.calls.map((call) => call[0].behavior);
+      expect(midStream.length).toBeGreaterThan(0);
+      expect(midStream.every((behavior: string) => behavior === 'auto')).toBe(true);
+
+      el.scrollTo.mockClear();
+      await act(async () => {
+        hold.open();
+        await sendPromise;
+      });
+
+      const settled = el.scrollTo.mock.calls.map((call) => call[0].behavior);
+      expect(settled[settled.length - 1]).toBe('smooth');
+    });
+
+    it('never animates for a reduced-motion visitor', async () => {
+      const realMatchMedia = window.matchMedia;
+      window.matchMedia = ((query: string) => ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      })) as unknown as typeof window.matchMedia;
+
+      try {
+        vi.stubGlobal(
+          'fetch',
+          vi.fn().mockResolvedValue({
+            ok: true,
+            body: { getReader: () => ({ read: vi.fn().mockResolvedValue({ done: true, value: undefined }) }) },
+          }),
+        );
+
+        const { result } = renderHook(() => useChatEngine());
+        const el = fakeScroller();
+        result.current.messagesContainerRef.current = el;
+
+        await act(async () => {
+          await result.current.handleSend('hi');
+        });
+
+        const behaviors = el.scrollTo.mock.calls.map((call) => call[0].behavior);
+        expect(behaviors.length).toBeGreaterThan(0);
+        expect(behaviors.every((behavior: string) => behavior === 'auto')).toBe(true);
+      } finally {
+        window.matchMedia = realMatchMedia;
+      }
     });
   });
 

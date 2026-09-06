@@ -4,7 +4,8 @@ import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import gsap from 'gsap';
 import * as THREE from 'three';
 import { clusters } from '../../data/infrastructureTopology';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useDocumentVisible } from '../../hooks/useDocumentVisible';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { ServiceCluster } from './ServiceCluster';
 import { ClusterEdge } from './ClusterEdge';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
@@ -57,7 +58,7 @@ function SceneContent({
   const { camera, invalidate } = useThree();
 
   // Reactive — re-renders if the visitor toggles the OS reduced-motion setting.
-  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+  const reducedMotion = useReducedMotion();
 
   // Shared camera-fly: select a cluster, switch to on-demand rendering, and move
   // the camera toward it (25% lerp, clamped to keep the cluster visible). Used by
@@ -280,14 +281,11 @@ export function TopologyScene({
   const selectedClusterId = externalId !== undefined ? externalId : internalId;
   const onSelectCluster = externalOnSelect ?? setInternalId;
 
-  // Fully pause the rAF loop when the tab is hidden (parity with HeroCanvas /
-  // AltiMascot), rather than only toggling autoRotate inside a still-running loop.
-  const [docVisible, setDocVisible] = useState(() => (typeof document === 'undefined' ? true : !document.hidden));
-  useEffect(() => {
-    const onVisibility = () => setDocVisible(!document.hidden);
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, []);
+  // Fully pause the rAF loop when the tab is hidden (parity with AltiMascot),
+  // rather than only toggling autoRotate inside a still-running loop. Because
+  // this drops frameloop to 'never', nothing inside the canvas needs its own
+  // `document.hidden` check — useFrame simply stops being called.
+  const docVisible = useDocumentVisible();
 
   return (
     <Canvas

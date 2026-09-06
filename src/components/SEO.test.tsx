@@ -384,4 +384,47 @@ describe('SEO', () => {
       ).toBeNull();
     });
   });
+
+  describe('JSON-LD serialisation', () => {
+    // Blog and BlogPost pipe Sanity-authored strings (titles, excerpts, tag
+    // names) into this graph, react-helmet-async assigns script children via
+    // innerHTML, and scripts/prerender.js snapshots the DOM into the shipped
+    // static HTML. A raw '<' therefore reaches the HTML tokenizer as markup.
+    const HOSTILE = '</script><img src=x onerror=alert(1)>';
+
+    const renderWithHostileSchema = async () => {
+      renderSEO({
+        title: 'Post',
+        description: 'desc',
+        structuredData: [{ '@type': 'Article', headline: HOSTILE }],
+      });
+      await waitFor(() => {
+        expect(document.querySelector('script[type="application/ld+json"]')?.textContent).toContain('Article');
+      });
+      return document.querySelector('script[type="application/ld+json"]')!;
+    };
+
+    it('escapes every < so a CMS string cannot close the ld+json script element', async () => {
+      const script = await renderWithHostileSchema();
+      const content = script.textContent ?? '';
+      expect(content, 'a raw </script> in a Sanity title would end the tag').not.toContain('</script');
+      expect(content).not.toContain('<');
+      expect(content).toContain('\\u003c');
+    });
+
+    it('still parses back to the exact structured data consumers expect', async () => {
+      const script = await renderWithHostileSchema();
+      const graph = JSON.parse(script.textContent ?? '');
+      const article = graph['@graph'].find((n: Record<string, unknown>) => n['@type'] === 'Article');
+      expect(article.headline).toBe(HOSTILE);
+    });
+
+    it('serialises to exactly one closing script tag, which is what the prerender crawl writes to disk', async () => {
+      // outerHTML is the closest jsdom equivalent of Puppeteer's page.content():
+      // script children serialise as raw text, so an unescaped payload produces
+      // a second, real </script> and everything after it becomes markup.
+      const script = await renderWithHostileSchema();
+      expect(script.outerHTML.match(/<\/script/gi) ?? []).toHaveLength(1);
+    });
+  });
 });

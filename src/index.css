@@ -184,6 +184,32 @@ select:focus:not(:focus-visible) {
     opacity: 1 !important;
     transform: none !important;
   }
+  /* Kept out of the group above: shimmer is decorative motion, not a reveal, so
+     it needs the animation stopped but must NOT be forced to opacity/transform
+     defaults that the skeleton's own layout classes may set. Stopping it is not
+     cosmetic — the blog listing paints six skeletons of eleven bars each, so a
+     visitor who asked for reduced motion otherwise gets ~66 elements sweeping
+     continuously for the whole Sanity fetch. At rest the static bg-linear-to-r
+     gradient still reads as a placeholder. */
+  .animate-shimmer {
+    animation: none !important;
+  }
+  /* Same treatment for Tailwind's own pulse, which is NOT one of the
+     `--animate-*` entries in the @theme block and so is invisible to the
+     coverage test that walks @theme (it is asserted explicitly instead).
+     Component-level gating only covers the surfaces that remembered to ask, and
+     the streaming carets and "thinking" indicators in ChatMessage, AskTheVector
+     and TraceResponseBubble, plus blueprint/LoadingSkeleton, all pulse
+     unguarded. Animation off only — a paused pulse sits at its natural opacity,
+     and these elements carry their own layout classes we must not stomp.
+
+     This does NOT reach the variant form: `[&_[data-shimmer]]:animate-pulse` in
+     BlogPostArticleSkeleton compiles to an escaped arbitrary-variant selector,
+     not `.animate-pulse`, so that component's isMotionDisabled() gate stays
+     load-bearing. Prefer the plain utility if you want this rule to cover you. */
+  .animate-pulse {
+    animation: none !important;
+  }
 }
 
 /* View Transitions — progressive enhancement for browsers that support it */

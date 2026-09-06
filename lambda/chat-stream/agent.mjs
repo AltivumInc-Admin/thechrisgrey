@@ -1,5 +1,5 @@
 import { Agent, BedrockModel, SlidingWindowConversationManager, BeforeModelCallEvent } from "@strands-agents/sdk";
-import { emitEvent, EVENT_KINDS } from "./events.mjs";
+import { emitEvent, writeModelText, EVENT_KINDS } from "./events.mjs";
 
 export const DEFAULT_REGION = "us-east-1";
 export const DEFAULT_MAX_TOKENS = 500;
@@ -47,7 +47,13 @@ export function buildBedrockModel({
     config.guardrailConfig = {
       guardrailIdentifier: guardrailId,
       guardrailVersion,
-      streamProcessingMode: "async",
+      // "sync" (the Bedrock default) holds each chunk until the guardrail has
+      // scanned it. Under "async" the chunk reaches the visitor first and is
+      // scanned after, and index.mjs only remediates a turn that streamed NO
+      // text — so async dropped the intervention on exactly the turns that
+      // needed it. The added per-chunk latency buys a guardrail that blocks
+      // rather than one that only reports.
+      streamProcessingMode: "sync",
       trace: "enabled",
     };
   }
@@ -117,6 +123,17 @@ function extractUsage(streamEvent) {
   return null;
 }
 
+/**
+ * CloudWatch metric names must stay a bounded set. stopReason is a closed enum
+ * from Bedrock/Strands, but normalize defensively so an unexpected value can
+ * never widen the namespace.
+ * @param {any} stopReason @returns {string}
+ */
+function normalizeStopReason(stopReason) {
+  if (typeof stopReason !== "string" || stopReason.length === 0) return "unknown";
+  return stopReason.replace(/[^A-Za-z0-9_]/g, "_").slice(0, 32);
+}
+
 /** @param {any} result */
 function toolResultStatus(result) {
   if (!result) return "unknown";
@@ -155,12 +172,9 @@ export async function streamAgentResponse({ agent, userMessage, responseStream, 
       case "modelStreamUpdateEvent": {
         const text = extractText(event);
         if (text) {
-          // Defense-in-depth: the wire protocol is NUL-framed (events.mjs \x00EVT\x00,
-          // index.mjs \x00SYS\x00). A literal U+0000 in MODEL output could forge a frame,
-          // so strip NUL from this model-text path only. Never strip the intentional
-          // delimiter writes in events.mjs / index.mjs.
-          // eslint-disable-next-line no-control-regex -- intentionally matching U+0000 to strip forged frame delimiters
-          responseStream.write(text.replace(/\x00/g, ""));
+          // NUL-stripping lives in writeModelText (events.mjs) so every model-text
+          // writer gets it — this loop and genUi.mjs's lead-in are the only two.
+          writeModelText(responseStream, text);
           hadText = true;
           onText?.(text);
           break;
@@ -207,6 +221,12 @@ export async function streamAgentResponse({ agent, userMessage, responseStream, 
     const accumulated = next.value.metrics?.accumulatedUsage;
     if (accumulated) usage = accumulated;
   }
+
+  // A turn truncated at maxTokens, or cut short by the loop cap above
+  // (stopReason 'cancelled'), still returns hadText:true — so index.mjs records
+  // it as a clean success. Emit the reason here, where it is already in hand,
+  // so a truncated answer is separable from a complete one in CloudWatch.
+  metrics?.record(`AgentStop_${normalizeStopReason(stopReason)}`);
 
   return { hadText, usage, guardrailIntervened, stopReason };
 }

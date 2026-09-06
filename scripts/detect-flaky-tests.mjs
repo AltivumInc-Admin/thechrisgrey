@@ -23,8 +23,20 @@
  */
 import { execSync } from 'node:child_process';
 
-const RUNS = parseInt(process.argv.find((a) => a.startsWith('--runs='))?.split('=')[1] || '3', 10);
-const SUITE_ARG = process.argv.find((a) => a.startsWith('--suite='))?.split('=')[1];
+/**
+ * Accepts both `--runs 5` and `--runs=5` (the header has always documented the
+ * space form, but only the `=` form ever parsed, so `--runs 5` silently ran
+ * with the default).
+ */
+function argValue(name) {
+  const eq = process.argv.find((a) => a.startsWith(`${name}=`));
+  if (eq) return eq.split('=')[1];
+  const i = process.argv.indexOf(name);
+  return i !== -1 ? process.argv[i + 1] : undefined;
+}
+
+const RUNS = parseInt(argValue('--runs') || '3', 10);
+const SUITE_ARG = argValue('--suite');
 const RUN_FRONTEND = !SUITE_ARG || SUITE_ARG === 'frontend';
 const RUN_LAMBDA = !SUITE_ARG || SUITE_ARG === 'lambda';
 
@@ -45,24 +57,43 @@ function runSuite(command, suiteName) {
     try {
       const output = execSync(command, {
         encoding: 'utf8',
-        timeout: 120000,
+        // The full frontend suite runs 90s+ on a warm dev machine and well past
+        // that on a 2-core CI runner. The old 120s ceiling meant every CI run
+        // could be killed mid-suite and recorded as a plain failure.
+        timeout: 15 * 60 * 1000,
+        maxBuffer: 64 * 1024 * 1024,
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { ...process.env, CI: 'true', FORCE_COLOR: '0' },
       });
-      const passed = output.match(/ℹ pass\s+(\d+)/)?.[1] || output.match(/(\d+) passing/)?.[1] || '0';
-      const failed = output.match(/ℹ fail\s+(\d+)/)?.[1] || output.match(/(\d+) failing/)?.[1] || '0';
-      const skipped = output.match(/ℹ skipped\s+(\d+)/)?.[1] || '0';
+      // Two summary dialects: vitest prints "Tests  N failed | M passed (T)",
+      // node --test prints "ℹ pass N" / "ℹ fail N". The old patterns knew
+      // node --test and mocha only, so every vitest run parsed as 0 tests.
+      const passed = output.match(/ℹ pass\s+(\d+)/)?.[1] || output.match(/Tests[^\n]*?(\d+) passed/)?.[1] || '0';
+      const failed = output.match(/ℹ fail\s+(\d+)/)?.[1] || output.match(/Tests[^\n]*?(\d+) failed/)?.[1] || '0';
+      const skipped = output.match(/ℹ skipped\s+(\d+)/)?.[1] || output.match(/Tests[^\n]*?(\d+) skipped/)?.[1] || '0';
+
+      const passCount = parseInt(passed, 10);
+      const failCount = parseInt(failed, 10);
+
+      // A "passing" run that executed zero tests is a broken harness, not a
+      // pass. Counting it green is exactly the failure mode this repo keeps
+      // getting burned by: a gate that reports success having examined nothing.
+      if (passCount === 0 && failCount === 0) {
+        results.push({ run: i, passed: false, infra: true, passCount: 0, failCount: 0, output });
+        console.log(`${COLORS.red}ERROR (0 tests parsed from the runner output)${COLORS.reset}`);
+        continue;
+      }
 
       results.push({
         run: i,
-        passed: true,
-        passCount: parseInt(passed, 10),
-        failCount: parseInt(failed, 10),
+        passed: failCount === 0,
+        passCount,
+        failCount,
         skipCount: parseInt(skipped, 10),
         output,
       });
 
-      if (parseInt(failed, 10) > 0) {
+      if (failCount > 0) {
         console.log(`${COLORS.red}FAIL (${failed} failing)${COLORS.reset}`);
       } else {
         console.log(`${COLORS.green}PASS (${passed} tests)${COLORS.reset}`);
@@ -109,7 +140,7 @@ function analyzeFlakiness(frontendResults, lambdaResults) {
 function main() {
   console.log(`${COLORS.bold}=== Flaky Test Detection (${RUNS} runs) ===${COLORS.reset}\n`);
 
-  const frontendResults = RUN_FRONTEND ? runSuite('npx vitest run --reporter=verbose 2>&1', 'frontend') : [];
+  const frontendResults = RUN_FRONTEND ? runSuite('npx vitest run --reporter=dot 2>&1', 'frontend') : [];
   console.log('');
   const lambdaResults = RUN_LAMBDA ? runSuite('npm run test:lambda 2>&1', 'lambda') : [];
 
@@ -121,12 +152,15 @@ function main() {
     const allPass = [...frontendResults, ...lambdaResults].every((r) => r.passed);
     if (allPass) {
       console.log(`${COLORS.green}No flaky tests detected — all ${RUNS} runs passed consistently.${COLORS.reset}`);
-    } else {
-      console.log(
-        `${COLORS.yellow}No flaky tests detected — but some runs failed consistently (broken, not flaky).${COLORS.reset}`,
-      );
+      process.exit(0);
     }
-    process.exit(0);
+    // Consistent failure is worse than flakiness, not better: either the suite
+    // is broken or the harness is (a timeout, a 0-test parse). Exiting 0 here
+    // let a nightly job go green while testing nothing.
+    console.log(
+      `${COLORS.red}No flakiness — but runs failed consistently (broken suite or harness). Exit 2.${COLORS.reset}`,
+    );
+    process.exit(2);
   } else {
     console.log(`${COLORS.red}${COLORS.bold}FLAKY TESTS DETECTED:${COLORS.reset}\n`);
     for (const f of flaky) {

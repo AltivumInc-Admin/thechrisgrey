@@ -76,4 +76,7 @@ test("cite_blog_passage handles Sanity errors gracefully", async () => {
   assert.equal(result.ok, false);
   assert.match(result.error, /Unable to fetch/i);
   assert.ok(metrics.records.includes("ToolFailure_CitePassage"));
+  // ToolCall_ counts attempts, not successes: a thrown fetch must still register
+  // the attempt, or ToolFailure_/ToolCall_ is not a failure rate.
+  assert.ok(metrics.records.includes("ToolCall_CitePassage"));
 });

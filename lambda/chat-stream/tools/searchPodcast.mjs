@@ -4,10 +4,20 @@ import { normalizeQuery, isMeaningful } from "lambda-shared/sanityQueries";
 import { emitEvent, EVENT_KINDS } from "../events.mjs";
 import { retrievePodcastChunks } from "../podcastRetrieve.mjs";
 import { createLogger } from "lambda-shared/logger";
+import { recordToolFailure } from "./toolMetrics.mjs";
 
 const _tool = /** @type {any} */ (tool);
 
 const MAX_CITATIONS = 3;
+
+/**
+ * Retrieve wider than we cite. Live retrieval commonly returns several moments
+ * from the SAME episode (the top three hits for "women veterans" were all one
+ * video), so at numberOfResults 4 there is almost no headroom to find a second
+ * episode for a question like "which episodes cover X". Eight is still one
+ * Retrieve call.
+ */
+const RETRIEVAL_RESULTS = 8;
 
 /**
  * Format a second-offset as a YouTube-style timestamp label (MM:SS or H:MM:SS).
@@ -28,6 +38,44 @@ function trimQuote(text, max = 240) {
   const clean = String(text).replace(/\s+/g, " ").trim();
   if (clean.length <= max) return clean;
   return `${clean.slice(0, max - 1).trimEnd()}…`;
+}
+
+/**
+ * Pick up to MAX_CITATIONS chunks, preferring one per EPISODE.
+ *
+ * De-duping on `videoId-startSeconds` alone only removes the identical moment,
+ * so a same-episode cluster (which is what the KB actually returns) would answer
+ * "which episodes talk about X" with three cards carrying one episode title and
+ * three timestamps. Chunks arrive in relevance order, so the first hit per
+ * episode is also its best one. Extra moments from an already-shown episode fill
+ * the remaining slots, which is all there is when the archive genuinely covers a
+ * topic once.
+ *
+ * @param {Array<{ videoId: string, startSeconds: number }>} chunks
+ * @returns {any[]}
+ */
+function selectCitations(chunks) {
+  const seenMoments = new Set();
+  const seenEpisodes = new Set();
+  /** @type {any[]} */
+  const primary = [];
+  /** @type {any[]} */
+  const overflow = [];
+
+  for (const c of chunks) {
+    const moment = `${c.videoId}-${c.startSeconds}`;
+    if (seenMoments.has(moment)) continue;
+    seenMoments.add(moment);
+
+    if (seenEpisodes.has(c.videoId)) {
+      overflow.push(c);
+      continue;
+    }
+    seenEpisodes.add(c.videoId);
+    primary.push(c);
+  }
+
+  return [...primary, ...overflow].slice(0, MAX_CITATIONS);
 }
 
 /**
@@ -69,33 +117,44 @@ export function buildSearchPodcastTool({
         return { ok: false, error: "Query must contain a meaningful keyword." };
       }
 
+      // Counted for the ATTEMPT, before the awaited retrieval. Recorded after it,
+      // a failed search emitted ToolFailure_SearchPodcast with no matching
+      // ToolCall_SearchPodcast, so failures/calls was not a failure rate — it
+      // could exceed 1. citePassage and searchBlog count the same way.
+      metrics?.record("ToolCall_SearchPodcast");
       const startedAt = Date.now();
       try {
         const chunks = await retrievePodcastChunks(agentClient, RetrieveCommand, normalized, {
           knowledgeBaseId: podcastKbId,
           requestId,
           metrics,
-          numberOfResults: 4,
+          numberOfResults: RETRIEVAL_RESULTS,
           timeoutMs: 4000,
         });
 
-        metrics?.record("ToolCall_SearchPodcast");
         metrics?.record("ToolLatency_SearchPodcast", Date.now() - startedAt, "Milliseconds");
 
+        if (chunks === null) {
+          // The archive could not be searched. Returning the no-match shape here
+          // would have the model tell the visitor the podcast contains nothing on
+          // the topic — a factual claim about content, sourced from an outage.
+          recordToolFailure(metrics, "SearchPodcast");
+          log.error("tool_error", {
+            tool: "search_podcast",
+            error: "podcast_kb_unavailable",
+            message: "retrieval failed, timed out, or returned unparseable metadata",
+          });
+          return { ok: false, error: "Unable to search the podcast right now." };
+        }
+
         if (chunks.length === 0) {
+          // Genuine no-match, distinct from the branch above. Counted so the
+          // empty-answer rate is graphable next to ToolCall_SearchPodcast.
+          metrics?.record("ToolEmpty_SearchPodcast");
           return { ok: true, query: normalized, results: [] };
         }
 
-        // De-dupe by episode + timestamp; keep the top MAX_CITATIONS.
-        const seen = new Set();
-        const top = [];
-        for (const c of chunks) {
-          const key = `${c.videoId}-${c.startSeconds}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
-          top.push(c);
-          if (top.length >= MAX_CITATIONS) break;
-        }
+        const top = selectCitations(chunks);
 
         for (const c of top) {
           emitEvent(responseStream, {
@@ -120,7 +179,7 @@ export function buildSearchPodcastTool({
           })),
         };
       } catch (error) {
-        metrics?.record("ToolFailure_SearchPodcast");
+        recordToolFailure(metrics, "SearchPodcast");
         log.error("tool_error", {
           tool: "search_podcast",
           error: error instanceof Error ? error.name : String(error),

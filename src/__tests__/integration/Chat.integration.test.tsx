@@ -9,8 +9,13 @@ import Chat from '../../pages/Chat';
 // Turnstile/issuer flow in jsdom. Without this, setting VITE_SESSION_ENDPOINT
 // in the environment (as the Amplify build does) makes getSessionToken try to
 // load the Cloudflare script and time out — green only when the var is unset.
+// The forget path calls sessionTokens.reset() as well (the cached token is
+// signed over a hash of the device id being erased), so the factory has to cover
+// the whole surface useChatEngine imports - a partial mock throws the moment a
+// test exercises /chat's Forget me control.
 vi.mock('../../utils/sessionToken', () => ({
   getSessionToken: vi.fn().mockResolvedValue(''),
+  sessionTokens: { getToken: vi.fn().mockResolvedValue(''), reset: vi.fn() },
 }));
 
 // jsdom does not implement scrollTo on elements; polyfill for these tests
