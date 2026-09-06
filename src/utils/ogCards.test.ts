@@ -21,8 +21,10 @@ function readGeneratorCardPaths(): string[] {
   const block = src.match(/export const OG_CARDS = \{([\s\S]*?)\n\};/);
   if (!block) throw new Error('Could not locate the OG_CARDS map in scripts/generate-og-images.mjs');
   const paths = new Set<string>();
-  // Match only keys that introduce a card object: '<path>': { eyebrow: ...
-  const re = /'([^']+)':\s*\{\s*eyebrow:/g;
+  // Match only keys that introduce a card object. Two shapes exist: rendered
+  // cards ('<path>': { eyebrow: ... }) and committed passthrough assets
+  // ('<path>': { asset: ... }, e.g. the photographic home card).
+  const re = /'([^']+)':\s*\{\s*(?:eyebrow|asset):/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(block[1]))) paths.add(m[1]);
   return [...paths];
@@ -55,7 +57,7 @@ describe('OG cards — drift detector', () => {
 });
 
 describe('slugForOgPath', () => {
-  it('maps / to home', () => expect(slugForOgPath('/')).toBe('home'));
+  it('maps / to home-hero (the committed photographic card)', () => expect(slugForOgPath('/')).toBe('home-hero'));
   it('strips the leading slash', () => expect(slugForOgPath('/aws')).toBe('aws'));
   it('keeps multi-word slugs intact', () =>
     expect(slugForOgPath('/beyond-the-assessment')).toBe('beyond-the-assessment'));
@@ -71,8 +73,8 @@ describe('ogImageForUrl', () => {
     expect(ogImageForUrl(`${SITE}/aws/`)).toBe(`${SITE}/og/aws.png`);
   });
   it('maps the root url (no path) to the home card', () => {
-    expect(ogImageForUrl(SITE)).toBe(`${SITE}/og/home.png`);
-    expect(ogImageForUrl(`${SITE}/`)).toBe(`${SITE}/og/home.png`);
+    expect(ogImageForUrl(SITE)).toBe(`${SITE}/og/home-hero.png`);
+    expect(ogImageForUrl(`${SITE}/`)).toBe(`${SITE}/og/home-hero.png`);
   });
   it('falls back to /og.png for routes without a card (e.g. a blog post)', () => {
     expect(ogImageForUrl(`${SITE}/blog/some-post`)).toBe(`${SITE}/og.png`);

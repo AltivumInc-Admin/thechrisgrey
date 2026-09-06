@@ -37,7 +37,10 @@ export const OG_CARD_PATHS: readonly string[] = [
 
 /** Route path -> card slug. Mirrors `slugForPath` in generate-og-images.mjs. */
 export function slugForOgPath(path: string): string {
-  if (path === '/') return 'home';
+  // 'home-hero', not 'home': the home card is the committed photographic
+  // asset, and the changed filename forces X to re-scrape past its stale
+  // imageless cache of /og/home.png (see generate-og-images.mjs).
+  if (path === '/') return 'home-hero';
   return path.replace(/^\//, '').replace(/\//g, '-');
 }
 
