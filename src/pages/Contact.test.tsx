@@ -1,6 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
+/**
+ * Every interaction in this file uses `delay: null`: with the default delay,
+ * user.type() inserts an artificial wait between each keystroke's event
+ * sequence, and the multi-intent tests type ~100 characters into a page that
+ * is already expensive to render. Under the full suite's parallel workers that
+ * pushed the slowest tests past the 5s default timeout intermittently - the
+ * nightly flaky-test detector caught exactly that. The events still fire in
+ * full order per keystroke; only the artificial pause between them is skipped.
+ */
+const setupUser = () => userEvent.setup({ delay: null });
 import { MemoryRouter } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Contact from './Contact';
@@ -89,7 +100,7 @@ describe('Contact multi-intent flow', () => {
   });
 
   it('reveals event-specific fields when the user selects the speaking intent', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderContactAt('/contact');
 
     await user.selectOptions(screen.getByLabelText(/reaching out about/i), 'speaking');
@@ -99,7 +110,7 @@ describe('Contact multi-intent flow', () => {
   });
 
   it('hides event-specific fields again when switching away from speaking', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderContactAt('/contact?intent=speaking');
 
     await user.selectOptions(screen.getByLabelText(/reaching out about/i), 'consulting');
@@ -108,7 +119,7 @@ describe('Contact multi-intent flow', () => {
   });
 
   it('includes intent and event details in the submitted payload', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     fetchSpy.mockResolvedValue({
       ok: true,
       status: 200,
@@ -143,7 +154,7 @@ describe('Contact multi-intent flow', () => {
   });
 
   it('clears event-specific fields after a successful submission', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     fetchSpy.mockResolvedValue({
       ok: true,
       status: 200,
@@ -169,7 +180,7 @@ describe('Contact multi-intent flow', () => {
   });
 
   it('still blocks submission and shows inline errors when required fields are empty', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderContactAt('/contact?intent=speaking');
 
     await user.click(screen.getByRole('button', { name: /send message/i }));
