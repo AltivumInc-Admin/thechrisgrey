@@ -8,14 +8,14 @@
     "test": "node --test __tests__/*.test.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.1068.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1126.0",
     "@aws-sdk/client-cloudwatch": "^3.1068.0",
-    "@aws-sdk/client-dynamodb": "^3.1068.0",
-    "@aws-sdk/lib-dynamodb": "^3.1079.0",
+    "@aws-sdk/client-dynamodb": "^3.1126.0",
+    "@aws-sdk/lib-dynamodb": "^3.1126.0",
     "@sanity/client": "^7.22.1",
     "@sentry/node": "^10.0.0",
     "posthog-node": "^5.39.4",
     "lambda-shared": "file:../shared",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   }
 }
